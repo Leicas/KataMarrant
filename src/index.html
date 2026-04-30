@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>KataMarrant</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <h1>KataMarrant</h1>
+      <nav class="tabs">
+        <button data-view="home" class="tab active">Home</button>
+        <button data-view="quiz" class="tab">Quiz</button>
+        <button data-view="rapid" class="tab">Rapid</button>
+        <button data-view="browse" class="tab">Browse</button>
+        <button data-view="settings" class="tab">⚙</button>
+      </nav>
+    </header>
+
+    <main id="view-root">
+      <section id="view-home" class="view active"></section>
+      <section id="view-quiz" class="view"></section>
+      <section id="view-rapid" class="view"></section>
+      <section id="view-browse" class="view"></section>
+      <section id="view-settings" class="view"></section>
+    </main>
+
+    <!-- Video modal — populated dynamically by main.js when "Watch video" is clicked -->
+    <div id="video-modal" class="video-modal hidden" role="dialog" aria-modal="true">
+      <div class="video-modal-backdrop"></div>
+      <div class="video-modal-frame">
+        <button class="video-modal-close" aria-label="Close" type="button">×</button>
+        <div class="video-modal-header"></div>
+        <div class="video-modal-iframe-wrap"></div>
+        <div class="video-modal-footer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
