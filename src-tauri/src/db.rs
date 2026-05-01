@@ -26,7 +26,8 @@ pub fn initialize(app_data_dir: &Path) -> AppResult<Connection> {
             slug         TEXT NOT NULL,
             correct      INTEGER NOT NULL,
             mode         TEXT NOT NULL,
-            answered_at  INTEGER NOT NULL
+            answered_at  INTEGER NOT NULL,
+            response_ms  INTEGER
         );
         "#,
     )?;
@@ -38,6 +39,15 @@ pub fn initialize(app_data_dir: &Path) -> AppResult<Connection> {
     )?;
     if has_last_correct == 0 {
         conn.execute("ALTER TABLE technique_stats ADD COLUMN last_correct INTEGER", [])?;
+    }
+    // Migration: ajoute quiz_log.response_ms (durée en ms entre prompt et réponse).
+    let has_response_ms: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('quiz_log') WHERE name = 'response_ms'",
+        [],
+        |r| r.get(0),
+    )?;
+    if has_response_ms == 0 {
+        conn.execute("ALTER TABLE quiz_log ADD COLUMN response_ms INTEGER", [])?;
     }
     Ok(conn)
 }
@@ -92,6 +102,7 @@ pub fn record_answer(
     slug: &str,
     correct: bool,
     mode: &str,
+    response_ms: Option<i64>,
 ) -> AppResult<()> {
     let now = chrono::Utc::now().timestamp();
     let (cd, wd) = if correct { (1, 0) } else { (0, 1) };
@@ -109,8 +120,8 @@ pub fn record_answer(
         params![slug, cd, wd, now, last_correct],
     )?;
     conn.execute(
-        "INSERT INTO quiz_log (slug, correct, mode, answered_at) VALUES (?1, ?2, ?3, ?4)",
-        params![slug, correct as i64, mode, now],
+        "INSERT INTO quiz_log (slug, correct, mode, answered_at, response_ms) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![slug, correct as i64, mode, now, response_ms],
     )?;
     Ok(())
 }

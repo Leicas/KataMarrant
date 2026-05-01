@@ -170,10 +170,17 @@ pub fn answer_question(
     slug: String,
     correct: bool,
     mode: Option<String>,
+    response_ms: Option<i64>,
     state: tauri::State<'_, AppState>,
 ) -> AppResult<()> {
     let conn = state.db.lock().unwrap();
-    db::record_answer(&conn, &slug, correct, mode.as_deref().unwrap_or("single"))?;
+    db::record_answer(
+        &conn,
+        &slug,
+        correct,
+        mode.as_deref().unwrap_or("single"),
+        response_ms,
+    )?;
     Ok(())
 }
 

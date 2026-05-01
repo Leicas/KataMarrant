@@ -85,6 +85,7 @@ pub fn run() {
             commands::stats::get_overall_stats,
             commands::stats::get_all_technique_stats,
             commands::stats::get_technique_stat,
+            commands::stats::get_analytics,
             commands::scheduler::set_quiz_interval,
             commands::scheduler::get_quiz_interval,
             commands::scheduler::trigger_quiz_now,
