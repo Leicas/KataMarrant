@@ -62,3 +62,61 @@ jobs:
             echo "::error::version mismatch — semantic-release should keep these aligned"
             exit 1
           fi
+
+  # ---------------------------------------------------------------------------
+  # Cross-target type checks for the mobile platforms. We don't run a full
+  # APK / IPA build here — that needs keystore + Apple Developer signing
+  # secrets, neither of which is configured yet. `cargo check` against the
+  # cross target catches anything that breaks the cfg(target_os = ...) paths
+  # (e.g. tauri-plugin-schedule-task on Android, schedule_next_ios on iOS).
+  # ---------------------------------------------------------------------------
+  android-check:
+    name: Android cargo check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager --install "ndk;26.1.10909125" >/dev/null
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: android-aarch64
+
+      - name: cargo check --target aarch64-linux-android
+        working-directory: src-tauri
+        env:
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+        run: cargo check --target aarch64-linux-android
+
+  ios-check:
+    name: iOS cargo check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: ios-aarch64
+
+      - name: cargo check --target aarch64-apple-ios
+        working-directory: src-tauri
+        run: cargo check --target aarch64-apple-ios
