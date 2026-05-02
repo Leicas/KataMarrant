@@ -1,3 +1,9 @@
+## [1.2.3](https://github.com/Leicas/KataMarrant/compare/v1.2.2...v1.2.3) (2026-05-02)
+
+### Bug Fixes
+
+* **ci:** top-level time dep + tauri android init in release.yml ([c19bdbc](https://github.com/Leicas/KataMarrant/commit/c19bdbc5db6164159dcd1d48579d96f17676b668)), closes [#25264215901](https://github.com/Leicas/KataMarrant/issues/25264215901)
+
 ## [1.2.2](https://github.com/Leicas/KataMarrant/compare/v1.2.1...v1.2.2) (2026-05-02)
 
 ### Bug Fixes
