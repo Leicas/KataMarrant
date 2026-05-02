@@ -1,3 +1,9 @@
+## [1.2.2](https://github.com/Leicas/KataMarrant/compare/v1.2.1...v1.2.2) (2026-05-02)
+
+### Bug Fixes
+
+* **ci:** force time/std feature so iOS picks up OffsetDateTime ([170510b](https://github.com/Leicas/KataMarrant/commit/170510bff70f270db7dd6c6e193253b8f6559a3e))
+
 ## [1.2.1](https://github.com/Leicas/KataMarrant/compare/v1.2.0...v1.2.1) (2026-05-02)
 
 ### Bug Fixes
