@@ -2121,7 +2121,7 @@ dependencies = [
 
 [[package]]
 name = "kata-marrant"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "chrono",
  "log",
@@ -2138,6 +2138,7 @@ dependencies = [
  "tauri-plugin-schedule-task",
  "tauri-plugin-store",
  "thiserror 2.0.18",
+ "time",
  "tokio",
 ]
 

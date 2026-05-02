@@ -39,3 +39,10 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 # instead, see scheduler::schedule_next_ios.
 [target.'cfg(target_os = "android")'.dependencies]
 tauri-plugin-schedule-task = { git = "https://github.com/charlesschaefer/tauri-plugin-schedule-task", branch = "main" }
+
+# iOS-only: tauri-plugin-notification's `Schedule::At { date, ... }` field
+# is `time::OffsetDateTime` (the `time` crate, not chrono). It's already
+# in the lockfile transitively via tauri-plugin-notification — this entry
+# just makes it nameable from `scheduler::schedule_next_ios`.
+[target.'cfg(target_os = "ios")'.dependencies]
+time = "0.3"
