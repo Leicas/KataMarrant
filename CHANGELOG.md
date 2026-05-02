@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/Leicas/KataMarrant/compare/v1.0.0...v1.1.0) (2026-05-02)
+
+### Features
+
+* **sync:** add force-resync recovery action ([1173ce8](https://github.com/Leicas/KataMarrant/commit/1173ce8dd3cca73fd0e1597020aaf3dd7b81c73a))
+
 ## 1.0.0 (2026-05-02)
 
 ### Features
