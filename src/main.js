@@ -2381,15 +2381,30 @@ function buildSyncSection() {
         s.ui.busy = true; s.ui.error_msg = null;
         render();
         let pushOk = true, pullOk = true;
+        let pushErr = null, pullErr = null;
         try {
           const p = await invoke("sync_push");
-          if (p && p.ok === false && p.error !== "not_logged_in") pushOk = false;
-        } catch (e) { pushOk = false; console.warn("sync_push", e); }
+          console.info("sync_push result", p);
+          if (p && p.ok === false && p.error !== "not_logged_in") {
+            pushOk = false; pushErr = p.error || "unknown";
+          }
+        } catch (e) { pushOk = false; pushErr = String(e); console.warn("sync_push", e); }
         try {
           const q = await invoke("sync_pull");
-          if (q && q.ok === false && q.error !== "not_logged_in") pullOk = false;
-        } catch (e) { pullOk = false; console.warn("sync_pull", e); }
-        if (!pushOk || !pullOk) s.ui.error_msg = t("settings.sync.error.unreachable");
+          console.info("sync_pull result", q);
+          if (q && q.ok === false && q.error !== "not_logged_in") {
+            pullOk = false; pullErr = q.error || "unknown";
+          }
+        } catch (e) { pullOk = false; pullErr = String(e); console.warn("sync_pull", e); }
+        if (!pushOk || !pullOk) {
+          // Surface the underlying error tag (http: 401, network: …, decode: …)
+          // so the user can tell connection-refused apart from auth/protocol
+          // problems. Falls back to the generic message if both are null.
+          const reason = pushErr || pullErr;
+          s.ui.error_msg = reason
+            ? `${t("settings.sync.error.unreachable")} (${reason})`
+            : t("settings.sync.error.unreachable");
+        }
         await refreshSyncStatus();
         s.ui.busy = false;
         render();

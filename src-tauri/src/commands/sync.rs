@@ -596,7 +596,12 @@ pub async fn push_inner(state: &tauri::State<'_, AppState>) -> AppResult<SyncRes
     };
 
     // Snapshot stats + logs + gamification + settings under one lock so the
-    // payload is internally consistent.
+    // payload is internally consistent. We also capture the client's clock
+    // *before* the read; that becomes the new `last_pushed_at` cursor on
+    // success. Mixing the server's clock with locally-stamped `updated_at`
+    // values would either re-push or silently skip rows depending on skew —
+    // the cursor must live in the same clock domain as the values it filters.
+    let snapshot_at = chrono::Utc::now().timestamp();
     let (stats, logs, max_log_id, gamification, settings_blob) = {
         let conn = state.db.lock().unwrap();
         let stats = collect_stats_since(&conn, last_pushed_at)?;
@@ -621,14 +626,16 @@ pub async fn push_inner(state: &tauri::State<'_, AppState>) -> AppResult<SyncRes
     let url = format!("{}/sync/push", server_url.trim_end_matches('/'));
     match post_json::<PushRes>(&url, &body, Some(&jwt)).await {
         Ok(resp) => {
-            // Persist the new cursor + clear pending flag.
+            // Persist the new cursor + clear pending flag. `last_pushed_at`
+            // is the *client*'s clock at snapshot time, not server_now —
+            // see comment above the snapshot.
             let conn = state.db.lock().unwrap();
             let new_log_cursor = max_log_id.unwrap_or(last_pushed_log_id);
             conn.execute(
                 "UPDATE sync_state
                  SET last_pushed_at = ?1, last_pushed_log_id = ?2, pending_changes = 0
                  WHERE id = 1",
-                rusqlite::params![resp.server_now, new_log_cursor],
+                rusqlite::params![snapshot_at, new_log_cursor],
             )?;
             Ok(SyncResultDto::ok(stats_count, log_count, resp.server_now))
         }

@@ -357,14 +357,21 @@ pub fn record_answer(
 
 pub fn touch_shown(conn: &Connection, slug: &str) -> AppResult<()> {
     let now = chrono::Utc::now().timestamp();
+    // Stamp `updated_at` so the row is picked up by the next sync push.
+    // Without this, freshly-touched (but never-answered) rows sit at
+    // updated_at = 0 forever and are skipped by `WHERE updated_at > since`.
     conn.execute(
         r#"
-        INSERT INTO technique_stats (slug, last_shown_at)
-        VALUES (?1, ?2)
-        ON CONFLICT(slug) DO UPDATE SET last_shown_at = ?2
+        INSERT INTO technique_stats (slug, last_shown_at, updated_at)
+        VALUES (?1, ?2, ?2)
+        ON CONFLICT(slug) DO UPDATE SET last_shown_at = ?2, updated_at = ?2
         "#,
         params![slug, now],
     )?;
+    let _ = conn.execute(
+        "UPDATE sync_state SET pending_changes = 1 WHERE id = 1",
+        [],
+    );
     Ok(())
 }
 
