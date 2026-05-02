@@ -557,6 +557,12 @@ function navigate(view) {
   if (store.view === "drill" && view !== "drill") {
     clearDrillTimer();
   }
+  // Invalidate cached sync status when entering settings, so the next
+  // buildSyncSection() pulls fresh state. Within a settings session the
+  // status_loaded flag prevents the per-keystroke fetch loop.
+  if (view === "settings" && store.sync) {
+    store.sync.ui.status_loaded = false;
+  }
   store.view = view;
   els(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
   els(".view").forEach(v => v.classList.toggle("active", v.id === `view-${view}`));
@@ -2147,6 +2153,11 @@ function ensureSyncStore() {
         email_input: "",
         token_input: "",
         status: null,
+        // Set true on the first refreshSyncStatus(); the build path uses it
+        // to skip re-fetching on every re-render (which would otherwise
+        // call render() in a .then() and steal focus from any input the
+        // user is typing into — settings, sync, daily goal, all of them).
+        status_loaded: false,
         busy: false,
         error_msg: null,
         info_msg: null,
@@ -2161,9 +2172,11 @@ async function refreshSyncStatus() {
   try {
     const status = await invoke("sync_status");
     s.ui.status = status;
+    s.ui.status_loaded = true;
     if (status?.logged_in) s.ui.phase = "signed_in";
   } catch (e) {
     console.warn("sync_status failed", e);
+    s.ui.status_loaded = true; // even on failure, don't loop the fetch
   }
   return s.ui.status;
 }
@@ -2204,12 +2217,17 @@ function buildSyncSection() {
   wrap.appendChild(h("div", { class: "muted", style: "margin-top:6px; line-height:1.45" },
     t("settings.sync.help")));
 
-  // Async kick to refresh status, then re-render this section. Keeps the
-  // initial render synchronous so the rest of the settings page paints
-  // immediately even if the backend is slow.
-  refreshSyncStatus().then(() => {
-    if (store.view === "settings") render();
-  });
+  // Fetch status ONCE per settings-tab visit. Without the guard, every
+  // keystroke triggers a re-render, which calls buildSyncSection again,
+  // which kicks off another refreshSyncStatus(), whose .then() calls
+  // render() — destroying every <input> on the settings card and stealing
+  // focus mid-keystroke. Explicit user actions (login, sync_now, logout)
+  // still call refreshSyncStatus directly without the guard.
+  if (!s.ui.status_loaded) {
+    refreshSyncStatus().then(() => {
+      if (store.view === "settings") render();
+    });
+  }
 
   if (s.ui.status?.logged_in || s.ui.phase === "signed_in") {
     const status = s.ui.status || {};
