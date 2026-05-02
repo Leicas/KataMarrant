@@ -14,3 +14,7 @@ src-tauri/gen/
 *.jks
 *.keystore
 key.properties
+
+# Dev screenshots / build artifacts (not for the public repo).
+screenshots/
+build-android.log

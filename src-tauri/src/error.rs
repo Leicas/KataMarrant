@@ -9,6 +9,16 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error("Tauri error: {0}")]
     Tauri(#[from] tauri::Error),
+    #[error("Schedule error: {0}")]
+    Schedule(String),
+    #[error("Store error: {0}")]
+    Store(#[from] tauri_plugin_store::Error),
+    #[error("Notification error: {0}")]
+    Notification(#[from] tauri_plugin_notification::Error),
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("Gamification error: {0}")]
+    Gamification(String),
     #[error("{0}")]
     General(String),
 }

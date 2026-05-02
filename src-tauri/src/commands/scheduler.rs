@@ -1,57 +1,65 @@
 use tauri_plugin_store::StoreExt;
 
 use crate::error::{AppError, AppResult};
-use crate::scheduler;
+use crate::scheduler::{self, ScheduleConfig};
 use crate::state::AppState;
 
 const STORE_FILE: &str = "settings.json";
-const KEY_INTERVAL: &str = "quiz_interval_minutes";
-
-const VALID_INTERVALS: &[u64] = &[0, 5, 15, 30, 60, 120, 240, 480];
+const KEY_SCHEDULE: &str = "quiz_schedule";
 
 #[tauri::command]
-pub async fn set_quiz_interval(
-    minutes: u64,
+pub async fn set_quiz_schedule(
+    config: ScheduleConfig,
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
 ) -> AppResult<()> {
-    if !VALID_INTERVALS.contains(&minutes) {
-        return Err(AppError::General(format!(
-            "Invalid interval {minutes}. Allowed: {:?}",
-            VALID_INTERVALS
-        )));
-    }
+    config.validate().map_err(AppError::Schedule)?;
 
     {
         let mut s = state.scheduler.lock().unwrap();
-        s.interval_minutes = minutes;
+        s.config = config.clone();
+        // Reset last_fired_at so the new schedule's first slot can fire as
+        // soon as it arrives (otherwise a recently-fired old config would
+        // suppress the first new slot).
+        s.last_fired_at = 0;
     }
 
-    if let Ok(store) = app_handle.store(STORE_FILE) {
-        store.set(KEY_INTERVAL, serde_json::json!(minutes));
-        if let Err(e) = store.save() {
-            log::error!("Save interval failed: {e}");
-        }
+    let store = app_handle.store(STORE_FILE)?;
+    store.set(KEY_SCHEDULE, serde_json::to_value(&config)?);
+    if let Err(e) = store.save() {
+        log::error!("save schedule failed: {e}");
     }
 
-    log::info!("Quiz interval set to {minutes} min");
+    log::info!("Quiz schedule updated: {:?}", config);
 
-    #[cfg(mobile)]
+    // Re-arm platform-specific path. Desktop reads the new config on its
+    // next tick — no explicit re-arm needed.
+    #[cfg(target_os = "android")]
     {
         let h = app_handle.clone();
         tauri::async_runtime::spawn(async move {
             scheduler::schedule_next(&h).await;
         });
     }
-    #[cfg(desktop)]
-    let _ = &app_handle;
+    #[cfg(target_os = "ios")]
+    {
+        let h = app_handle.clone();
+        tauri::async_runtime::spawn(async move {
+            scheduler::schedule_next_ios(&h).await;
+        });
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let _ = &app_handle;
+        let _ = &scheduler::run_scheduler_loop; // suppress unused-import lint on desktop
+    }
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn get_quiz_interval(state: tauri::State<'_, AppState>) -> AppResult<u64> {
-    Ok(state.scheduler.lock().unwrap().interval_minutes)
+pub fn get_quiz_schedule(state: tauri::State<'_, AppState>) -> AppResult<ScheduleConfig> {
+    Ok(state.scheduler.lock().unwrap().config.clone())
 }
 
 #[tauri::command]

@@ -720,3 +720,291 @@ main {
     border: 0;
   }
 }
+
+/* ----- Profile hero card (Home) ----- */
+.profile-hero {
+  background: linear-gradient(160deg, rgba(239, 68, 68, .14), rgba(253, 230, 138, .04) 70%, var(--bg-elev));
+  border: 1px solid var(--brand-deep);
+  box-shadow: 0 6px 22px rgba(239, 68, 68, .15);
+  padding: 18px 16px 14px;
+}
+.profile-hero h3.profile-section {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 14px 0 8px;
+  display: flex;
+  align-items: baseline;
+}
+.profile-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.profile-level {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-deep), var(--brand));
+  border: 1px solid var(--brand);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, .25);
+}
+.profile-level .lvl-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+  line-height: 1;
+}
+.profile-level .lvl-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, .85);
+  margin-top: 2px;
+}
+.profile-xp {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.xp-track {
+  height: 10px;
+  background: var(--bg-hover);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--kanji));
+  transition: width .3s ease;
+}
+.xp-text {
+  font-size: 11px;
+  text-align: right;
+  font-weight: 600;
+}
+
+.profile-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+.profile-streak,
+.profile-goal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  align-items: center;
+}
+.profile-streak .streak-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--kanji);
+  letter-spacing: .5px;
+}
+.profile-streak .small,
+.profile-goal .small {
+  font-size: 10px;
+  opacity: .8;
+}
+.goal-ring {
+  width: 100%;
+  margin-top: 4px;
+}
+.goal-ring-bar {
+  height: 8px;
+  background: var(--bg-elev);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.goal-ring-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--kanji));
+  transition: width .3s ease;
+}
+.goal-text {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.goal-text .num {
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.mastery-row .stat-bar-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+.ach {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  text-align: center;
+  transition: transform .12s, border-color .12s;
+}
+.ach:hover { transform: translateY(-1px); border-color: var(--brand); }
+.ach .ach-icon {
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 4px;
+  filter: grayscale(1);
+  opacity: .35;
+}
+.ach .ach-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.15;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ach .ach-date {
+  font-size: 9px;
+  margin-top: 3px;
+  opacity: .7;
+}
+.ach.unlocked {
+  background: linear-gradient(160deg, rgba(253, 230, 138, .12), rgba(239, 68, 68, .05));
+  border-color: rgba(253, 230, 138, .35);
+}
+.ach.unlocked .ach-icon { filter: none; opacity: 1; }
+.ach.unlocked .ach-name { color: var(--heading); }
+.ach.unlocked .ach-date { color: var(--kanji); opacity: .85; }
+
+@media (max-width: 380px) {
+  .achievement-grid { grid-template-columns: repeat(3, 1fr); }
+  .profile-row { flex-direction: column; }
+}
+
+/* ----- Micro-feedback toast layer ----- */
+.micro-feedback {
+  position: fixed;
+  top: calc(70px + env(safe-area-inset-top));
+  right: 12px;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  align-items: flex-end;
+}
+.mf-pill {
+  pointer-events: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  color: white;
+  background: linear-gradient(135deg, var(--brand-deep), var(--brand));
+  border: 1px solid rgba(253, 230, 138, .3);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  animation: mfSlideIn .22s cubic-bezier(.2,.8,.2,1);
+}
+.mf-pill.mf-out { animation: mfSlideOut .22s ease-in forwards; }
+.mf-pill.mf-xp {
+  background: linear-gradient(135deg, var(--brand), var(--kanji));
+  color: #1a1f30;
+  text-shadow: 0 1px 0 rgba(255,255,255,.2);
+}
+.mf-pill.mf-combo {
+  background: linear-gradient(135deg, var(--brand-bright), var(--brand));
+}
+.mf-pill.mf-streak {
+  background: linear-gradient(135deg, var(--kanji), var(--brand-bright));
+  color: #1a1f30;
+}
+.mf-pill.mf-level {
+  background: linear-gradient(135deg, var(--good), var(--kanji));
+  color: #082b1f;
+}
+.mf-pill.mf-goal {
+  background: linear-gradient(135deg, var(--kanji), var(--good));
+  color: #1a1f30;
+}
+
+.mf-achievement {
+  pointer-events: auto;
+  width: min(280px, 90vw);
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(239, 68, 68, .9), rgba(185, 28, 28, .9));
+  border: 1px solid var(--kanji);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
+  color: white;
+  cursor: pointer;
+  animation: mfSlideIn .26s cubic-bezier(.2,.8,.2,1);
+}
+.mf-achievement.mf-out { animation: mfSlideOut .26s ease-in forwards; }
+.mf-ach-tag {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--kanji);
+  margin-bottom: 4px;
+}
+.mf-ach-name {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  letter-spacing: .3px;
+}
+.mf-ach-desc {
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: .9;
+}
+
+@keyframes mfSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes mfSlideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+
+/* Track 4 — sync pane in Settings: visually demarcate the optional auth
+   section so it's clearly separated from the always-present scheduler. */
+.sync-pane {
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+.sync-pane > label:first-child {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

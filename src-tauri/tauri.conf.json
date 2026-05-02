@@ -23,7 +23,7 @@
     ],
     "withGlobalTauri": true,
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' data: https:; media-src 'self' data:; connect-src 'self'; script-src 'self'; style-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com"
     }
   },
   "bundle": {
@@ -37,7 +37,10 @@
       "icons/icon.ico"
     ],
     "category": "Education",
-    "shortDescription": "Judo kata & gokyo trainer"
+    "shortDescription": "Judo kata & gokyo trainer",
+    "iOS": {
+      "minimumSystemVersion": "13.0"
+    }
   },
   "plugins": {}
 }

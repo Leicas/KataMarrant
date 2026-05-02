@@ -17,6 +17,8 @@ npm run dev                  # desktop dev (hot-reload frontend, compiles Rust)
 npm run build                # desktop release
 npm run android:dev          # android dev (requires Android Studio + JDK)
 npm run android:build        # android release apk
+npm run ios:dev              # ios dev (requires Xcode on macOS, see iOS section)
+npm run ios:build            # ios release ipa (requires signing setup)
 ```
 
 Rust-only (in `src-tauri/`):
@@ -47,11 +49,11 @@ There are no automated tests.
 | `error.rs` | `AppError` / `AppResult<T>` (serializes to JSON) |
 | `data.rs` | Static `TECHNIQUES: &[Technique]` — 40 Gokyo entries (slug, romaji, kanji, `name_fr`, group, category, judo_how/wiki/image URLs) |
 | `db.rs` | SQLite stats: `technique_stats`, `quiz_log`, helpers |
-| `scheduler.rs` | tokio loop + `tauri-plugin-schedule-task` handler (mobile) |
-| `notification.rs` | Mobile notification channel + show helpers (mobile only) |
+| `scheduler.rs` | `ScheduleConfig`, `next_fire_after`, desktop loop, Android (`schedule_next`) + iOS (`schedule_next_ios`) handlers |
+| `notification.rs` | Mobile notification channel (Android) + show helpers (Android/iOS) |
 | `commands/quiz.rs` | `list_techniques`, `next_question`, `answer_question` |
 | `commands/stats.rs` | `get_overall_stats`, `get_all_technique_stats` |
-| `commands/scheduler.rs` | `set_quiz_interval`, `get_quiz_interval`, `trigger_quiz_now` |
+| `commands/scheduler.rs` | `set_quiz_schedule`, `get_quiz_schedule`, `trigger_quiz_now` |
 
 ### Question selection
 
@@ -75,20 +77,70 @@ or anywhere.
 
 ### Scheduler
 
-Mirrors haply-time:
+The scheduler is driven by a single `ScheduleConfig` (in `scheduler.rs`)
+serialized as JSON under `settings.json` → `quiz_schedule`. Five kinds:
+`Disabled`, `Daily { time, weekdays }`, `TwiceDaily { time_a, time_b, weekdays }`,
+`DailyMinCount { time, min_count, weekdays }` ("smart" — fires unless the user
+already answered ≥ N today), and `EveryMinutes { minutes, quiet_hours? }`. The
+pure function `next_fire_after(...)` computes the next slot and is shared by
+all platforms.
 
-- **Desktop**: tokio loop tick every 30s, emits `show_quiz_prompt` once
-  `interval_minutes` of wall-clock has passed.
-- **Mobile**: `tauri-plugin-schedule-task` fires `quiz_prompt`, the handler emits
-  `show_quiz_prompt`, shows a system notification, and re-arms the next slot.
+- **Desktop**: tokio loop tick every 30s; compares `next_fire_after` to `Local::now()`
+  and emits `show_quiz_prompt` when due.
+- **Android**: `tauri-plugin-schedule-task` (WorkManager) — re-armed via
+  `scheduler::schedule_next` after each fire. Plugin is **Android-only**: the
+  upstream crate ships no iOS impl.
+- **iOS**: `tauri-plugin-notification` schedules pending local notifications
+  upfront via `scheduler::schedule_next_ios` (capped at 32 slots over 30 days
+  to stay well under iOS's 64-pending-notification cap). `RunEvent::Resumed`
+  in `lib.rs` re-enqueues on each foreground so config edits propagate.
+  Caveat: `DailyMinCount` on iOS will always fire the OS-level notification
+  regardless of today's count (the count check only runs while the app is
+  alive); the next foreground tick re-evaluates.
 
-`interval_minutes = 0` disables both paths.
+Migration: an old `quiz_interval_minutes` u64 key (≤ 0.2.0) is auto-translated
+to `EveryMinutes { minutes, quiet_hours: None }` (or `Disabled` for 0) on
+first launch and the legacy key is deleted.
+
+### iOS
+
+- **`bundle.iOS.minimumSystemVersion`** is set to **13.0**.
+- **No `developmentTeam` is configured yet** — the user does not have an
+  Apple Developer account. Local development on a Mac will use Xcode's
+  automatic free signing. Add `developmentTeam` to `tauri.conf.json` once
+  signing is set up.
+- **No App Store / TestFlight builds** until the cert is in place.
+- iOS uses `tauri-plugin-notification` for scheduling, NOT
+  `tauri-plugin-schedule-task` (which has no iOS impl).
+- **Bootstrapping a Mac**: run `npx tauri ios init` once on a Mac with Xcode
+  installed to populate `src-tauri/gen/ios/`. That step is intentionally not
+  automated here because it requires macOS + Xcode.
+- Capability `capabilities/ios.json` declares `notification:default`.
+  `capabilities/mobile.json` is now **Android-only** (drops the
+  `schedule-task:default` permission from iOS where the plugin is absent).
+
+### Sync server (separate, private repo)
+
+The cross-device sync backend lives in a **separate sibling directory**
+`D:\dev\katamarrant-sync\` and is intentionally NOT part of this public
+repo (private deployment, contains SMTP credentials and JWT secrets). It
+is a standalone Rust crate (`katamarrant-sync`, axum + sqlx + sqlite +
+lettre) deployed on the user's Proxmox cluster behind a reverse proxy.
+
+The client side (this repo) talks to it via the commands in
+`src-tauri/src/commands/sync.rs`. The default server URL lives in
+`src-tauri/src/db.rs::sync_state.server_url` and points at
+`https://katamarrant.weill-duflos.fr`. Sync is fully optional — the app
+works offline if the server is unreachable; all sync calls swallow
+network errors and never propagate as fatal.
 
 ### Persistence
 
 - **SQLite** (`rusqlite`, bundled): `technique_stats` (correct/wrong counts +
   last-shown), `quiz_log` (every answer with timestamp).
-- **tauri-plugin-store** (`settings.json`): `quiz_interval_minutes`.
+- **tauri-plugin-store** (`settings.json`): `quiz_schedule` (JSON-tagged
+  `ScheduleConfig`). Legacy `quiz_interval_minutes` key is auto-migrated on
+  first launch (see `lib.rs::migrate_legacy_interval`).
 - **localStorage** (frontend): UI-only prefs (UI language, distractor mode, group
   filter, show-kanji toggle).
 

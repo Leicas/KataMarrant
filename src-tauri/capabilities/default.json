@@ -9,7 +9,6 @@
     "log:default",
     "notification:default",
     "opener:default",
-    "opener:allow-open-url",
-    "schedule-task:default"
+    "opener:allow-open-url"
   ]
 }

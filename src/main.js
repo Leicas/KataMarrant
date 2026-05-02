@@ -6,18 +6,21 @@ const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 const opener = window.__TAURI__.opener;
 
-const VALID_INTERVALS = [
-  { v: 0,    en: "Off",   fr: "Désactivé" },
-  { v: 5,    en: "5 min", fr: "5 min" },
-  { v: 15,   en: "15 min", fr: "15 min" },
-  { v: 30,   en: "30 min", fr: "30 min" },
-  { v: 60,   en: "1 h",   fr: "1 h" },
-  { v: 120,  en: "2 h",   fr: "2 h" },
-  { v: 240,  en: "4 h",   fr: "4 h" },
-  { v: 480,  en: "8 h",   fr: "8 h" },
-];
-
 const RAPID_LENGTH = 10;
+
+// Default schedule mirrors the backend default — Daily 19:00, every day.
+// Used as a fallback when the backend hasn't returned yet.
+//
+// The `weekdays` field is a 7-bit mask (bit0=Mon … bit6=Sun) — the Rust
+// side uses a tuple-newtype `WeekdayMask(u8)` which serde serializes as
+// just the integer.
+const DEFAULT_SCHEDULE = {
+  kind: "daily",
+  time: { hour: 19, minute: 0 },
+  weekdays: 0x7f,
+};
+
+const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 // ---------------------------------------------------------------------------
 // i18n
@@ -94,8 +97,35 @@ const I18N = {
     "settings.lang":      "Language",
     "settings.lang_en":   "English",
     "settings.lang_fr":   "Français",
-    "settings.interval":  "Quiz prompt interval",
-    "settings.interval_help": "Triggers a notification (Android) or in-app prompt (desktop). 0 disables.",
+    "settings.schedule":      "Quiz reminder",
+    "settings.schedule.disabled": "Off",
+    "settings.schedule.daily":    "Daily at fixed time",
+    "settings.schedule.twice":    "Twice daily",
+    "settings.schedule.smart":    "Smart (only if I haven't done enough)",
+    "settings.schedule.every":    "Every N minutes",
+    "settings.schedule.time":     "Time",
+    "settings.schedule.time_a":   "First time",
+    "settings.schedule.time_b":   "Second time",
+    "settings.schedule.weekdays": "Days of week",
+    "settings.schedule.min_count": "Skip if I've already done…",
+    "settings.schedule.minutes":  "Every (minutes)",
+    "settings.schedule.quiet_hours": "Quiet hours",
+    "settings.schedule.quiet_start": "Quiet start",
+    "settings.schedule.quiet_end":   "Quiet end",
+    "settings.schedule.quiet_off":   "No quiet hours",
+    "settings.schedule.weekday.mon": "Mon",
+    "settings.schedule.weekday.tue": "Tue",
+    "settings.schedule.weekday.wed": "Wed",
+    "settings.schedule.weekday.thu": "Thu",
+    "settings.schedule.weekday.fri": "Fri",
+    "settings.schedule.weekday.sat": "Sat",
+    "settings.schedule.weekday.sun": "Sun",
+    "settings.schedule.summary.disabled": "Off",
+    "settings.schedule.summary.daily":    "Daily at {t}",
+    "settings.schedule.summary.twice":    "Twice daily {a} / {b}",
+    "settings.schedule.summary.smart":    "At {t} if fewer than {n} done",
+    "settings.schedule.summary.every":    "Every {n} min",
+    "settings.schedule.help": "Schedules a notification (Android/iOS) or in-app prompt (desktop).",
     "settings.distractor": "Distractor difficulty",
     "settings.dist_group":    "Same gokyo group (hardest)",
     "settings.dist_category": "Same category (te/koshi/ashi/sutemi)",
@@ -147,6 +177,54 @@ const I18N = {
     "cat.koshi-waza":  "Hip techniques",
     "cat.te-waza":     "Hand techniques",
     "cat.sutemi-waza": "Sacrifice throws",
+
+    "profile.title":         "Your dōjō progress",
+    "profile.level":         "Level {n}",
+    "profile.xp":            "{cur} / {next} XP",
+    "profile.streak":        "Streak",
+    "profile.streak_days":   "{n} days",
+    "profile.longest":       "Best: {n}",
+    "profile.daily_goal":    "Daily goal",
+    "profile.goal_progress": "{cur} / {goal}",
+    "profile.combo":         "Best combo: {n}",
+    "profile.mastery":       "Mastery by group",
+    "profile.achievements":  "Achievements",
+    "profile.unlocked":      "{n} / {total} unlocked",
+    "profile.locked":        "Locked",
+    "profile.unlocked_at":   "Unlocked {d}",
+    "settings.daily_goal":   "Daily goal (questions/day)",
+    "settings.daily_goal_help": "Hit this many questions in one day to earn the +25 XP bonus.",
+
+    "settings.sync.title":        "Cross-device sync",
+    "settings.sync.help":         "Optional: sign in to sync your stats and progress between devices. The app keeps working fully offline if the server can't be reached.",
+    "settings.sync.signin_cta":   "Sign in to sync",
+    "settings.sync.email_label":  "Email",
+    "settings.sync.send_magic":   "Send magic link",
+    "settings.sync.magic_sent":   "Magic link sent — check your email and paste the token below.",
+    "settings.sync.token_label":  "Token from email",
+    "settings.sync.verify":       "Verify",
+    "settings.sync.signed_in_as": "Signed in as {email}",
+    "settings.sync.last_synced":  "Last synced: {when}",
+    "settings.sync.never_synced": "never",
+    "settings.sync.sync_now":     "Sync now",
+    "settings.sync.signout":      "Sign out",
+    "settings.sync.auto_sync":    "Auto-sync changes in the background",
+    "settings.sync.error.network":       "Server unreachable — your data stays local.",
+    "settings.sync.error.invalid_token": "Token invalid or expired — try sending a new link.",
+    "settings.sync.error.unreachable":   "Server unreachable.",
+    "settings.sync.status.ok":           "All synced.",
+    "settings.sync.status.pending":      "Pending changes — will push automatically.",
+    "settings.sync.relative.justnow":    "just now",
+    "settings.sync.relative.minutes":    "{n} min ago",
+    "settings.sync.relative.hours":      "{n} h ago",
+    "settings.sync.relative.days":       "{n} d ago",
+
+    "toast.xp":              "+{n} XP",
+    "toast.combo":           "🔥 ×{n}",
+    "toast.streak":          "🔥 {n}-day streak",
+    "toast.level_up":        "Level up! → {n}",
+    "toast.goal_met":        "Daily goal hit!",
+    "toast.achievement":     "Achievement unlocked",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -218,8 +296,35 @@ const I18N = {
     "settings.lang":      "Langue",
     "settings.lang_en":   "English",
     "settings.lang_fr":   "Français",
-    "settings.interval":  "Intervalle du rappel quiz",
-    "settings.interval_help": "Déclenche une notification (Android) ou un prompt (desktop). 0 désactive.",
+    "settings.schedule":      "Rappel quiz",
+    "settings.schedule.disabled": "Désactivé",
+    "settings.schedule.daily":    "Quotidien à heure fixe",
+    "settings.schedule.twice":    "Deux fois par jour",
+    "settings.schedule.smart":    "Smart (seulement si pas assez fait)",
+    "settings.schedule.every":    "Toutes les N minutes",
+    "settings.schedule.time":     "Heure",
+    "settings.schedule.time_a":   "Première heure",
+    "settings.schedule.time_b":   "Deuxième heure",
+    "settings.schedule.weekdays": "Jours de la semaine",
+    "settings.schedule.min_count": "Ignorer si déjà fait…",
+    "settings.schedule.minutes":  "Toutes les (minutes)",
+    "settings.schedule.quiet_hours": "Heures silencieuses",
+    "settings.schedule.quiet_start": "Début du silence",
+    "settings.schedule.quiet_end":   "Fin du silence",
+    "settings.schedule.quiet_off":   "Pas d'heures silencieuses",
+    "settings.schedule.weekday.mon": "Lun",
+    "settings.schedule.weekday.tue": "Mar",
+    "settings.schedule.weekday.wed": "Mer",
+    "settings.schedule.weekday.thu": "Jeu",
+    "settings.schedule.weekday.fri": "Ven",
+    "settings.schedule.weekday.sat": "Sam",
+    "settings.schedule.weekday.sun": "Dim",
+    "settings.schedule.summary.disabled": "Désactivé",
+    "settings.schedule.summary.daily":    "Tous les jours à {t}",
+    "settings.schedule.summary.twice":    "Deux fois par jour {a} / {b}",
+    "settings.schedule.summary.smart":    "À {t} si moins de {n} fait",
+    "settings.schedule.summary.every":    "Toutes les {n} min",
+    "settings.schedule.help": "Déclenche une notification (Android/iOS) ou un prompt (desktop).",
     "settings.distractor": "Difficulté des distracteurs",
     "settings.dist_group":    "Même groupe gokyo (le + dur)",
     "settings.dist_category": "Même catégorie (te/koshi/ashi/sutemi)",
@@ -271,6 +376,54 @@ const I18N = {
     "cat.koshi-waza":  "Techniques de hanche",
     "cat.te-waza":     "Techniques de bras",
     "cat.sutemi-waza": "Techniques de sacrifice",
+
+    "profile.title":         "Ta progression au dōjō",
+    "profile.level":         "Niveau {n}",
+    "profile.xp":            "{cur} / {next} XP",
+    "profile.streak":        "Série",
+    "profile.streak_days":   "{n} jours",
+    "profile.longest":       "Record : {n}",
+    "profile.daily_goal":    "Objectif quotidien",
+    "profile.goal_progress": "{cur} / {goal}",
+    "profile.combo":         "Meilleur combo : {n}",
+    "profile.mastery":       "Maîtrise par groupe",
+    "profile.achievements":  "Succès",
+    "profile.unlocked":      "{n} / {total} débloqués",
+    "profile.locked":        "Verrouillé",
+    "profile.unlocked_at":   "Débloqué le {d}",
+    "settings.daily_goal":   "Objectif quotidien (questions/jour)",
+    "settings.daily_goal_help": "Atteins ce nombre dans la journée pour gagner les +25 XP bonus.",
+
+    "settings.sync.title":        "Synchro multi-appareils",
+    "settings.sync.help":         "Optionnel : connecte-toi pour synchroniser tes stats entre appareils. L'app reste 100 % utilisable hors ligne.",
+    "settings.sync.signin_cta":   "Se connecter pour synchroniser",
+    "settings.sync.email_label":  "Email",
+    "settings.sync.send_magic":   "Envoyer le lien magique",
+    "settings.sync.magic_sent":   "Lien envoyé — vérifie ta boîte mail et colle le code ci-dessous.",
+    "settings.sync.token_label":  "Code reçu par email",
+    "settings.sync.verify":       "Valider",
+    "settings.sync.signed_in_as": "Connecté en tant que {email}",
+    "settings.sync.last_synced":  "Dernière synchro : {when}",
+    "settings.sync.never_synced": "jamais",
+    "settings.sync.sync_now":     "Synchroniser",
+    "settings.sync.signout":      "Se déconnecter",
+    "settings.sync.auto_sync":    "Synchronisation automatique en arrière-plan",
+    "settings.sync.error.network":       "Serveur injoignable — tes données restent locales.",
+    "settings.sync.error.invalid_token": "Code invalide ou expiré — redemande un nouveau lien.",
+    "settings.sync.error.unreachable":   "Serveur injoignable.",
+    "settings.sync.status.ok":           "Tout est synchronisé.",
+    "settings.sync.status.pending":      "Changements en attente — pousse automatiquement.",
+    "settings.sync.relative.justnow":    "à l'instant",
+    "settings.sync.relative.minutes":    "il y a {n} min",
+    "settings.sync.relative.hours":      "il y a {n} h",
+    "settings.sync.relative.days":       "il y a {n} j",
+
+    "toast.xp":              "+{n} XP",
+    "toast.combo":           "🔥 ×{n}",
+    "toast.streak":          "🔥 {n} jours d'affilée",
+    "toast.level_up":        "Niveau supérieur ! → {n}",
+    "toast.goal_met":        "Objectif atteint !",
+    "toast.achievement":     "Succès débloqué",
   },
 };
 
@@ -292,19 +445,30 @@ const store = {
   lang: "en",
   techniques: [],
   settings: {
-    interval: 0,
+    // Schedule mirrors the backend `ScheduleConfig` (serde tag = "kind").
+    // Initialized from the backend on boot via fetchSchedule().
+    schedule: { ...DEFAULT_SCHEDULE },
     distractor_mode: "same-group",
     group_filter: 0,
     show_kanji_hint: false,   // image-first quiz; kanji always revealed after answer
     quiz_prompt_mode: "image", // "image" | "japanese" (kanji+romaji card, FR choices)
     drill: {
       duration_s: 10,
-      prompt_mode: "image",   // "image" | "kanji" | "romaji"
+      // Audio is the canary default — the most pedagogically valuable
+      // drill for Japanese pronunciation. loadLocalSettings preserves any
+      // saved value in ["image","kanji","romaji","audio"] so existing
+      // users keep their preference.
+      prompt_mode: "audio",
     },
   },
   quiz: null,
   rapid: null,
   drill: null,
+  // Gamification snapshot (level, xp, streak, daily_goal, today). Refreshed
+  // from the backend on boot and after each answer via the augmented
+  // answer_question response. Used to seed UI defaults (daily-goal stepper,
+  // profile card before the live fetch resolves).
+  gamification: null,
 };
 
 const STORE_KEYS = {
@@ -324,11 +488,55 @@ const STORE_KEYS = {
 const el = (sel, root = document) => root.querySelector(sel);
 const els = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+// Parse a "k1: v1; k2: v2" CSS-string into an object. Used to keep
+// inline-style call sites readable while applying styles via the DOM API
+// (so no `style="…"` attribute is emitted — the CSP omits 'unsafe-inline'
+// for style-src, and we don't want runtime violations).
+function parseStyleString(s) {
+  const out = {};
+  if (!s) return out;
+  for (const decl of String(s).split(";")) {
+    const colon = decl.indexOf(":");
+    if (colon < 0) continue;
+    const k = decl.slice(0, colon).trim();
+    const v = decl.slice(colon + 1).trim();
+    if (!k) continue;
+    // node.style uses camelCase property names (e.g. "fontSize"). Convert
+    // kebab-case CSS keys; if the key is already camelCase or a custom
+    // property (--var) it round-trips unchanged.
+    let prop = k;
+    if (k.startsWith("--")) {
+      // Custom properties — set via setProperty later by returning a
+      // sentinel. Keep flat object for simplicity: keys starting with "--"
+      // are detected by the caller.
+      out[k] = v;
+    } else {
+      prop = k.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      out[prop] = v;
+    }
+  }
+  return out;
+}
+
+function applyStyle(node, value) {
+  const obj = typeof value === "string" ? parseStyleString(value) : value || {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v == null) continue;
+    if (k.startsWith("--")) {
+      node.style.setProperty(k, v);
+    } else {
+      // Direct assignment — node.style[prop] = v.
+      node.style[k] = v;
+    }
+  }
+}
+
 function h(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (k === "class") node.className = v;
     else if (k === "html") node.innerHTML = v;
+    else if (k === "style") applyStyle(node, v);
     else if (k.startsWith("on") && typeof v === "function") {
       node.addEventListener(k.slice(2).toLowerCase(), v);
     } else if (v !== false && v != null) {
@@ -424,31 +632,19 @@ function fuzzyMatchRomaji(input, target) {
 }
 
 // ---------------------------------------------------------------------------
-// Text-to-speech for the audio drill mode.
-// Web Speech API works in modern Chromium WebViews. On Android, both the
-// availability and the quality of pronunciation depend on the installed
-// system TTS engine (typically Google TTS with the Japanese voice pack).
-// When no ja-* voice is present we fall back to the platform default and
-// drop the explicit lang= so the default voice doesn't reject the
-// utterance. Many Android engines ALSO require a user gesture before the
-// first speak() — so the auto-play below is best-effort, and the visible
-// 🔊 ▶ button (a real tap) is the reliable trigger.
+// Audio for the drill mode.
+// We *only* play pre-rendered MP3 clips from `src/assets/audio/<slug>.mp3`.
+// The Web Speech API path was removed because system TTS quality varies
+// wildly (Windows SAPI "Haruka Desktop" / Android default engines often
+// spell out romaji or use a robotic voice), and the live fallback to romaji
+// produced the bad pronunciations the user reported. The clips are
+// generated up-front by `scripts/generate_audio.py`, which can use OpenAI
+// gpt-4o-mini-tts (premium), Microsoft Edge Neural (free, default), or
+// gTTS (last-resort fallback). Same clip plays everywhere — desktop and
+// Android — so what you hear in dev is what users hear on a phone.
 // ---------------------------------------------------------------------------
 
 let _lastSpokenSlug = null;
-
-function ttsAvailable() {
-  return typeof window !== "undefined"
-    && !!window.speechSynthesis
-    && typeof window.SpeechSynthesisUtterance === "function";
-}
-
-function ttsVoiceSummary() {
-  if (!ttsAvailable()) return { available: false, count: 0, jp: 0 };
-  const voices = window.speechSynthesis.getVoices?.() || [];
-  const jp = voices.filter(v => (v.lang || "").toLowerCase().startsWith("ja")).length;
-  return { available: true, count: voices.length, jp };
-}
 
 // Cache of clip availability per slug — populated lazily on first play
 // attempt. Avoids hammering the WebView with 404-equivalent loads when
@@ -458,6 +654,10 @@ let _audioEl = null;
 
 function clipUrl(tech) {
   return `assets/audio/${tech.slug}.mp3`;
+}
+
+function clipStatusSummary(tech) {
+  return { known: _clipKnown.get(tech.slug) || null };
 }
 
 function playAudioClip(tech) {
@@ -471,8 +671,12 @@ function playAudioClip(tech) {
   _audioEl.src = url;
   const onError = () => {
     _clipKnown.set(tech.slug, "missing");
-    console.warn("[TTS] clip missing:", url);
+    console.warn("[audio] clip missing:", url);
     _audioEl.removeEventListener("error", onError);
+    if (typeof render === "function" && store.view === "drill"
+        && store.settings.drill.prompt_mode === "audio") {
+      render();
+    }
   };
   const onLoaded = () => {
     _clipKnown.set(tech.slug, "ok");
@@ -482,63 +686,22 @@ function playAudioClip(tech) {
   _audioEl.addEventListener("loadeddata", onLoaded);
   const p = _audioEl.play();
   if (p && typeof p.catch === "function") {
-    p.catch((e) => console.warn("[TTS] play() rejected:", e?.message || e));
+    p.catch((e) => console.warn("[audio] play() rejected:", e?.message || e));
   }
   return true;
 }
 
 function speakTechnique(tech) {
-  if (ttsAvailable()) {
-    try {
-      // cancel() clears any utterance still pending from a previous question.
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(tech.name);
-      const voices = window.speechSynthesis.getVoices?.() || [];
-      const jp = voices.find(v => (v.lang || "").toLowerCase().startsWith("ja"));
-      if (jp) {
-        u.voice = jp;
-        u.lang = jp.lang || "ja-JP";
-      } else {
-        u.lang = "";
-      }
-      u.rate = 0.85;
-      u.onstart = () => console.log("[TTS] start:", tech.name, "voice:", u.voice?.name || "(default)");
-      u.onerror = (ev) => console.warn("[TTS] error:", ev?.error || ev);
-      u.onend = () => console.log("[TTS] end:", tech.name);
-      window.speechSynthesis.speak(u);
-      return true;
-    } catch (e) {
-      console.error("[TTS] Web Speech threw, trying clip:", e);
-    }
-  }
-  // Fallback path: Android System WebView doesn't expose speechSynthesis,
-  // so we play a pre-recorded MP3 clip from `src/assets/audio/<slug>.mp3`.
-  // See scripts/generate_audio.py to regenerate the clip set.
   return playAudioClip(tech);
 }
 
 function maybeAutoSpeak(tech) {
   if (_lastSpokenSlug === tech.slug) return;
   _lastSpokenSlug = tech.slug;
-  // Defer slightly so the WebView paints the prompt before speak() fires.
-  // On Android WebView the first speak() of a session may be silently
-  // blocked until a user gesture happens; the manual replay button covers
-  // that case.
+  // Defer slightly so the WebView paints the prompt before play() fires.
+  // On Android WebView the first audio element may be silently blocked
+  // until a user gesture happens; the manual replay button covers that.
   setTimeout(() => speakTechnique(tech), 120);
-}
-
-// Some engines populate the voice list asynchronously. When voices arrive,
-// re-render the active drill so the diagnostic line below the audio button
-// reflects the now-available ja voice.
-if (typeof window !== "undefined" && window.speechSynthesis) {
-  try {
-    window.speechSynthesis.addEventListener?.("voiceschanged", () => {
-      if (typeof render === "function" && store.view === "drill"
-          && store.settings.drill.prompt_mode === "audio") {
-        render();
-      }
-    });
-  } catch (_) { /* older WebViews */ }
 }
 
 function makeImageEl(tech, alt) {
@@ -697,23 +860,50 @@ function bindVideoModal() {
   });
 }
 
-function intervalLabel(v) {
-  const i = VALID_INTERVALS.find(i => i.v === v);
-  return i ? i[store.lang] || i.en : String(v);
+function fmtTime(t) {
+  if (!t) return "??:??";
+  const hh = String(t.hour).padStart(2, "0");
+  const mm = String(t.minute).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+// Human label for the current schedule, used in the Home card and
+// settings UI.
+function scheduleSummary(cfg) {
+  if (!cfg) return t("settings.schedule.summary.disabled");
+  switch (cfg.kind) {
+    case "disabled":
+      return t("settings.schedule.summary.disabled");
+    case "daily":
+      return t("settings.schedule.summary.daily", { t: fmtTime(cfg.time) });
+    case "twice_daily":
+      return t("settings.schedule.summary.twice", {
+        a: fmtTime(cfg.time_a), b: fmtTime(cfg.time_b) });
+    case "daily_min_count":
+      return t("settings.schedule.summary.smart", {
+        t: fmtTime(cfg.time), n: cfg.min_count });
+    case "every_minutes":
+      return t("settings.schedule.summary.every", { n: cfg.minutes });
+    default:
+      return cfg.kind;
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Backend wrappers
 // ---------------------------------------------------------------------------
 
-async function fetchInterval() {
-  try { store.settings.interval = await invoke("get_quiz_interval"); }
-  catch (e) { console.error(e); }
+async function fetchSchedule() {
+  try {
+    const cfg = await invoke("get_quiz_schedule");
+    if (cfg && cfg.kind) store.settings.schedule = cfg;
+  } catch (e) { console.error(e); }
 }
 
-async function setInterval_(minutes) {
-  await invoke("set_quiz_interval", { minutes });
-  store.settings.interval = minutes;
+async function setSchedule(config) {
+  await invoke("set_quiz_schedule", { config });
+  store.settings.schedule = config;
+  try { queueSyncFlush(); } catch (_) {}
 }
 
 async function fetchTechniques() {
@@ -740,7 +930,120 @@ async function fetchNextQuestion() {
 }
 
 async function recordAnswer(slug, correct, mode, responseMs) {
-  return invoke("answer_question", { slug, correct, mode, responseMs: responseMs ?? null });
+  const outcome = await invoke("answer_question", {
+    slug, correct, mode, responseMs: responseMs ?? null,
+  });
+  if (outcome) handleGamificationOutcome(outcome);
+  // Sync glue: every answered question marks pending changes server-side.
+  // Schedule a debounced push so a flurry of answers collapses to one
+  // network call. The function itself silently noops if the user is logged
+  // out or auto-sync is off.
+  try { queueSyncFlush(); } catch (_) {}
+  return outcome;
+}
+
+async function fetchGamificationState() {
+  try { return await invoke("get_gamification_state"); }
+  catch (e) { console.error("get_gamification_state", e); return null; }
+}
+
+async function fetchAchievements() {
+  try { return await invoke("list_achievements"); }
+  catch (e) { console.error("list_achievements", e); return []; }
+}
+
+async function setDailyGoal(goal) {
+  try { await invoke("set_daily_goal", { goal }); }
+  catch (e) { console.error("set_daily_goal", e); }
+  try { queueSyncFlush(); } catch (_) {}
+}
+
+async function completeRapid(correctCount, total) {
+  try {
+    const newly = await invoke("complete_rapid", { correctCount, total });
+    if (Array.isArray(newly)) {
+      for (const a of newly) showAchievementOverlay(a);
+    }
+  } catch (e) { console.error("complete_rapid", e); }
+}
+
+async function completeDrillRun(consecutiveCorrect, promptMode) {
+  try {
+    const newly = await invoke("complete_drill_run", {
+      consecutiveCorrect, promptMode,
+    });
+    if (Array.isArray(newly)) {
+      for (const a of newly) showAchievementOverlay(a);
+    }
+  } catch (e) { console.error("complete_drill_run", e); }
+}
+
+// ---------------------------------------------------------------------------
+// Toast / micro-feedback layer for gamification events.
+// ---------------------------------------------------------------------------
+
+function ensureToastLayer() {
+  let layer = el("#micro-feedback");
+  if (layer) return layer;
+  layer = h("div", { id: "micro-feedback", class: "micro-feedback" });
+  document.body.appendChild(layer);
+  return layer;
+}
+
+function showToast(text, kind = "xp", durationMs = 1200) {
+  const layer = ensureToastLayer();
+  const pill = h("div", { class: `mf-pill mf-${kind}` }, text);
+  layer.appendChild(pill);
+  setTimeout(() => {
+    pill.classList.add("mf-out");
+    setTimeout(() => { try { pill.remove(); } catch (_) {} }, 250);
+  }, durationMs);
+}
+
+function showAchievementOverlay(ach) {
+  if (!ach) return;
+  const name = store.lang === "fr" ? ach.name_fr : ach.name_en;
+  const desc = store.lang === "fr" ? ach.description_fr : ach.description_en;
+  const layer = ensureToastLayer();
+  const card = h("div", { class: "mf-achievement" },
+    h("div", { class: "mf-ach-tag" }, t("toast.achievement")),
+    h("div", { class: "mf-ach-name" }, name),
+    h("div", { class: "mf-ach-desc" }, desc || ""),
+  );
+  card.addEventListener("click", () => {
+    card.classList.add("mf-out");
+    setTimeout(() => { try { card.remove(); } catch (_) {} }, 250);
+  });
+  layer.appendChild(card);
+  setTimeout(() => {
+    card.classList.add("mf-out");
+    setTimeout(() => { try { card.remove(); } catch (_) {} }, 250);
+  }, 3000);
+}
+
+// Process the augmented `answer_question` response and dispatch the right
+// micro-feedback. Called once per recorded answer.
+function handleGamificationOutcome(o) {
+  if (!o) return;
+  if (o.xp_gained > 0) {
+    showToast(t("toast.xp", { n: o.xp_gained }), "xp", 1000);
+  }
+  if (o.current_combo >= 2) {
+    showToast(t("toast.combo", { n: o.current_combo }), "combo", 1200);
+  }
+  if (o.streak_changed && o.current_streak > 1) {
+    showToast(t("toast.streak", { n: o.current_streak }), "streak", 1500);
+  }
+  if (o.level_up) {
+    showToast(t("toast.level_up", { n: o.level }), "level", 1800);
+  }
+  if (o.today && o.today.goal_met && o.today.questions === o.today.goal) {
+    // Fire only the first time we cross the threshold (questions == goal).
+    showToast(t("toast.goal_met"), "goal", 1800);
+  }
+  if (Array.isArray(o.unlocked)) {
+    for (const a of o.unlocked) showAchievementOverlay(a);
+  }
 }
 
 // Compute elapsed milliseconds since the question was first rendered. Returns
@@ -757,22 +1060,161 @@ function elapsedMs(shownAt) {
 // View renderers
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Profile hero card — XP / level, streak, daily goal, mastery, achievements.
+// Rendered into a slot inside renderHome so it appears at the top of the home
+// page without a tab of its own.
+// ---------------------------------------------------------------------------
+
+async function renderProfile(slot) {
+  if (!slot) return;
+  slot.innerHTML = "";
+
+  const [g, achievements, allTech] = await Promise.all([
+    fetchGamificationState(),
+    fetchAchievements(),
+    fetchAllStats().catch(() => []),
+  ]);
+  if (!g) return;
+
+  const card = h("div", { class: "card profile-hero" });
+
+  // Top row: level + XP bar.
+  const xpInLevel = g.xp_total - g.xp_for_current_level;
+  const xpSpan = Math.max(1, g.xp_for_next_level - g.xp_for_current_level);
+  const xpPct = Math.max(0, Math.min(100, (xpInLevel / xpSpan) * 100));
+  card.appendChild(h("div", { class: "profile-top" },
+    h("div", { class: "profile-level" },
+      h("span", { class: "lvl-num" }, String(g.level)),
+      h("span", { class: "lvl-label" }, t("profile.level", { n: g.level })),
+    ),
+    h("div", { class: "profile-xp" },
+      h("div", { class: "xp-track" },
+        h("div", { class: "xp-fill", style: `width:${xpPct}%` }),
+      ),
+      h("div", { class: "xp-text muted" },
+        t("profile.xp", { cur: xpInLevel, next: xpSpan }),
+      ),
+    ),
+  ));
+
+  // Streak + daily-goal ring.
+  const goal = Math.max(1, g.daily_goal);
+  const today = g.today || { questions: 0, correct: 0, goal_met: false };
+  const goalPct = Math.max(0, Math.min(100, (today.questions / goal) * 100));
+  card.appendChild(h("div", { class: "profile-row" },
+    h("div", { class: "profile-streak" },
+      h("div", { class: "streak-num" }, `🔥 ${g.current_streak}`),
+      h("div", { class: "muted" },
+        t("profile.streak_days", { n: g.current_streak })),
+      h("div", { class: "muted small" },
+        t("profile.longest", { n: g.longest_streak })),
+    ),
+    h("div", { class: "profile-goal" },
+      h("div", { class: "goal-ring" },
+        h("div", { class: "goal-ring-bar" },
+          h("div", { class: "goal-ring-fill", style: `width:${goalPct}%` }),
+        ),
+      ),
+      h("div", { class: "goal-text" },
+        h("span", {}, t("profile.daily_goal")),
+        h("span", { class: "num" },
+          t("profile.goal_progress", { cur: today.questions, goal })),
+      ),
+      g.best_combo > 1
+        ? h("div", { class: "muted small" }, t("profile.combo", { n: g.best_combo }))
+        : null,
+    ),
+  ));
+
+  // Mastery per group — count techniques in each group with correct_count >= 3
+  // AND last_correct = 1.
+  const statBy = {};
+  for (const s of allTech) statBy[s.slug] = s;
+  const techByGroup = {};
+  for (const tech of store.techniques) {
+    if (!techByGroup[tech.group]) techByGroup[tech.group] = [];
+    techByGroup[tech.group].push(tech);
+  }
+  card.appendChild(h("h3", { class: "profile-section" }, t("profile.mastery")));
+  for (let gi = 1; gi <= 5; gi++) {
+    const list = techByGroup[gi] || [];
+    let mastered = 0;
+    for (const tech of list) {
+      const s = statBy[tech.slug];
+      if (s && s.correct_count >= 3 && s.last_correct === true) mastered++;
+    }
+    const total = list.length || 8;
+    const pct = total ? (mastered / total) * 100 : 0;
+    card.appendChild(h("div", { class: "stat-bar-row mastery-row" },
+      h("div", { class: "stat-bar-label" }, `${gi}. ${GROUP_NAMES[gi] || ""}`),
+      h("div", { class: "stat-bar-track" },
+        h("div", {
+          class: `stat-bar-fill ${pct >= 100 ? "good" : "gold"}`,
+          style: `width:${pct}%`,
+        }),
+      ),
+      h("div", { class: "stat-bar-value" }, `${mastered} / ${total}`),
+    ));
+  }
+
+  // Achievements grid.
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  card.appendChild(h("h3", { class: "profile-section" },
+    t("profile.achievements"),
+    h("span", { class: "muted small", style: "margin-left:8px" },
+      t("profile.unlocked", { n: unlockedCount, total: achievements.length })),
+  ));
+  const grid = h("div", { class: "achievement-grid" });
+  for (const a of achievements) {
+    const name = store.lang === "fr" ? a.name_fr : a.name_en;
+    const desc = store.lang === "fr" ? a.description_fr : a.description_en;
+    const cls = `ach ${a.unlocked ? "unlocked" : "locked"}`;
+    let dateStr = "";
+    if (a.unlocked && a.unlocked_at) {
+      try {
+        const d = new Date(a.unlocked_at * 1000);
+        dateStr = d.toLocaleDateString(store.lang === "fr" ? "fr-FR" : "en-US", {
+          month: "short", day: "numeric",
+        });
+      } catch (_) {}
+    }
+    grid.appendChild(h("div", { class: cls, title: desc },
+      h("div", { class: "ach-icon" }, a.unlocked ? "🥋" : "🔒"),
+      h("div", { class: "ach-name" }, name),
+      a.unlocked && dateStr
+        ? h("div", { class: "ach-date muted small" }, dateStr)
+        : h("div", { class: "ach-date muted small" }, t("profile.locked")),
+    ));
+  }
+  card.appendChild(grid);
+
+  slot.appendChild(card);
+}
+
 async function renderHome() {
   const root = el("#view-home");
   root.innerHTML = "";
 
-  let stats = { total_answered: 0, total_correct: 0, streak_today: 0 };
+  let stats = { total_answered: 0, total_correct: 0, questions_today: 0 };
   try { stats = await fetchOverallStats(); } catch (_) {}
 
   const accuracy = stats.total_answered
     ? Math.round((stats.total_correct / stats.total_answered) * 100)
     : 0;
 
+  // Profile hero card — pulls gamification state + achievements + technique
+  // stats. Renders synchronously below; we kick off the fetches now and
+  // append the rendered card once everything resolves. The other cards
+  // append immediately so the page paints fast.
+  const profileSlot = h("div", { class: "profile-slot" });
+  root.appendChild(profileSlot);
+
   root.appendChild(h("div", { class: "card" },
     h("h2", {}, t("home.today")),
     h("div", { class: "stat-row" },
       h("span", {}, t("home.questions")),
-      h("span", { class: "num" }, String(stats.streak_today)),
+      h("span", { class: "num" }, String(stats.questions_today)),
     ),
     h("div", { class: "stat-row" },
       h("span", {}, t("home.accuracy")),
@@ -784,9 +1226,12 @@ async function renderHome() {
     ),
     h("div", { class: "stat-row" },
       h("span", {}, t("home.prompt")),
-      h("span", { class: "num" }, intervalLabel(store.settings.interval)),
+      h("span", { class: "num" }, scheduleSummary(store.settings.schedule)),
     ),
   ));
+
+  // Render the profile hero asynchronously.
+  renderProfile(profileSlot).catch(e => console.error("renderProfile", e));
 
   root.appendChild(h("div", { class: "card" },
     h("h2", {}, t("home.practice")),
@@ -841,24 +1286,16 @@ function renderQuizCard(q, mode, opts = {}) {
       h("div", { class: "prompt-kanji big" }, tech.kanji),
     );
   } else if (promptMode === "audio") {
-    const tts = ttsVoiceSummary();
+    // Pre-rendered MP3 clips are the only audio source — see speakTechnique
+    // and scripts/generate_audio.py.
+    const { known } = clipStatusSummary(tech);
     let diag;
-    if (!tts.available) {
-      // Android WebView path. We fall back to pre-recorded MP3 clips.
-      const known = _clipKnown.get(tech.slug);
-      if (known === "missing") {
-        diag = "⚠ no clip for this technique — run scripts/generate_audio.py";
-      } else if (known === "ok") {
-        diag = "♪ playing recorded clip";
-      } else {
-        diag = "♪ recorded clip (Web Speech unavailable in WebView)";
-      }
-    } else if (tts.count === 0) {
-      diag = "voices loading…";
-    } else if (tts.jp === 0) {
-      diag = `⚠ no ja-JP voice (${tts.count} voices) — install Japanese in TTS settings`;
+    if (known === "missing") {
+      diag = "⚠ no clip for this technique — run scripts/generate_audio.py";
+    } else if (known === "ok") {
+      diag = "♪ recorded clip";
     } else {
-      diag = `ja-JP ✓ · ${tts.jp}/${tts.count} voices`;
+      diag = "♪ recorded clip";
     }
     promptEl = h("div", { class: "quiz-text-prompt audio-mode" },
       h("button", {
@@ -1061,6 +1498,11 @@ async function renderRapid() {
   // End-of-run scoreboard.
   if (store.rapid.current >= store.rapid.total) {
     const r = store.rapid;
+    // Fire the perfect-burst achievement check exactly once per run.
+    if (!r._completed) {
+      r._completed = true;
+      completeRapid(r.correct, r.total);
+    }
     const pct = Math.round((r.correct / r.total) * 100);
     root.appendChild(h("div", { class: "card" },
       h("div", { class: "score-big" }, `${r.correct} / ${r.total}`),
@@ -1156,6 +1598,8 @@ function armDrillTimer() {
     store.drill.timed_out = true;
     store.drill.picked = null;
     store.drill.timer_id = null;
+    // Timeout = wrong → resets the silent-sensei consecutive counter.
+    store.drill.consecutive_correct = 0;
     try { await recordAnswer(slug, false, "drill", respMs); }
     catch (e) { console.error(e); }
     render();
@@ -1172,6 +1616,10 @@ async function startDrill() {
     timer_id: null,
     deadline: 0,
     shown_at: 0,
+    // Number of consecutive correct answers in the current run, without
+    // exiting. Reset by clearDrillTimer() when the user leaves the view.
+    consecutive_correct: 0,
+    sensei_fired: false,
   };
   render();
   try {
@@ -1263,6 +1711,19 @@ async function renderDrill() {
       d.answered = true;
       d.picked = slug;
       const ms = elapsedMs(d.shown_at);
+      if (isCorrect) {
+        d.consecutive_correct = (d.consecutive_correct || 0) + 1;
+        // Silent-sensei: 10 consecutive correct answers without exiting,
+        // in audio prompt mode. Fire backend check once per achievement.
+        if (!d.sensei_fired
+            && d.consecutive_correct >= 10
+            && store.settings.drill.prompt_mode === "audio") {
+          d.sensei_fired = true;
+          completeDrillRun(d.consecutive_correct, "audio");
+        }
+      } else {
+        d.consecutive_correct = 0;
+      }
       try { await recordAnswer(q.answer.slug, isCorrect, "drill", ms); }
       catch (e) { console.error(e); }
       render();
@@ -1443,6 +1904,474 @@ async function renderBrowse() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Schedule editor — kind picker + conditional sub-fields. Each change
+// debounces a single backend save; intermediate edits don't hit the disk.
+// ---------------------------------------------------------------------------
+
+let _scheduleSaveTimer = null;
+
+function debounceSaveSchedule(cfg) {
+  store.settings.schedule = cfg;
+  if (_scheduleSaveTimer) clearTimeout(_scheduleSaveTimer);
+  _scheduleSaveTimer = setTimeout(async () => {
+    _scheduleSaveTimer = null;
+    try { await setSchedule(cfg); }
+    catch (e) { console.error("setSchedule failed", e); }
+  }, 220);
+}
+
+function buildScheduleEditor() {
+  const wrap = h("div", { class: "field" },
+    h("label", {}, t("settings.schedule")),
+  );
+
+  const cfg = store.settings.schedule || { ...DEFAULT_SCHEDULE };
+  const kind = cfg.kind || "disabled";
+
+  const kindSelect = h("select", {});
+  for (const [k, label] of [
+    ["disabled",        t("settings.schedule.disabled")],
+    ["daily",           t("settings.schedule.daily")],
+    ["twice_daily",     t("settings.schedule.twice")],
+    ["daily_min_count", t("settings.schedule.smart")],
+    ["every_minutes",   t("settings.schedule.every")],
+  ]) {
+    const opt = h("option", { value: k }, label);
+    if (k === kind) opt.selected = true;
+    kindSelect.appendChild(opt);
+  }
+  kindSelect.addEventListener("change", () => {
+    const next = defaultsForKind(kindSelect.value);
+    debounceSaveSchedule(next);
+    render();
+  });
+  wrap.appendChild(kindSelect);
+
+  // Conditional sub-fields per kind.
+  const sub = h("div", { class: "schedule-sub", style: "margin-top:8px" });
+  const onUpdate = (mut) => {
+    const updated = { ...store.settings.schedule };
+    mut(updated);
+    debounceSaveSchedule(updated);
+  };
+
+  if (kind === "daily" || kind === "daily_min_count") {
+    sub.appendChild(timeField("settings.schedule.time", cfg.time, (v) => onUpdate(c => { c.time = v; })));
+    sub.appendChild(weekdaysField(cfg.weekdays, (v) => onUpdate(c => { c.weekdays = v; })));
+    if (kind === "daily_min_count") {
+      sub.appendChild(numberField(
+        "settings.schedule.min_count",
+        cfg.min_count ?? 10, 1, 200,
+        (v) => onUpdate(c => { c.min_count = v; }),
+      ));
+    }
+  } else if (kind === "twice_daily") {
+    sub.appendChild(timeField("settings.schedule.time_a", cfg.time_a, (v) => onUpdate(c => { c.time_a = v; })));
+    sub.appendChild(timeField("settings.schedule.time_b", cfg.time_b, (v) => onUpdate(c => { c.time_b = v; })));
+    sub.appendChild(weekdaysField(cfg.weekdays, (v) => onUpdate(c => { c.weekdays = v; })));
+  } else if (kind === "every_minutes") {
+    sub.appendChild(numberField(
+      "settings.schedule.minutes",
+      cfg.minutes ?? 30, 1, 24 * 60,
+      (v) => onUpdate(c => { c.minutes = v; }),
+    ));
+    sub.appendChild(quietHoursField(cfg.quiet_hours, (v) => onUpdate(c => { c.quiet_hours = v; })));
+  }
+  wrap.appendChild(sub);
+
+  wrap.appendChild(h("div", { class: "muted", style: "margin-top:6px" },
+    t("settings.schedule.help")));
+  wrap.appendChild(h("div", { class: "muted", style: "margin-top:4px; font-size:11px" },
+    scheduleSummary(cfg)));
+
+  return wrap;
+}
+
+function defaultsForKind(kind) {
+  switch (kind) {
+    case "disabled":
+      return { kind: "disabled" };
+    case "daily":
+      return { kind: "daily", time: { hour: 19, minute: 0 }, weekdays: 0x7f };
+    case "twice_daily":
+      return {
+        kind: "twice_daily",
+        time_a: { hour: 8, minute: 30 },
+        time_b: { hour: 19, minute: 0 },
+        weekdays: 0x7f,
+      };
+    case "daily_min_count":
+      return {
+        kind: "daily_min_count",
+        time: { hour: 19, minute: 0 },
+        min_count: 10,
+        weekdays: 0x7f,
+      };
+    case "every_minutes":
+      return { kind: "every_minutes", minutes: 30, quiet_hours: null };
+    default:
+      return { kind: "disabled" };
+  }
+}
+
+function timeField(labelKey, time, onChange) {
+  const v = time || { hour: 19, minute: 0 };
+  const input = h("input", {
+    type: "time",
+    value: `${String(v.hour).padStart(2, "0")}:${String(v.minute).padStart(2, "0")}`,
+  });
+  input.addEventListener("change", () => {
+    const [h_, m_] = input.value.split(":").map((x) => parseInt(x, 10));
+    if (Number.isFinite(h_) && Number.isFinite(m_)) {
+      onChange({ hour: h_, minute: m_ });
+    }
+  });
+  return h("div", { class: "field-inline" },
+    h("label", {}, t(labelKey)),
+    input,
+  );
+}
+
+function numberField(labelKey, value, min, max, onChange) {
+  const input = h("input", {
+    type: "number",
+    value: String(value),
+    min: String(min),
+    max: String(max),
+    step: "1",
+  });
+  input.addEventListener("change", () => {
+    const n = parseInt(input.value, 10);
+    if (Number.isFinite(n) && n >= min && n <= max) onChange(n);
+  });
+  return h("div", { class: "field-inline" },
+    h("label", {}, t(labelKey)),
+    input,
+  );
+}
+
+function weekdaysField(maskValue, onChange) {
+  // Mask is the WeekdayMask u8 — bit0=Mon … bit6=Sun.
+  let mask = typeof maskValue === "number" ? maskValue : 0x7f;
+  const wrap = h("div", { class: "weekday-row", style: "display:flex; gap:6px; flex-wrap:wrap; margin-top:6px" });
+  for (let i = 0; i < 7; i++) {
+    const bit = 1 << i;
+    const on = (mask & bit) !== 0;
+    const btn = h("button", {
+      type: "button",
+      class: `chip ${on ? "on" : "off"}`,
+      onclick: () => {
+        const nextOn = !((mask & bit) !== 0);
+        mask = nextOn ? (mask | bit) : (mask & ~bit);
+        if (mask === 0) mask = bit; // never let the mask hit 0 — backend rejects
+        onChange(mask);
+        render();
+      },
+    }, t(`settings.schedule.weekday.${WEEKDAY_KEYS[i]}`));
+    wrap.appendChild(btn);
+  }
+  return h("div", { class: "field-inline column" },
+    h("label", {}, t("settings.schedule.weekdays")),
+    wrap,
+  );
+}
+
+function quietHoursField(qh, onChange) {
+  const enabled = !!qh;
+  const wrap = h("div", { class: "field-inline column", style: "margin-top:6px" });
+  wrap.appendChild(h("label", {}, t("settings.schedule.quiet_hours")));
+  const toggle = h("select", {});
+  for (const [k, label] of [
+    ["off", t("settings.schedule.quiet_off")],
+    ["on", t("settings.schedule.quiet_hours")],
+  ]) {
+    const opt = h("option", { value: k }, label);
+    if ((k === "on") === enabled) opt.selected = true;
+    toggle.appendChild(opt);
+  }
+  toggle.addEventListener("change", () => {
+    if (toggle.value === "off") onChange(null);
+    else onChange({ start: { hour: 22, minute: 0 }, end: { hour: 7, minute: 0 } });
+    render();
+  });
+  wrap.appendChild(toggle);
+  if (enabled) {
+    wrap.appendChild(timeField(
+      "settings.schedule.quiet_start", qh.start,
+      (v) => onChange({ start: v, end: qh.end }),
+    ));
+    wrap.appendChild(timeField(
+      "settings.schedule.quiet_end", qh.end,
+      (v) => onChange({ start: qh.start, end: v }),
+    ));
+  }
+  return wrap;
+}
+
+// ---------------------------------------------------------------------------
+// Sync (Track 4) — magic-link login + push/pull glue.
+// ---------------------------------------------------------------------------
+//
+// Local-first: every Tauri command in this section is wrapped so a network
+// or auth failure renders an inline error and never poisons the rest of the
+// app. The flush debouncer reuses one pending timer; settings changes and
+// answer events both call queueSyncFlush() which schedules a single push
+// 30s later if auto-sync is on.
+//
+// State kept in `store.sync.ui`:
+//   - phase: "login" | "verify" | "signed_in"
+//   - email_input, token_input  (transient form values)
+//   - status        (most recent fetched SyncStatusDto)
+//   - busy          (boolean — disables buttons during a request)
+//   - error_msg     (already-translated error to display)
+const SYNC_AUTO_KEY = "kata.sync_auto";
+const SYNC_FLUSH_DELAY_MS = 30 * 1000;
+let _syncFlushTimer = null;
+
+function readAutoSync() {
+  const raw = localStorage.getItem(SYNC_AUTO_KEY);
+  if (raw === "0" || raw === "false") return false;
+  return true; // default on
+}
+
+function writeAutoSync(on) {
+  localStorage.setItem(SYNC_AUTO_KEY, on ? "1" : "0");
+}
+
+function ensureSyncStore() {
+  if (!store.sync) {
+    store.sync = {
+      ui: {
+        phase: "login",
+        email_input: "",
+        token_input: "",
+        status: null,
+        busy: false,
+        error_msg: null,
+        info_msg: null,
+      },
+    };
+  }
+  return store.sync;
+}
+
+async function refreshSyncStatus() {
+  const s = ensureSyncStore();
+  try {
+    const status = await invoke("sync_status");
+    s.ui.status = status;
+    if (status?.logged_in) s.ui.phase = "signed_in";
+  } catch (e) {
+    console.warn("sync_status failed", e);
+  }
+  return s.ui.status;
+}
+
+function relativeTime(unixSec) {
+  if (!unixSec) return t("settings.sync.never_synced");
+  const now = Date.now() / 1000;
+  const delta = Math.max(0, now - unixSec);
+  if (delta < 60) return t("settings.sync.relative.justnow");
+  if (delta < 3600) return t("settings.sync.relative.minutes", { n: Math.round(delta / 60) });
+  if (delta < 86400) return t("settings.sync.relative.hours", { n: Math.round(delta / 3600) });
+  return t("settings.sync.relative.days", { n: Math.round(delta / 86400) });
+}
+
+/// Schedule a debounced push 30s from now. Multiple calls collapse to a
+/// single flush — typical user flow (answer a flurry then settle) results
+/// in one network call.
+function queueSyncFlush() {
+  if (!readAutoSync()) return;
+  if (_syncFlushTimer) clearTimeout(_syncFlushTimer);
+  _syncFlushTimer = setTimeout(async () => {
+    _syncFlushTimer = null;
+    try {
+      const r = await invoke("sync_push");
+      if (r && !r.ok && r.error && r.error !== "not_logged_in") {
+        console.warn("sync_push reported", r.error);
+      }
+    } catch (e) {
+      console.warn("sync_push threw", e);
+    }
+  }, SYNC_FLUSH_DELAY_MS);
+}
+
+function buildSyncSection() {
+  const s = ensureSyncStore();
+  const wrap = h("div", { class: "field sync-pane" });
+  wrap.appendChild(h("label", {}, t("settings.sync.title")));
+  wrap.appendChild(h("div", { class: "muted", style: "margin-top:6px; line-height:1.45" },
+    t("settings.sync.help")));
+
+  // Async kick to refresh status, then re-render this section. Keeps the
+  // initial render synchronous so the rest of the settings page paints
+  // immediately even if the backend is slow.
+  refreshSyncStatus().then(() => {
+    if (store.view === "settings") render();
+  });
+
+  if (s.ui.status?.logged_in || s.ui.phase === "signed_in") {
+    const status = s.ui.status || {};
+    const email = status.email || "";
+    const lastSynced = Math.max(status.last_pulled_at || 0, status.last_pushed_at || 0);
+    const stateLine = status.pending_changes
+      ? t("settings.sync.status.pending")
+      : t("settings.sync.status.ok");
+
+    wrap.appendChild(h("div", { class: "muted", style: "margin-top:10px" },
+      t("settings.sync.signed_in_as", { email })));
+    wrap.appendChild(h("div", { class: "muted", style: "margin-top:4px" },
+      t("settings.sync.last_synced", { when: relativeTime(lastSynced) })));
+    wrap.appendChild(h("div", { class: "muted", style: "margin-top:4px" }, stateLine));
+
+    // Auto-sync toggle.
+    const autoSel = h("select", {});
+    for (const o of [["true", t("on") || "On"], ["false", t("off") || "Off"]]) {
+      const opt = h("option", { value: o[0] }, o[1]);
+      if ((o[0] === "true") === readAutoSync()) opt.selected = true;
+      autoSel.appendChild(opt);
+    }
+    autoSel.addEventListener("change", () => {
+      writeAutoSync(autoSel.value === "true");
+    });
+    wrap.appendChild(h("div", { class: "field", style: "margin-top:10px" },
+      h("label", {}, t("settings.sync.auto_sync")),
+      autoSel,
+    ));
+
+    const buttons = h("div", { class: "btn-row", style: "margin-top:10px; gap:8px; display:flex; flex-wrap:wrap" });
+    const syncBtn = h("button", {
+      class: "btn",
+      onclick: async () => {
+        if (s.ui.busy) return;
+        s.ui.busy = true; s.ui.error_msg = null;
+        render();
+        let pushOk = true, pullOk = true;
+        try {
+          const p = await invoke("sync_push");
+          if (p && p.ok === false && p.error !== "not_logged_in") pushOk = false;
+        } catch (e) { pushOk = false; console.warn("sync_push", e); }
+        try {
+          const q = await invoke("sync_pull");
+          if (q && q.ok === false && q.error !== "not_logged_in") pullOk = false;
+        } catch (e) { pullOk = false; console.warn("sync_pull", e); }
+        if (!pushOk || !pullOk) s.ui.error_msg = t("settings.sync.error.unreachable");
+        await refreshSyncStatus();
+        s.ui.busy = false;
+        render();
+      },
+    }, s.ui.busy ? "…" : t("settings.sync.sync_now"));
+    const outBtn = h("button", {
+      class: "btn ghost",
+      onclick: async () => {
+        try { await invoke("sync_logout"); } catch (e) { console.warn(e); }
+        s.ui.phase = "login";
+        s.ui.email_input = "";
+        s.ui.token_input = "";
+        s.ui.status = null;
+        s.ui.error_msg = null;
+        s.ui.info_msg = null;
+        render();
+      },
+    }, t("settings.sync.signout"));
+    buttons.appendChild(syncBtn);
+    buttons.appendChild(outBtn);
+    wrap.appendChild(buttons);
+
+    if (s.ui.error_msg) {
+      wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px; color:var(--accent, #c87a7a)" },
+        s.ui.error_msg));
+    }
+    return wrap;
+  }
+
+  // Logged-out: email-entry + (optional) token-entry phase.
+  const emailInput = h("input", {
+    type: "email",
+    value: s.ui.email_input,
+    placeholder: "you@example.com",
+    autocomplete: "email",
+    inputmode: "email",
+  });
+  emailInput.addEventListener("input", () => { s.ui.email_input = emailInput.value; });
+  wrap.appendChild(h("div", { class: "field", style: "margin-top:10px" },
+    h("label", {}, t("settings.sync.email_label")),
+    emailInput,
+  ));
+
+  const sendBtn = h("button", {
+    class: "btn full",
+    onclick: async () => {
+      const email = (s.ui.email_input || "").trim();
+      if (!email) return;
+      s.ui.busy = true; s.ui.error_msg = null;
+      render();
+      try {
+        // Stash the email locally so verify can attribute the session to it.
+        await invoke("sync_set_pending_email", { email });
+        await invoke("sync_login_start", { email });
+        s.ui.phase = "verify";
+        s.ui.info_msg = t("settings.sync.magic_sent");
+      } catch (e) {
+        console.warn("sync_login_start", e);
+        s.ui.error_msg = t("settings.sync.error.unreachable");
+      }
+      s.ui.busy = false;
+      render();
+    },
+  }, s.ui.busy ? "…" : t("settings.sync.send_magic"));
+  wrap.appendChild(h("div", { class: "field" }, sendBtn));
+
+  if (s.ui.phase === "verify" || s.ui.token_input) {
+    if (s.ui.info_msg) {
+      wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px; line-height:1.45" }, s.ui.info_msg));
+    }
+    const tokenInput = h("input", {
+      type: "text",
+      value: s.ui.token_input,
+      placeholder: "abcd1234…",
+      autocomplete: "one-time-code",
+    });
+    tokenInput.addEventListener("input", () => { s.ui.token_input = tokenInput.value; });
+    wrap.appendChild(h("div", { class: "field", style: "margin-top:10px" },
+      h("label", {}, t("settings.sync.token_label")),
+      tokenInput,
+    ));
+    const verifyBtn = h("button", {
+      class: "btn full",
+      onclick: async () => {
+        const tok = (s.ui.token_input || "").trim();
+        if (!tok) return;
+        s.ui.busy = true; s.ui.error_msg = null;
+        render();
+        try {
+          await invoke("sync_login_verify", { token: tok });
+          s.ui.phase = "signed_in";
+          s.ui.token_input = "";
+          await refreshSyncStatus();
+          // Pull immediately so the new device hydrates before the user
+          // wonders why nothing changed.
+          try { await invoke("sync_pull"); } catch (_) {}
+          await refreshSyncStatus();
+        } catch (e) {
+          console.warn("sync_login_verify", e);
+          s.ui.error_msg = t("settings.sync.error.invalid_token");
+        }
+        s.ui.busy = false;
+        render();
+      },
+    }, s.ui.busy ? "…" : t("settings.sync.verify"));
+    wrap.appendChild(h("div", { class: "field" }, verifyBtn));
+  }
+
+  if (s.ui.error_msg) {
+    wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px; color:var(--accent, #c87a7a)" },
+      s.ui.error_msg));
+  }
+  return wrap;
+}
+
 async function renderSettings() {
   const root = el("#view-settings");
   root.innerHTML = "";
@@ -1467,22 +2396,37 @@ async function renderSettings() {
     langSelect,
   ));
 
-  // Interval picker.
-  const intervalSelect = h("select", {});
-  for (const i of VALID_INTERVALS) {
-    const opt = h("option", { value: String(i.v) }, i[store.lang] || i.en);
-    if (i.v === store.settings.interval) opt.selected = true;
-    intervalSelect.appendChild(opt);
-  }
-  intervalSelect.addEventListener("change", async () => {
-    const minutes = parseInt(intervalSelect.value, 10);
-    try { await setInterval_(minutes); }
-    catch (e) { console.error("setInterval failed", e); }
+  // Schedule editor — multi-control: kind picker + conditional sub-fields.
+  card.appendChild(buildScheduleEditor());
+
+  // Sync (Track 4) — magic-link login + manual sync.
+  card.appendChild(buildSyncSection());
+
+  // Daily goal stepper (gamification).
+  const dailyGoalInput = h("input", {
+    type: "number",
+    min: "1",
+    max: "100",
+    step: "1",
+    value: String(store.gamification?.daily_goal ?? 10),
+  });
+  let _goalSaveTimer = null;
+  dailyGoalInput.addEventListener("change", () => {
+    const n = parseInt(dailyGoalInput.value, 10);
+    if (!Number.isFinite(n) || n < 1 || n > 100) return;
+    if (_goalSaveTimer) clearTimeout(_goalSaveTimer);
+    _goalSaveTimer = setTimeout(() => {
+      _goalSaveTimer = null;
+      setDailyGoal(n).then(() => {
+        if (store.gamification) store.gamification.daily_goal = n;
+      });
+    }, 220);
   });
   card.appendChild(h("div", { class: "field" },
-    h("label", {}, t("settings.interval")),
-    intervalSelect,
-    h("div", { class: "muted", style: "margin-top:6px" }, t("settings.interval_help")),
+    h("label", {}, t("settings.daily_goal")),
+    dailyGoalInput,
+    h("div", { class: "muted", style: "margin-top:6px" },
+      t("settings.daily_goal_help")),
   ));
 
   // Distractor mode.
@@ -1723,7 +2667,9 @@ async function boot() {
   // plugin not yet ready) doesn't block the whole boot. Rendering proceeds
   // with whatever data is available.
   try { await fetchTechniques(); } catch (e) { console.error("fetchTechniques", e); }
-  try { await fetchInterval(); }   catch (e) { console.error("fetchInterval", e); }
+  try { await fetchSchedule(); }   catch (e) { console.error("fetchSchedule", e); }
+  try { store.gamification = await fetchGamificationState(); }
+  catch (e) { console.error("fetchGamificationState", e); }
 
   try {
     await listen("show_quiz_prompt", async (event) => {
