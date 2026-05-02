@@ -111,21 +111,49 @@ jobs:
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
         run: cargo check --target aarch64-linux-android
 
-  ios-check:
-    name: iOS cargo check
+  ios-build:
+    name: iOS simulator build
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-ios
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          shared-key: ios-aarch64
+          shared-key: ios-build
 
       - name: cargo check --target aarch64-apple-ios
         working-directory: src-tauri
         run: cargo check --target aarch64-apple-ios
+
+      - run: npm ci
+
+      # `tauri ios init` generates the gen/ios/ Xcode project. Idempotent —
+      # safe to re-run on every CI build. We don't check this dir into git
+      # so it has to be regenerated each time.
+      - name: Generate gen/ios/ Xcode project
+        run: npx tauri ios init
+
+      # Simulator build skips signing entirely. Produces a `.app` bundle
+      # under target/aarch64-apple-ios-sim/release/bundle/ios that can be
+      # opened in Xcode's iOS Simulator on a Mac. No Apple Developer
+      # account / cert / provisioning profile required.
+      - name: Build for iPhone Simulator (unsigned)
+        run: npx tauri ios build --target aarch64-apple-ios-sim
+
+      # Surface the artefact so reviewers can pull it down for local
+      # simulator testing without needing the runner.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: src-tauri/gen/ios/build/arm64/**/KataMarrant.app
+          if-no-files-found: warn
+          retention-days: 7
