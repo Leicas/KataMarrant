@@ -200,9 +200,12 @@ const I18N = {
     "settings.sync.signin_cta":   "Sign in to sync",
     "settings.sync.email_label":  "Email",
     "settings.sync.send_magic":   "Send magic link",
-    "settings.sync.magic_sent":   "Magic link sent — check your email and paste the token below.",
-    "settings.sync.token_label":  "Token from email",
+    "settings.sync.magic_sent":   "Check your email and click the link to sign in.",
+    "settings.sync.fallback_code_help": "If the link doesn't work, copy the code from your email and paste it here:",
+    "settings.sync.waiting":      "Waiting for you to click the link in your email…",
+    "settings.sync.token_label":  "Code from email",
     "settings.sync.verify":       "Verify",
+    "settings.sync.cancel":       "Cancel",
     "settings.sync.signed_in_as": "Signed in as {email}",
     "settings.sync.last_synced":  "Last synced: {when}",
     "settings.sync.never_synced": "never",
@@ -210,7 +213,8 @@ const I18N = {
     "settings.sync.signout":      "Sign out",
     "settings.sync.auto_sync":    "Auto-sync changes in the background",
     "settings.sync.error.network":       "Server unreachable — your data stays local.",
-    "settings.sync.error.invalid_token": "Token invalid or expired — try sending a new link.",
+    "settings.sync.error.invalid_token": "Code invalid or expired — try sending a new link.",
+    "settings.sync.error.expired":       "Sign-in expired — please try again.",
     "settings.sync.error.unreachable":   "Server unreachable.",
     "settings.sync.status.ok":           "All synced.",
     "settings.sync.status.pending":      "Pending changes — will push automatically.",
@@ -399,9 +403,12 @@ const I18N = {
     "settings.sync.signin_cta":   "Se connecter pour synchroniser",
     "settings.sync.email_label":  "Email",
     "settings.sync.send_magic":   "Envoyer le lien magique",
-    "settings.sync.magic_sent":   "Lien envoyé — vérifie ta boîte mail et colle le code ci-dessous.",
+    "settings.sync.magic_sent":   "Vérifie ta boîte mail et clique sur le lien pour te connecter.",
+    "settings.sync.fallback_code_help": "Si le lien ne fonctionne pas, copie le code depuis ton email et colle-le ici :",
+    "settings.sync.waiting":      "En attente du clic sur le lien reçu par email…",
     "settings.sync.token_label":  "Code reçu par email",
     "settings.sync.verify":       "Valider",
+    "settings.sync.cancel":       "Annuler",
     "settings.sync.signed_in_as": "Connecté en tant que {email}",
     "settings.sync.last_synced":  "Dernière synchro : {when}",
     "settings.sync.never_synced": "jamais",
@@ -410,6 +417,7 @@ const I18N = {
     "settings.sync.auto_sync":    "Synchronisation automatique en arrière-plan",
     "settings.sync.error.network":       "Serveur injoignable — tes données restent locales.",
     "settings.sync.error.invalid_token": "Code invalide ou expiré — redemande un nouveau lien.",
+    "settings.sync.error.expired":       "Connexion expirée — réessaie.",
     "settings.sync.error.unreachable":   "Serveur injoignable.",
     "settings.sync.status.ok":           "Tout est synchronisé.",
     "settings.sync.status.pending":      "Changements en attente — pousse automatiquement.",
@@ -562,6 +570,12 @@ function navigate(view) {
   // status_loaded flag prevents the per-keystroke fetch loop.
   if (view === "settings" && store.sync) {
     store.sync.ui.status_loaded = false;
+  }
+  // Cancel the magic-link poll when leaving settings — without this it
+  // would keep ticking in the background and could surface a "signed in"
+  // toast on a screen the user isn't looking at.
+  if (store.view === "settings" && view !== "settings") {
+    if (typeof stopSyncPoll === "function") stopSyncPoll();
   }
   store.view = view;
   els(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
@@ -2149,9 +2163,19 @@ function ensureSyncStore() {
   if (!store.sync) {
     store.sync = {
       ui: {
+        // "login"     — email-entry screen
+        // "verify"    — link sent, polling + fallback code visible
+        // "signed_in" — JWT in hand
         phase: "login",
         email_input: "",
+        // Paste-fallback code the user types in if the link doesn't work.
         token_input: "",
+        // Whether the paste-fallback box is visible (collapsed by default
+        // since the click flow is the happy path).
+        show_fallback_input: false,
+        // Active poll session metadata. `expires_at_ms` is wall-clock so we
+        // can stop polling once the server-side attempt is gone.
+        poll: null, // { session_id, expires_at_ms }
         status: null,
         // Set true on the first refreshSyncStatus(); the build path uses it
         // to skip re-fetching on every re-render (which would otherwise
@@ -2165,6 +2189,97 @@ function ensureSyncStore() {
     };
   }
   return store.sync;
+}
+
+// Magic-link polling: a single global handle so we can cancel cleanly when
+// the user navigates away, the attempt expires, or verification succeeds.
+let _syncPollTimer = null;
+let _syncPollBackoffMs = 2000;
+
+function stopSyncPoll() {
+  if (_syncPollTimer) {
+    clearTimeout(_syncPollTimer);
+    _syncPollTimer = null;
+  }
+  _syncPollBackoffMs = 2000;
+}
+
+function startSyncPoll() {
+  stopSyncPoll();
+  _syncPollBackoffMs = 2000;
+  scheduleNextPoll();
+}
+
+function scheduleNextPoll() {
+  _syncPollTimer = setTimeout(() => {
+    _syncPollTimer = null;
+    runSyncPollOnce();
+  }, _syncPollBackoffMs);
+}
+
+async function runSyncPollOnce() {
+  const s = ensureSyncStore();
+  const poll = s.ui.poll;
+  if (!poll || s.ui.phase !== "verify") {
+    // Nothing to do — user navigated away or already signed in.
+    return;
+  }
+  if (Date.now() >= poll.expires_at_ms) {
+    s.ui.poll = null;
+    s.ui.phase = "login";
+    s.ui.error_msg = t("settings.sync.error.expired");
+    s.ui.info_msg = null;
+    if (store.view === "settings") render();
+    return;
+  }
+  try {
+    const resp = await invoke("auth_poll", { sessionId: poll.session_id });
+    // null  → still pending
+    // {...} → success — JWT already persisted by the Rust side
+    if (resp) {
+      s.ui.phase = "signed_in";
+      s.ui.poll = null;
+      s.ui.token_input = "";
+      s.ui.error_msg = null;
+      s.ui.info_msg = null;
+      stopSyncPoll();
+      await refreshSyncStatus();
+      // Pull immediately so the new device hydrates before the user
+      // wonders why nothing changed.
+      try { await invoke("sync_pull"); } catch (_) {}
+      await refreshSyncStatus();
+      if (store.view === "settings") render();
+      return;
+    }
+    // Still pending — reset backoff and re-arm at 2s cadence.
+    _syncPollBackoffMs = 2000;
+  } catch (e) {
+    const msg = (e && (e.message || e.toString())) || "";
+    if (msg.includes("expired")) {
+      s.ui.poll = null;
+      s.ui.phase = "login";
+      s.ui.error_msg = t("settings.sync.error.expired");
+      s.ui.info_msg = null;
+      stopSyncPoll();
+      if (store.view === "settings") render();
+      return;
+    }
+    if (msg.includes("unknown_session")) {
+      s.ui.poll = null;
+      s.ui.phase = "login";
+      s.ui.error_msg = t("settings.sync.error.expired");
+      stopSyncPoll();
+      if (store.view === "settings") render();
+      return;
+    }
+    // Network/other transient errors → exponential backoff capped at 10s.
+    console.warn("auth_poll transient", e);
+    _syncPollBackoffMs = Math.min(10000, Math.max(2000, _syncPollBackoffMs * 2));
+  }
+  // Re-arm if still in verify phase after handling this tick.
+  if (s.ui.phase === "verify" && s.ui.poll) {
+    scheduleNextPoll();
+  }
 }
 
 async function refreshSyncStatus() {
@@ -2284,9 +2399,12 @@ function buildSyncSection() {
       class: "btn ghost",
       onclick: async () => {
         try { await invoke("sync_logout"); } catch (e) { console.warn(e); }
+        stopSyncPoll();
         s.ui.phase = "login";
         s.ui.email_input = "";
         s.ui.token_input = "";
+        s.ui.poll = null;
+        s.ui.show_fallback_input = false;
         s.ui.status = null;
         s.ui.error_msg = null;
         s.ui.info_msg = null;
@@ -2304,7 +2422,82 @@ function buildSyncSection() {
     return wrap;
   }
 
-  // Logged-out: email-entry + (optional) token-entry phase.
+  // Logged-out: email-entry phase OR verify-waiting phase.
+  if (s.ui.phase === "verify" && s.ui.poll) {
+    // Poll-waiting screen: tells the user to click the link in their
+    // email; a paste-fallback input below lets them type the code from
+    // the email if they're on a different device.
+    wrap.appendChild(h("div", { class: "muted", style: "margin-top:10px; line-height:1.45" },
+      t("settings.sync.waiting")));
+
+    wrap.appendChild(h("div", { class: "muted", style: "margin-top:12px; line-height:1.45" },
+      t("settings.sync.fallback_code_help")));
+
+    const tokenInput = h("input", {
+      type: "text",
+      value: s.ui.token_input,
+      placeholder: "ABCD-EFGH-JK",
+      autocomplete: "one-time-code",
+      inputmode: "text",
+      autocapitalize: "characters",
+      spellcheck: "false",
+    });
+    tokenInput.addEventListener("input", () => { s.ui.token_input = tokenInput.value; });
+    wrap.appendChild(h("div", { class: "field", style: "margin-top:10px" },
+      h("label", {}, t("settings.sync.token_label")),
+      tokenInput,
+    ));
+
+    const verifyBtn = h("button", {
+      class: "btn full",
+      onclick: async () => {
+        const code = (s.ui.token_input || "").trim();
+        if (!code) return;
+        s.ui.busy = true; s.ui.error_msg = null;
+        render();
+        try {
+          await invoke("auth_verify_code", { code });
+          s.ui.phase = "signed_in";
+          s.ui.poll = null;
+          s.ui.token_input = "";
+          stopSyncPoll();
+          await refreshSyncStatus();
+          // Pull immediately so the new device hydrates before the user
+          // wonders why nothing changed.
+          try { await invoke("sync_pull"); } catch (_) {}
+          await refreshSyncStatus();
+        } catch (e) {
+          console.warn("auth_verify_code", e);
+          s.ui.error_msg = t("settings.sync.error.invalid_token");
+        }
+        s.ui.busy = false;
+        render();
+      },
+    }, s.ui.busy ? "…" : t("settings.sync.verify"));
+    wrap.appendChild(h("div", { class: "field" }, verifyBtn));
+
+    const cancelBtn = h("button", {
+      class: "btn ghost",
+      onclick: () => {
+        stopSyncPoll();
+        s.ui.phase = "login";
+        s.ui.poll = null;
+        s.ui.token_input = "";
+        s.ui.error_msg = null;
+        s.ui.info_msg = null;
+        render();
+      },
+    }, t("settings.sync.cancel"));
+    wrap.appendChild(h("div", { class: "field" }, cancelBtn));
+
+    if (s.ui.error_msg) {
+      wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px; color:var(--accent, #c87a7a)" },
+        s.ui.error_msg));
+    }
+    return wrap;
+  }
+
+  // Default (and reset) state: email entry.
   const emailInput = h("input", {
     type: "email",
     value: s.ui.email_input,
@@ -2328,11 +2521,18 @@ function buildSyncSection() {
       try {
         // Stash the email locally so verify can attribute the session to it.
         await invoke("sync_set_pending_email", { email });
-        await invoke("sync_login_start", { email });
+        const r = await invoke("auth_start", { email });
+        // r = { session_id, expires_in }; short code is only in the email.
+        s.ui.poll = {
+          session_id: r.session_id,
+          expires_at_ms: Date.now() + (Number(r.expires_in) || 900) * 1000,
+        };
         s.ui.phase = "verify";
+        s.ui.token_input = "";
         s.ui.info_msg = t("settings.sync.magic_sent");
+        startSyncPoll();
       } catch (e) {
-        console.warn("sync_login_start", e);
+        console.warn("auth_start", e);
         s.ui.error_msg = t("settings.sync.error.unreachable");
       }
       s.ui.busy = false;
@@ -2340,48 +2540,6 @@ function buildSyncSection() {
     },
   }, s.ui.busy ? "…" : t("settings.sync.send_magic"));
   wrap.appendChild(h("div", { class: "field" }, sendBtn));
-
-  if (s.ui.phase === "verify" || s.ui.token_input) {
-    if (s.ui.info_msg) {
-      wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px; line-height:1.45" }, s.ui.info_msg));
-    }
-    const tokenInput = h("input", {
-      type: "text",
-      value: s.ui.token_input,
-      placeholder: "abcd1234…",
-      autocomplete: "one-time-code",
-    });
-    tokenInput.addEventListener("input", () => { s.ui.token_input = tokenInput.value; });
-    wrap.appendChild(h("div", { class: "field", style: "margin-top:10px" },
-      h("label", {}, t("settings.sync.token_label")),
-      tokenInput,
-    ));
-    const verifyBtn = h("button", {
-      class: "btn full",
-      onclick: async () => {
-        const tok = (s.ui.token_input || "").trim();
-        if (!tok) return;
-        s.ui.busy = true; s.ui.error_msg = null;
-        render();
-        try {
-          await invoke("sync_login_verify", { token: tok });
-          s.ui.phase = "signed_in";
-          s.ui.token_input = "";
-          await refreshSyncStatus();
-          // Pull immediately so the new device hydrates before the user
-          // wonders why nothing changed.
-          try { await invoke("sync_pull"); } catch (_) {}
-          await refreshSyncStatus();
-        } catch (e) {
-          console.warn("sync_login_verify", e);
-          s.ui.error_msg = t("settings.sync.error.invalid_token");
-        }
-        s.ui.busy = false;
-        render();
-      },
-    }, s.ui.busy ? "…" : t("settings.sync.verify"));
-    wrap.appendChild(h("div", { class: "field" }, verifyBtn));
-  }
 
   if (s.ui.error_msg) {
     wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px; color:var(--accent, #c87a7a)" },

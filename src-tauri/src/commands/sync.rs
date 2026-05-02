@@ -37,13 +37,6 @@ const HTTP_TIMEOUT: Duration = Duration::from_secs(10);
 /// the `sync_state.server_url` column or the store key.
 const DEFAULT_SERVER_URL: &str = "https://katamarrant.weill-duflos.fr";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SessionDto {
-    pub user_id: String,
-    pub email: String,
-    pub expires_at: i64,
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct SyncStatusDto {
     pub logged_in: bool,
@@ -331,67 +324,159 @@ struct AuthStartReq<'a> {
     email: &'a str,
 }
 
-#[derive(Debug, Deserialize)]
-struct AuthStartRes {
-    #[allow(dead_code)]
-    ok: bool,
+/// Server response for `POST /auth/start`. The short code is delivered
+/// only in the email itself (not via this API) so an attacker calling
+/// `/auth/start` for someone else's address can't get a valid code
+/// without inbox access.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthStartDto {
+    pub session_id: String,
+    /// Seconds until the session_id stops being valid for polling.
+    pub expires_in: i64,
+}
+
+/// Server response for a successful `GET /auth/poll` (200) or
+/// `POST /auth/verify` (200). Used both for the JSON wire shape and the
+/// command return value, to keep the JS side simple.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionResponse {
+    pub session: String,
+    pub user_id: String,
+    pub expires_at: i64,
 }
 
 #[derive(Debug, Serialize)]
 struct AuthVerifyReq<'a> {
-    token: &'a str,
+    code: &'a str,
 }
 
-#[derive(Debug, Deserialize)]
-struct AuthVerifyRes {
-    session: String,
-    user_id: String,
-    expires_at: i64,
-}
-
+/// `POST /auth/start` — kicks off the magic-link flow. Always succeeds on
+/// the server (anti-enumeration), so a successful future means the user
+/// should expect an email.
 #[tauri::command]
-pub async fn sync_login_start(
+pub async fn auth_start(
     email: String,
     state: tauri::State<'_, AppState>,
-) -> AppResult<()> {
+) -> AppResult<AuthStartDto> {
     let server_url = {
         let conn = state.db.lock().unwrap();
         let s = read_sync_state(&conn)?;
         s.server_url
     };
     let url = format!("{}/auth/start", server_url.trim_end_matches('/'));
-    match post_json::<AuthStartRes>(&url, &AuthStartReq { email: &email }, None).await {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            log::warn!("[sync] /auth/start failed (non-fatal): {e}");
-            // Still return Ok — we don't want the frontend to think login is
-            // impossible just because the network blipped. The user can
-            // retry from the same screen.
-            Ok(())
-        }
-    }
+    let resp: AuthStartDto = post_json(&url, &AuthStartReq { email: &email }, None)
+        .await
+        .map_err(|e| AppError::General(format!("auth_start: {e}")))?;
+    Ok(resp)
 }
 
+/// `GET /auth/poll?session_id=...` — returns:
+///   - `Ok(None)` while the click-flow hasn't completed (HTTP 204)
+///   - `Ok(Some(SessionResponse))` once the JWT is delivered (HTTP 200)
+///   - Err on 410 Gone (expired), 404 (unknown), or network failure
+///
+/// On `Some`, the JWT is persisted to the local DB + tauri-plugin-store
+/// mirror so the rest of the app sees a logged-in state. The frontend
+/// can then transition its UI without an extra round-trip.
 #[tauri::command]
-pub async fn sync_login_verify(
-    token: String,
+pub async fn auth_poll(
+    session_id: String,
     state: tauri::State<'_, AppState>,
     app: tauri::AppHandle,
-) -> AppResult<SessionDto> {
+) -> AppResult<Option<SessionResponse>> {
+    let server_url = {
+        let conn = state.db.lock().unwrap();
+        let s = read_sync_state(&conn)?;
+        s.server_url
+    };
+    let url = format!(
+        "{}/auth/poll?session_id={}",
+        server_url.trim_end_matches('/'),
+        urlencode(&session_id),
+    );
+    let client = http_client();
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::General(format!("auth_poll network: {e}")))?;
+    let status = resp.status();
+    if status.as_u16() == 204 {
+        return Ok(None);
+    }
+    if status.is_success() {
+        let parsed: SessionResponse = resp
+            .json()
+            .await
+            .map_err(|e| AppError::General(format!("auth_poll decode: {e}")))?;
+        persist_session(&state, &app, &parsed)?;
+        return Ok(Some(parsed));
+    }
+    if status.as_u16() == 410 {
+        return Err(AppError::General("expired".to_string()));
+    }
+    if status.as_u16() == 404 {
+        return Err(AppError::General("unknown_session".to_string()));
+    }
+    Err(AppError::General(format!("auth_poll http: {status}")))
+}
+
+/// `POST /auth/verify { code }` — paste-fallback path. The user took the
+/// short code from their email and typed it in.
+#[tauri::command]
+pub async fn auth_verify_code(
+    code: String,
+    state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<SessionResponse> {
     let server_url = {
         let conn = state.db.lock().unwrap();
         let s = read_sync_state(&conn)?;
         s.server_url
     };
     let url = format!("{}/auth/verify", server_url.trim_end_matches('/'));
-    let resp = post_json::<AuthVerifyRes>(&url, &AuthVerifyReq { token: &token }, None)
+    let client = http_client();
+    let resp = client
+        .post(&url)
+        .json(&AuthVerifyReq { code: &code })
+        .send()
         .await
-        .map_err(|e| AppError::General(format!("verify: {e}")))?;
+        .map_err(|e| AppError::General(format!("auth_verify network: {e}")))?;
+    let status = resp.status();
+    if status.is_success() {
+        let parsed: SessionResponse = resp
+            .json()
+            .await
+            .map_err(|e| AppError::General(format!("auth_verify decode: {e}")))?;
+        persist_session(&state, &app, &parsed)?;
+        return Ok(parsed);
+    }
+    if status.as_u16() == 400 {
+        // Best-effort: bubble the server's error tag up so the JS side can
+        // show a precise message. Falls back to "invalid" if the body
+        // doesn't parse.
+        #[derive(Deserialize)]
+        struct ErrBody {
+            error: String,
+        }
+        let tag = resp
+            .json::<ErrBody>()
+            .await
+            .map(|b| b.error)
+            .unwrap_or_else(|_| "invalid".to_string());
+        return Err(AppError::General(tag));
+    }
+    Err(AppError::General(format!("auth_verify http: {status}")))
+}
 
-    // Persist locally — but the email isn't in the response, so we have to
-    // ask the server again? Simpler: stash whatever email the caller had
-    // typed in via a follow-up status read. For now, leave email blank if
-    // the caller didn't already populate it.
+/// Persist a freshly-issued session to the DB + plugin-store mirror.
+/// Shared by the poll-success and paste-fallback paths so both flows leave
+/// the app in the same state.
+fn persist_session(
+    state: &tauri::State<'_, AppState>,
+    app: &tauri::AppHandle,
+    resp: &SessionResponse,
+) -> AppResult<()> {
     let email = {
         let conn = state.db.lock().unwrap();
         let s = read_sync_state(&conn)?;
@@ -403,20 +488,32 @@ pub async fn sync_login_verify(
         // Generate a stable client_id on first login if we don't have one.
         let _ = ensure_client_id(&conn);
     }
-    store_set(&app, KEY_SYNC_JWT, JsonValue::String(resp.session.clone()));
-    store_set(&app, KEY_SYNC_USER, JsonValue::String(resp.user_id.clone()));
+    store_set(app, KEY_SYNC_JWT, JsonValue::String(resp.session.clone()));
+    store_set(app, KEY_SYNC_USER, JsonValue::String(resp.user_id.clone()));
     if !email.is_empty() {
-        store_set(&app, KEY_SYNC_EMAIL, JsonValue::String(email.clone()));
+        store_set(app, KEY_SYNC_EMAIL, JsonValue::String(email));
     }
-    Ok(SessionDto {
-        user_id: resp.user_id,
-        email,
-        expires_at: resp.expires_at,
-    })
+    Ok(())
 }
 
-/// Frontends call this **before** `sync_login_start` so we remember which
-/// email the magic-link was sent to (the verify response doesn't echo it).
+/// Minimal URL-encoder for the polling query string. The session_id is a
+/// ULID (Crockford base32, no special chars), but we encode defensively in
+/// case the server ever changes the alphabet.
+fn urlencode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.as_bytes() {
+        let c = *b as char;
+        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~') {
+            out.push(c);
+        } else {
+            out.push_str(&format!("%{:02X}", b));
+        }
+    }
+    out
+}
+
+/// Frontends call this **before** `auth_start` so we remember which email
+/// the magic-link was sent to (the poll/verify responses don't echo it).
 #[tauri::command]
 pub fn sync_set_pending_email(
     email: String,
