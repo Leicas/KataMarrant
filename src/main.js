@@ -211,6 +211,9 @@ const I18N = {
     "settings.sync.never_synced": "never",
     "settings.sync.sync_now":     "Sync now",
     "settings.sync.signout":      "Sign out",
+    "settings.sync.force_resync": "Force full resync",
+    "settings.sync.force_resync_confirm": "This will mark every local stat as new and pull everything from the server. Continue?",
+    "settings.sync.force_resync_done":    "Full resync complete.",
     "settings.sync.auto_sync":    "Auto-sync changes in the background",
     "settings.sync.error.network":       "Server unreachable — your data stays local.",
     "settings.sync.error.invalid_token": "Code invalid or expired — try sending a new link.",
@@ -414,6 +417,9 @@ const I18N = {
     "settings.sync.never_synced": "jamais",
     "settings.sync.sync_now":     "Synchroniser",
     "settings.sync.signout":      "Se déconnecter",
+    "settings.sync.force_resync": "Resynchro complète",
+    "settings.sync.force_resync_confirm": "Toutes les stats locales seront marquées comme nouvelles et tout sera récupéré depuis le serveur. Continuer ?",
+    "settings.sync.force_resync_done":    "Resynchro complète terminée.",
     "settings.sync.auto_sync":    "Synchronisation automatique en arrière-plan",
     "settings.sync.error.network":       "Serveur injoignable — tes données restent locales.",
     "settings.sync.error.invalid_token": "Code invalide ou expiré — redemande un nouveau lien.",
@@ -2426,7 +2432,43 @@ function buildSyncSection() {
         render();
       },
     }, t("settings.sync.signout"));
+    const resyncBtn = h("button", {
+      class: "btn ghost",
+      onclick: async () => {
+        if (s.ui.busy) return;
+        if (!confirm(t("settings.sync.force_resync_confirm"))) return;
+        s.ui.busy = true; s.ui.error_msg = null; s.ui.info_msg = null;
+        render();
+        try {
+          await invoke("sync_force_resync");
+          // Push first so server gets all of our local rows; then pull.
+          // Either step's network failure is non-fatal — the next periodic
+          // tick will retry.
+          let firstErr = null;
+          try {
+            const p = await invoke("sync_push");
+            if (p && p.ok === false && p.error !== "not_logged_in") firstErr = p.error;
+          } catch (e) { firstErr = String(e); }
+          try {
+            const q = await invoke("sync_pull");
+            if (q && q.ok === false && q.error !== "not_logged_in" && !firstErr) firstErr = q.error;
+          } catch (e) { if (!firstErr) firstErr = String(e); }
+          if (firstErr) {
+            s.ui.error_msg = `${t("settings.sync.error.unreachable")} (${firstErr})`;
+          } else {
+            s.ui.info_msg = t("settings.sync.force_resync_done");
+          }
+        } catch (e) {
+          console.warn("sync_force_resync", e);
+          s.ui.error_msg = `${t("settings.sync.error.unreachable")} (${String(e)})`;
+        }
+        await refreshSyncStatus();
+        s.ui.busy = false;
+        render();
+      },
+    }, t("settings.sync.force_resync"));
     buttons.appendChild(syncBtn);
+    buttons.appendChild(resyncBtn);
     buttons.appendChild(outBtn);
     wrap.appendChild(buttons);
 

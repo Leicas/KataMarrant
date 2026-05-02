@@ -184,6 +184,7 @@ pub fn run() {
             commands::sync::sync_logout,
             commands::sync::sync_push,
             commands::sync::sync_pull,
+            commands::sync::sync_force_resync,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

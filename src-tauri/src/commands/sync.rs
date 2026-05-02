@@ -561,6 +561,39 @@ pub fn sync_logout(
     Ok(())
 }
 
+/// Reset both sync cursors to 0 AND restamp every locally-mutable row's
+/// `updated_at` to now, so the next push ships everything and the next
+/// pull receives everything the server holds. Recovery hatch when local
+/// and remote diverge — typical trigger is the user noticing different
+/// counts on two devices and tapping "Force full resync" in the UI.
+/// Pulls and pushes that follow this call will be slow (full snapshot)
+/// but the LWW server will converge both sides on the second round-trip.
+#[tauri::command]
+pub fn sync_force_resync(state: tauri::State<'_, AppState>) -> AppResult<()> {
+    let conn = state.db.lock().unwrap();
+    let now = chrono::Utc::now().timestamp();
+    conn.execute(
+        "UPDATE sync_state
+            SET last_pulled_at = 0,
+                last_pushed_at = 0,
+                last_pushed_log_id = 0,
+                pending_changes = 1,
+                updated_at = ?1
+          WHERE id = 1",
+        rusqlite::params![now],
+    )?;
+    conn.execute(
+        "UPDATE technique_stats SET updated_at = ?1",
+        rusqlite::params![now],
+    )?;
+    conn.execute(
+        "UPDATE gamification_state SET updated_at = ?1 WHERE id = 1",
+        rusqlite::params![now],
+    )?;
+    log::info!("[sync] force_resync: cursors=0, all rows stamped at {now}");
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn sync_push(state: tauri::State<'_, AppState>) -> AppResult<SyncResultDto> {
     push_inner(&state).await
