@@ -15,6 +15,13 @@ src-tauri/gen/
 *.keystore
 key.properties
 
+# Local-only secrets runbooks — anything matching `SECRETS.local.md` /
+# `*.secrets.md` stays out of git. Use this name when stashing values
+# you'll paste into GitHub Actions secrets / 1Password / etc.
+SECRETS.local.md
+*.secrets.md
+.secrets/
+
 # Dev screenshots / build artifacts (not for the public repo).
 screenshots/
 build-android.log
