@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/Leicas/KataMarrant/compare/v1.2.0...v1.2.1) (2026-05-02)
+
+### Bug Fixes
+
+* **ci:** wire NDK clang/ar/linker for Android cargo check + add time crate for iOS ([ec7db21](https://github.com/Leicas/KataMarrant/commit/ec7db217ea72f24e8d323c36bda1579690252acc))
+
 ## [1.2.0](https://github.com/Leicas/KataMarrant/compare/v1.1.0...v1.2.0) (2026-05-02)
 
 ### Features
