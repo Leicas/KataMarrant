@@ -135,6 +135,43 @@ pub fn initialize(app_data_dir: &Path) -> AppResult<Connection> {
         )?;
     }
 
+    // Migration (Track 4 / sync today's count): track per-row LWW timestamp on
+    // daily_progress + a sibling table for OTHER devices' contributions for
+    // the same day. Display layer SUMs across the two so two devices that
+    // both answered today see the merged total.
+    let has_dp_updated: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('daily_progress') WHERE name = 'updated_at'",
+        [],
+        |r| r.get(0),
+    )?;
+    if has_dp_updated == 0 {
+        conn.execute(
+            "ALTER TABLE daily_progress ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0",
+            [],
+        )?;
+        // Stamp existing rows with `now` so a fresh push ships them once.
+        conn.execute(
+            "UPDATE daily_progress SET updated_at = strftime('%s','now') WHERE updated_at = 0",
+            [],
+        )?;
+    }
+    conn.execute_batch(
+        r#"
+        CREATE TABLE IF NOT EXISTS daily_progress_peers (
+            client_id   TEXT NOT NULL,
+            day         TEXT NOT NULL,
+            questions   INTEGER NOT NULL DEFAULT 0,
+            correct     INTEGER NOT NULL DEFAULT 0,
+            goal_met    INTEGER NOT NULL DEFAULT 0,
+            xp_earned   INTEGER NOT NULL DEFAULT 0,
+            updated_at  INTEGER NOT NULL,
+            PRIMARY KEY (client_id, day)
+        );
+        CREATE INDEX IF NOT EXISTS idx_daily_progress_peers_day
+            ON daily_progress_peers(day);
+        "#,
+    )?;
+
     // One-shot backfill of daily_progress from quiz_log on first run after upgrade.
     let daily_count: i64 = conn.query_row(
         "SELECT COUNT(*) FROM daily_progress",
@@ -530,12 +567,13 @@ pub fn bump_daily(
     xp: i64,
 ) -> AppResult<DailyProgressRow> {
     conn.execute(
-        "INSERT INTO daily_progress (day, questions, correct, goal_met, xp_earned)
-         VALUES (?1, 1, ?2, 0, ?3)
+        "INSERT INTO daily_progress (day, questions, correct, goal_met, xp_earned, updated_at)
+         VALUES (?1, 1, ?2, 0, ?3, strftime('%s','now'))
          ON CONFLICT(day) DO UPDATE SET
              questions = questions + 1,
              correct = correct + ?2,
-             xp_earned = xp_earned + ?3",
+             xp_earned = xp_earned + ?3,
+             updated_at = strftime('%s','now')",
         params![day, if correct { 1 } else { 0 }, xp],
     )?;
     get_daily(conn, day)
@@ -543,10 +581,107 @@ pub fn bump_daily(
 
 pub fn mark_goal_met(conn: &Connection, day: &str, bonus_xp: i64) -> AppResult<DailyProgressRow> {
     conn.execute(
-        "UPDATE daily_progress SET goal_met = 1, xp_earned = xp_earned + ?2 WHERE day = ?1",
+        "UPDATE daily_progress
+            SET goal_met = 1,
+                xp_earned = xp_earned + ?2,
+                updated_at = strftime('%s','now')
+          WHERE day = ?1",
         params![day, bonus_xp],
     )?;
     get_daily(conn, day)
+}
+
+/// Today's count merged across this device + every peer device that has
+/// pushed via sync. Used by the gamification command to return the
+/// user-visible "questions today" the UI shows so it stays consistent
+/// with the goal indicator across devices.
+pub fn get_daily_merged(conn: &Connection, day: &str) -> AppResult<DailyProgressRow> {
+    let local = get_daily(conn, day)?;
+    let (peer_q, peer_c, peer_g, peer_x): (i64, i64, i64, i64) = conn
+        .query_row(
+            "SELECT
+                COALESCE(SUM(questions), 0),
+                COALESCE(SUM(correct), 0),
+                COALESCE(MAX(goal_met), 0),
+                COALESCE(SUM(xp_earned), 0)
+             FROM daily_progress_peers WHERE day = ?1",
+            params![day],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap_or((0, 0, 0, 0));
+    Ok(DailyProgressRow {
+        day: local.day,
+        questions: local.questions + peer_q,
+        correct: local.correct + peer_c,
+        // local goal-met flag wins (it's about THIS device hitting its goal),
+        // but peer is informational.
+        goal_met: if local.goal_met != 0 || peer_g != 0 { 1 } else { 0 },
+        xp_earned: local.xp_earned + peer_x,
+    })
+}
+
+/// One row per `daily_progress` entry, in the same column order as the
+/// SELECT in `collect_daily_progress_since`. Plain tuple aliased so
+/// clippy doesn't yell about the wide signature.
+pub type DailyProgressTuple = (String, i64, i64, i64, i64, i64);
+
+/// Rows changed since the given client cursor — the push pipeline ships
+/// these to the server, which stores them under (user, client, day).
+pub fn collect_daily_progress_since(
+    conn: &Connection,
+    since: i64,
+) -> AppResult<Vec<DailyProgressTuple>> {
+    let mut stmt = conn.prepare(
+        "SELECT day, questions, correct, goal_met, xp_earned, updated_at
+         FROM daily_progress WHERE updated_at > ?1",
+    )?;
+    let rows = stmt
+        .query_map(params![since], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+                r.get::<_, i64>(3)?,
+                r.get::<_, i64>(4)?,
+                r.get::<_, i64>(5)?,
+            ))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(rows)
+}
+
+/// LWW-upsert peer rows received from sync_pull. Self-rows (matching
+/// our own client_id) are filtered out by the caller — this function
+/// trusts that input. Returns count of rows written.
+#[allow(clippy::too_many_arguments)]
+pub fn apply_daily_progress_peer(
+    conn: &Connection,
+    client_id: &str,
+    day: &str,
+    questions: i64,
+    correct: i64,
+    goal_met: i64,
+    xp_earned: i64,
+    updated_at: i64,
+) -> AppResult<()> {
+    conn.execute(
+        "INSERT INTO daily_progress_peers
+           (client_id, day, questions, correct, goal_met, xp_earned, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+         ON CONFLICT(client_id, day) DO UPDATE SET
+             questions  = CASE WHEN excluded.updated_at > daily_progress_peers.updated_at
+                               THEN excluded.questions ELSE daily_progress_peers.questions END,
+             correct    = CASE WHEN excluded.updated_at > daily_progress_peers.updated_at
+                               THEN excluded.correct ELSE daily_progress_peers.correct END,
+             goal_met   = CASE WHEN excluded.updated_at > daily_progress_peers.updated_at
+                               THEN excluded.goal_met ELSE daily_progress_peers.goal_met END,
+             xp_earned  = CASE WHEN excluded.updated_at > daily_progress_peers.updated_at
+                               THEN excluded.xp_earned ELSE daily_progress_peers.xp_earned END,
+             updated_at = CASE WHEN excluded.updated_at > daily_progress_peers.updated_at
+                               THEN excluded.updated_at ELSE daily_progress_peers.updated_at END",
+        params![client_id, day, questions, correct, goal_met, xp_earned, updated_at],
+    )?;
+    Ok(())
 }
 
 pub fn get_daily(conn: &Connection, day: &str) -> AppResult<DailyProgressRow> {

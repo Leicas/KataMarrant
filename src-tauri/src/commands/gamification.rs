@@ -395,9 +395,11 @@ pub fn record_answer_with_gamification(
         }
     }
 
-    // Centenary.
+    // Centenary — count merged across devices so a 60+40 split between
+    // phone and laptop still fires it.
+    let merged_today = db::get_daily_merged(&conn, &today)?;
     if !db::is_unlocked(&conn, "centenary")?
-        && today_row.questions >= 100
+        && merged_today.questions >= 100
         && db::unlock_achievement(&conn, "centenary", None)?
     {
         unlocked.push(UnlockedAchievement::new("centenary"));
@@ -420,7 +422,13 @@ pub fn record_answer_with_gamification(
     }
 
     let goal = gstate.daily_goal;
-    let today_dto = DailyProgressDto::from_row(today_row, goal);
+    // Frontend renders the merged total so it matches across devices that
+    // both push to the same account. `today_row` is *this* device's
+    // contribution (used above for the goal-met decision and the
+    // per-answer streak/combo bonus); we replace it with the merge for
+    // the user-visible DTO.
+    let _ = today_row;
+    let today_dto = DailyProgressDto::from_row(merged_today, goal);
 
     Ok(AnswerGamificationOutcome {
         xp_gained,
@@ -448,7 +456,9 @@ pub fn get_gamification_state(
     let conn = state.db.lock().unwrap();
     let row = db::get_gamification_state(&conn)?;
     let today = db::local_today_string();
-    let today_row = db::get_daily(&conn, &today)?;
+    // Merged across devices so the home/profile UI matches what the user
+    // actually answered today, regardless of which device.
+    let today_row = db::get_daily_merged(&conn, &today)?;
     let dto = DailyProgressDto::from_row(today_row, row.daily_goal);
     Ok(GamificationStateDto::from_row(&row, dto))
 }

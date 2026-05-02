@@ -115,6 +115,34 @@ struct GamificationBlob {
     updated_at: i64,
 }
 
+/// Per-(client, day) push row. Two clients on the same day are NOT in
+/// conflict — the server stores them separately and the pull-side merge
+/// SUMs across rows for display.
+#[derive(Debug, Clone, Serialize)]
+struct DailyProgressPushRow {
+    day: String,
+    questions: i64,
+    correct: i64,
+    goal_met: i64,
+    xp_earned: i64,
+    updated_at: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct DailyProgressPullRow {
+    client_id: String,
+    day: String,
+    #[serde(default)]
+    questions: i64,
+    #[serde(default)]
+    correct: i64,
+    #[serde(default)]
+    goal_met: i64,
+    #[serde(default)]
+    xp_earned: i64,
+    updated_at: i64,
+}
+
 #[derive(Debug, Serialize)]
 struct PushBody {
     client_id: String,
@@ -123,6 +151,7 @@ struct PushBody {
     quiz_log: Vec<QuizLogRow>,
     settings: Option<SettingsBlob>,
     gamification_state: Option<GamificationBlob>,
+    daily_progress: Vec<DailyProgressPushRow>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -150,6 +179,8 @@ struct PullRes {
     quiz_log: Vec<QuizLogRowOut>,
     settings: Option<SettingsBlob>,
     gamification_state: Option<GamificationBlob>,
+    #[serde(default)]
+    daily_progress: Vec<DailyProgressPullRow>,
 }
 
 // ---------------------------------------------------------------------------
@@ -590,6 +621,10 @@ pub fn sync_force_resync(state: tauri::State<'_, AppState>) -> AppResult<()> {
         "UPDATE gamification_state SET updated_at = ?1 WHERE id = 1",
         rusqlite::params![now],
     )?;
+    conn.execute(
+        "UPDATE daily_progress SET updated_at = ?1",
+        rusqlite::params![now],
+    )?;
     log::info!("[sync] force_resync: cursors=0, all rows stamped at {now}");
     Ok(())
 }
@@ -635,15 +670,22 @@ pub async fn push_inner(state: &tauri::State<'_, AppState>) -> AppResult<SyncRes
     // values would either re-push or silently skip rows depending on skew —
     // the cursor must live in the same clock domain as the values it filters.
     let snapshot_at = chrono::Utc::now().timestamp();
-    let (stats, logs, max_log_id, gamification, settings_blob) = {
+    let (stats, logs, max_log_id, gamification, settings_blob, daily_rows) = {
         let conn = state.db.lock().unwrap();
         let stats = collect_stats_since(&conn, last_pushed_at)?;
         let (logs, max_log_id) = collect_logs_since(&conn, last_pushed_log_id)?;
         let gamification = collect_gamification(&conn)?;
+        let daily_raw = crate::db::collect_daily_progress_since(&conn, last_pushed_at)?;
+        let daily_rows: Vec<DailyProgressPushRow> = daily_raw
+            .into_iter()
+            .map(|(day, questions, correct, goal_met, xp_earned, updated_at)| {
+                DailyProgressPushRow { day, questions, correct, goal_met, xp_earned, updated_at }
+            })
+            .collect();
         drop(conn);
         // Settings blob is read from the store outside the DB lock.
         let settings_blob = collect_settings_blob(state)?;
-        (stats, logs, max_log_id, gamification, settings_blob)
+        (stats, logs, max_log_id, gamification, settings_blob, daily_rows)
     };
 
     let stats_count = stats.len() as u32;
@@ -655,6 +697,7 @@ pub async fn push_inner(state: &tauri::State<'_, AppState>) -> AppResult<SyncRes
         quiz_log: logs,
         settings: settings_blob,
         gamification_state: gamification,
+        daily_progress: daily_rows,
     };
     let url = format!("{}/sync/push", server_url.trim_end_matches('/'));
     match post_json::<PushRes>(&url, &body, Some(&jwt)).await {
@@ -680,13 +723,13 @@ pub async fn push_inner(state: &tauri::State<'_, AppState>) -> AppResult<SyncRes
 }
 
 pub async fn pull_inner(state: &tauri::State<'_, AppState>) -> AppResult<SyncResultDto> {
-    let (jwt, server_url, since) = {
+    let (jwt, server_url, since, self_client_id) = {
         let conn = state.db.lock().unwrap();
         let s = read_sync_state(&conn)?;
         let Some(jwt) = s.session_jwt.clone() else {
             return Ok(SyncResultDto::err("not_logged_in"));
         };
-        (jwt, s.server_url, s.last_pulled_at)
+        (jwt, s.server_url, s.last_pulled_at, s.client_id.clone())
     };
 
     let url = format!("{}/sync/pull?since={}", server_url.trim_end_matches('/'), since);
@@ -712,6 +755,24 @@ pub async fn pull_inner(state: &tauri::State<'_, AppState>) -> AppResult<SyncRes
         }
         if let Some(g) = &resp.gamification_state {
             apply_remote_gamification(&conn, g)?;
+        }
+        // daily_progress peers — skip rows that match our own client_id
+        // (those are echoes of our own pushes; the local daily_progress
+        // table is already authoritative for them).
+        for r in &resp.daily_progress {
+            if Some(&r.client_id) == self_client_id.as_ref() {
+                continue;
+            }
+            crate::db::apply_daily_progress_peer(
+                &conn,
+                &r.client_id,
+                &r.day,
+                r.questions,
+                r.correct,
+                r.goal_met,
+                r.xp_earned,
+                r.updated_at,
+            )?;
         }
         conn.execute(
             "UPDATE sync_state SET last_pulled_at = ?1 WHERE id = 1",
