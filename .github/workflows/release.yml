@@ -187,23 +187,36 @@ jobs:
             exit 1
           fi
 
-      - name: Write key.properties
+      - if: env.HAS_KEYSTORE == 'true'
+        run: npm ci
+
+      # gen/android/ is gitignored (the architect's plan: regenerate
+      # fresh on each CI run rather than checking the Xcode/Gradle
+      # scaffolding into the public repo). Without this step, `tauri
+      # android build` fails with: "Project directory ... does not
+      # exist. Did you update the package name…"
+      - name: Generate gen/android/ project
+        if: env.HAS_KEYSTORE == 'true'
+        run: npx tauri android init
+        env:
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+
+      # tauri android init regenerates key.properties from scratch with
+      # debug placeholders, so we have to re-write it AFTER init runs.
+      - name: Re-write key.properties for release signing
         if: env.HAS_KEYSTORE == 'true'
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          mkdir -p src-tauri/gen/android
           {
             echo "storeFile=$HOME/keystores/release.jks"
             echo "storePassword=$KEYSTORE_PASSWORD"
             echo "keyAlias=$KEY_ALIAS"
             echo "keyPassword=$KEY_PASSWORD"
           } > src-tauri/gen/android/key.properties
-
-      - if: env.HAS_KEYSTORE == 'true'
-        run: npm ci
 
       - name: Build signed APK + AAB
         if: env.HAS_KEYSTORE == 'true'
