@@ -42,7 +42,10 @@ tauri-plugin-schedule-task = { git = "https://github.com/charlesschaefer/tauri-p
 
 # iOS-only: tauri-plugin-notification's `Schedule::At { date, ... }` field
 # is `time::OffsetDateTime` (the `time` crate, not chrono). It's already
-# in the lockfile transitively via tauri-plugin-notification — this entry
-# just makes it nameable from `scheduler::schedule_next_ios`.
+# in the lockfile transitively via tauri-plugin-notification, but the
+# transitive dep declares `default-features = false`, which keeps
+# `OffsetDateTime` (gated behind the `alloc`/`std` features) un-exported.
+# Cargo's feature unification doesn't always re-enable defaults across
+# target-specific dep tables, so we list `std` explicitly here.
 [target.'cfg(target_os = "ios")'.dependencies]
-time = "0.3"
+time = { version = "0.3", features = ["std"] }
