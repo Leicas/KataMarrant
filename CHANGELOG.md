@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/Leicas/KataMarrant/compare/v1.1.0...v1.2.0) (2026-05-02)
+
+### Features
+
+* **sync:** sync daily_progress per (client, day), display merged total ([b407fa8](https://github.com/Leicas/KataMarrant/commit/b407fa81c89dbbe57bc6e7d7d36680e1f06d1dd2))
+
 ## [1.1.0](https://github.com/Leicas/KataMarrant/compare/v1.0.0...v1.1.0) (2026-05-02)
 
 ### Features
