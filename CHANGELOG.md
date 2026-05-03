@@ -1,3 +1,9 @@
+## [1.4.0-beta.2](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.1...v1.4.0-beta.2) (2026-05-03)
+
+### Features
+
+* **updater:** activate signing — pubkey + createUpdaterArtifacts on ([dfb50df](https://github.com/Leicas/KataMarrant/commit/dfb50df54b7b798c8fc9a8d3c33e08c9a0325262))
+
 ## [1.4.0-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.3.1-beta.1...v1.4.0-beta.1) (2026-05-03)
 
 ### Features
