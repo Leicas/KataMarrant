@@ -660,7 +660,9 @@ function navigate(view) {
     if (typeof stopSyncPoll === "function") stopSyncPoll();
   }
   store.view = view;
-  els(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+  // Desktop sidebar nav (.navitem) and mobile bottom-tab-bar (.tab) both
+  // carry data-view; toggle .active on every match in either set.
+  els(".tab, .navitem").forEach(t => t.classList.toggle("active", t.dataset.view === view));
   els(".view").forEach(v => v.classList.toggle("active", v.id === `view-${view}`));
   render();
 }
@@ -826,8 +828,15 @@ function makeImageEl(tech, alt) {
 
 function applyTabLabels() {
   document.documentElement.lang = store.lang;
+  // Mobile tab buttons hold a single text label.
   for (const btn of els(".tab")) {
     btn.textContent = t(`tab.${btn.dataset.view}`);
+  }
+  // Desktop sidebar items have an icon + label structure; only the .lbl
+  // span gets retranslated so the icon character stays put.
+  for (const btn of els(".navitem")) {
+    const lbl = btn.querySelector(".lbl");
+    if (lbl) lbl.textContent = t(`tab.${btn.dataset.view}`);
   }
 }
 
@@ -2980,18 +2989,16 @@ function render() {
 // ---------------------------------------------------------------------------
 
 async function detectUpdaterPlatform() {
-  try {
-    if (window.__TAURI__?.os?.platform) {
-      store.updater.platform = await window.__TAURI__.os.platform();
-    } else {
-      store.updater.platform = "unknown";
-    }
-  } catch (_) {
-    store.updater.platform = "unknown";
-  }
-  store.updater.supported =
-    ["linux", "macos", "windows"].includes(store.updater.platform) &&
-    !!window.__TAURI__?.updater;
+  // The tauri-plugin-updater crate is target-gated to desktop in Cargo.toml,
+  // so window.__TAURI__.updater simply doesn't exist on Android/iOS — making
+  // feature-presence the most reliable signal (and removing the need for
+  // tauri-plugin-os, which we don't ship). Earlier code expected
+  // window.__TAURI__.os.platform() to exist, but the os plugin isn't
+  // registered, so the fallback path was returning "unknown" and treating
+  // desktop as mobile — that's why the screenshots showed the mobile
+  // "platform updates via the store" copy on Windows.
+  store.updater.supported = !!window.__TAURI__?.updater;
+  store.updater.platform = store.updater.supported ? "desktop" : "mobile";
 }
 
 function loadUpdaterPrefs() {
@@ -3149,14 +3156,24 @@ function renderUpdaterPill() {
   const visible = state === "available" || state === "downloading" ||
                   state === "ready_to_install" || state === "installing";
   if (!visible) { if (pill) pill.remove(); return; }
-  const topbar = el(".topbar");
-  if (!topbar) return;
+  // Anchor: the desktop titlebar (preferred — pill becomes a chrome element
+  // alongside the window controls), with fallback to the mobile topbar.
+  const anchor = el(".titlebar-right") || el(".topbar-mobile");
+  if (!anchor) return;
   if (!pill) {
     pill = h("button", {
       id: "updater-pill", class: "updater-pill", type: "button",
+      style: "-webkit-app-region: no-drag",
       onclick: () => openUpdaterModal(),
     });
-    topbar.appendChild(pill);
+    if (anchor.classList.contains("titlebar-right")) {
+      // Insert before .window-controls so the controls stay flush right.
+      const controls = anchor.querySelector(".window-controls");
+      if (controls) anchor.insertBefore(pill, controls);
+      else anchor.appendChild(pill);
+    } else {
+      anchor.appendChild(pill);
+    }
   }
   pill.innerHTML = "";
   pill.appendChild(h("span", { class: "updater-pill-dot" }));
@@ -3410,18 +3427,56 @@ async function buildUpdaterSection() {
   return card;
 }
 
+// Detect the OS so CSS can branch (e.g. macOS hides our window controls in
+// favor of the OS-drawn traffic lights, and insets the titlebar 78px to
+// avoid colliding with them). Falls back to navigator.userAgent when the
+// Tauri os plugin isn't registered (we don't ship it; this is a pure-CSS
+// hint, not a load-bearing capability).
+async function detectPlatformBodyClass() {
+  let p = "unknown";
+  try {
+    if (window.__TAURI__?.os?.platform) p = await window.__TAURI__.os.platform();
+  } catch (_) {}
+  if (p === "unknown") {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes("mac"))                                    p = "macos";
+    else if (ua.includes("win"))                               p = "windows";
+    else if (ua.includes("android"))                           p = "android";
+    else if (ua.includes("iphone") || ua.includes("ipad"))     p = "ios";
+    else if (ua.includes("linux"))                             p = "linux";
+  }
+  document.body.dataset.platform = p;
+}
+
+// Wire the custom titlebar's window controls. Tauri 2 exposes window ops
+// via window:default permissions, which core:default already grants — no
+// capability change needed. Silent no-op on mobile (where the OS handles
+// chrome and our .window-controls is hidden by CSS).
+function bindWindowControls() {
+  const win = window.__TAURI__?.window?.getCurrentWindow?.();
+  if (!win) return;
+  el(".wc-min")?.addEventListener("click", () => win.minimize());
+  el(".wc-max")?.addEventListener("click", () => win.toggleMaximize());
+  el(".wc-close")?.addEventListener("click", () => win.close());
+}
+
 async function boot() {
   try {
     loadLocalSettings();
     loadUpdaterPrefs();
     await detectUpdaterPlatform();
+    await detectPlatformBodyClass();
     applyTabLabels();
 
-    els(".tab").forEach(btn => {
+    // Wire both the mobile bottom-tab-bar (.tab) and the desktop sidebar
+    // (.navitem). `navigate()` toggles .active on both sets so they stay
+    // in sync across the responsive breakpoints.
+    els(".tab, .navitem").forEach(btn => {
       btn.addEventListener("click", () => navigate(btn.dataset.view));
     });
 
     bindVideoModal();
+    bindWindowControls();
   } catch (e) {
     console.error("boot: setup failed", e);
   }

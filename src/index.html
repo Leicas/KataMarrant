@@ -8,28 +8,70 @@
 </head>
 <body>
   <div id="app">
-    <header class="topbar">
-      <h1>KataMarrant</h1>
-      <nav class="tabs">
-        <button data-view="home" class="tab active">Home</button>
-        <button data-view="quiz" class="tab">Quiz</button>
-        <button data-view="rapid" class="tab">Rapid</button>
-        <button data-view="drill" class="tab">Drill</button>
-        <button data-view="browse" class="tab">Browse</button>
-        <button data-view="stats" class="tab">Stats</button>
-        <button data-view="settings" class="tab">⚙</button>
-      </nav>
-    </header>
+    <div class="window-shell">
+      <!-- Custom titlebar (frameless on desktop). On mobile this whole bar is
+           hidden by CSS — the .topbar-mobile below stands in. -->
+      <header class="titlebar" data-tauri-drag-region>
+        <div class="titlebar-left">
+          <span class="titlebar-brand">KataMarrant</span>
+        </div>
+        <div class="titlebar-center"></div>
+        <div class="titlebar-right">
+          <!-- Auto-updater pill mounts here at runtime (between the spacer and
+               the window controls). It carries -webkit-app-region: no-drag
+               so clicks work inside the drag region. -->
+          <div class="window-controls" style="-webkit-app-region: no-drag">
+            <button class="wc wc-min" type="button" aria-label="Minimize">&#xE921;</button>
+            <button class="wc wc-max" type="button" aria-label="Maximize">&#xE922;</button>
+            <button class="wc wc-close" type="button" aria-label="Close">&#xE8BB;</button>
+          </div>
+        </div>
+      </header>
 
-    <main id="view-root">
-      <section id="view-home" class="view active"></section>
-      <section id="view-quiz" class="view"></section>
-      <section id="view-rapid" class="view"></section>
-      <section id="view-drill" class="view"></section>
-      <section id="view-browse" class="view"></section>
-      <section id="view-stats" class="view"></section>
-      <section id="view-settings" class="view"></section>
-    </main>
+      <div class="shell-body">
+        <!-- Sidebar nav (desktop). Collapses to icon-only at 600–959px and
+             hides entirely below 600px (bottombar takes over). -->
+        <aside class="sidebar" aria-label="Primary">
+          <nav class="sidenav">
+            <button data-view="home"   class="navitem active" type="button"><span class="ico">●</span><span class="lbl">Home</span></button>
+            <button data-view="quiz"   class="navitem"        type="button"><span class="ico">◇</span><span class="lbl">Quiz</span></button>
+            <button data-view="rapid"  class="navitem"        type="button"><span class="ico">»</span><span class="lbl">Rapid</span></button>
+            <button data-view="drill"  class="navitem"        type="button"><span class="ico">⏱</span><span class="lbl">Drill</span></button>
+            <button data-view="browse" class="navitem"        type="button"><span class="ico">≡</span><span class="lbl">Browse</span></button>
+            <button data-view="stats"  class="navitem"        type="button"><span class="ico">▦</span><span class="lbl">Stats</span></button>
+          </nav>
+          <div class="sidebar-spacer"></div>
+          <div class="sidebar-foot">
+            <button data-view="settings" class="navitem" type="button"><span class="ico">⚙</span><span class="lbl">Settings</span></button>
+          </div>
+        </aside>
+
+        <!-- Mobile-only chrome: small topbar with brand + scrollable tab row.
+             Hidden on desktop (≥600px) so the titlebar+sidebar combo wins. -->
+        <header class="topbar-mobile">
+          <h1>KataMarrant</h1>
+          <nav class="tabs" aria-label="Primary (mobile)">
+            <button data-view="home"     class="tab active" type="button">Home</button>
+            <button data-view="quiz"     class="tab"        type="button">Quiz</button>
+            <button data-view="rapid"    class="tab"        type="button">Rapid</button>
+            <button data-view="drill"    class="tab"        type="button">Drill</button>
+            <button data-view="browse"   class="tab"        type="button">Browse</button>
+            <button data-view="stats"    class="tab"        type="button">Stats</button>
+            <button data-view="settings" class="tab"        type="button">⚙</button>
+          </nav>
+        </header>
+
+        <main id="view-root">
+          <section id="view-home"     class="view active"></section>
+          <section id="view-quiz"     class="view"></section>
+          <section id="view-rapid"    class="view"></section>
+          <section id="view-drill"    class="view"></section>
+          <section id="view-browse"   class="view"></section>
+          <section id="view-stats"    class="view"></section>
+          <section id="view-settings" class="view"></section>
+        </main>
+      </div>
+    </div>
 
     <!-- Video modal — populated dynamically by main.js when "Watch video" is clicked -->
     <div id="video-modal" class="video-modal hidden" role="dialog" aria-modal="true">
