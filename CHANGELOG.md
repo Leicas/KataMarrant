@@ -1,3 +1,9 @@
+## [1.4.0-beta.12](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.11...v1.4.0-beta.12) (2026-05-03)
+
+### Bug Fixes
+
+* **quiz:** missing idempotency guard let fast-double-click double-log answers ([997f7cd](https://github.com/Leicas/KataMarrant/commit/997f7cd1c39366fe486f0850d8bf06db2770191d))
+
 ## [1.4.0-beta.11](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.10...v1.4.0-beta.11) (2026-05-03)
 
 ### Features
