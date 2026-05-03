@@ -12,18 +12,18 @@
       <!-- Custom titlebar (frameless on desktop). On mobile this whole bar is
            hidden by CSS — the .topbar-mobile below stands in. -->
       <header class="titlebar" data-tauri-drag-region>
-        <div class="titlebar-left">
-          <span class="titlebar-brand">KataMarrant</span>
+        <div class="titlebar-left" data-tauri-drag-region>
+          <span class="titlebar-brand" data-tauri-drag-region>KataMarrant</span>
         </div>
-        <div class="titlebar-center"></div>
-        <div class="titlebar-right">
+        <div class="titlebar-center" data-tauri-drag-region></div>
+        <div class="titlebar-right" data-tauri-drag-region>
           <!-- Auto-updater pill mounts here at runtime (between the spacer and
                the window controls). It carries -webkit-app-region: no-drag
                so clicks work inside the drag region. -->
           <div class="window-controls" style="-webkit-app-region: no-drag">
-            <button class="wc wc-min" type="button" aria-label="Minimize">&#xE921;</button>
-            <button class="wc wc-max" type="button" aria-label="Maximize">&#xE922;</button>
-            <button class="wc wc-close" type="button" aria-label="Close">&#xE8BB;</button>
+            <button class="wc wc-min"   type="button" aria-label="Minimize" style="-webkit-app-region: no-drag">&#xE921;</button>
+            <button class="wc wc-max"   type="button" aria-label="Maximize" style="-webkit-app-region: no-drag">&#xE922;</button>
+            <button class="wc wc-close" type="button" aria-label="Close"    style="-webkit-app-region: no-drag">&#xE8BB;</button>
           </div>
         </div>
       </header>

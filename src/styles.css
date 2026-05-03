@@ -822,10 +822,17 @@ main {
 
 /* ----- Profile hero card (Home) ----- */
 .profile-hero {
-  background: linear-gradient(160deg, rgba(239, 68, 68, .14), rgba(253, 230, 138, .04) 70%, var(--bg-elev));
-  border: 1px solid var(--brand-deep);
-  box-shadow: 0 6px 22px rgba(239, 68, 68, .15);
-  padding: 18px 16px 14px;
+  /* Calmer than the previous filled red gradient with full red outline —
+     the gradient now fades top-to-bottom and the accent edge is a 1px
+     inset stroke at low opacity rather than a hard 1px solid border. */
+  background:
+    linear-gradient(180deg, rgba(208, 69, 69, 0.08) 0%, transparent 60%),
+    var(--bg-elev-2);
+  border: none;
+  box-shadow:
+    var(--shadow-1),
+    0 0 0 1px var(--accent-edge) inset;
+  padding: var(--sp-5);
 }
 .profile-hero h3.profile-section {
   font-size: 12px;
@@ -1265,6 +1272,18 @@ main {
   flex: 0 0 auto;
   user-select: none;
   -webkit-user-select: none;
+  /* Belt & braces — Tauri 2 honors both the data attribute (preferred)
+     and the legacy CSS rule. Children opt out via no-drag below. */
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.titlebar-left, .titlebar-center, .titlebar-right {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.titlebar-brand {
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 .titlebar-left,
 .titlebar-right {

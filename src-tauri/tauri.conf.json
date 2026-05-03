@@ -62,7 +62,8 @@
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUwNjQ4NUY3QkIxRDNDODgKUldTSVBCMjc5NFZrVUppa1pOT0ZMMEVQZUM4VDZ4NGtIUDBGd29ER3RGLzU3QjhKNWVicDRLbHMK",
       "endpoints": [
-        "https://github.com/Leicas/KataMarrant/releases/latest/download/latest.json"
+        "https://github.com/Leicas/KataMarrant/releases/latest/download/latest.json",
+        "https://github.com/Leicas/KataMarrant/releases/download/beta-latest/latest.json"
       ],
       "windows": {
         "installMode": "passive"
