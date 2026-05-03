@@ -24,6 +24,81 @@ pub struct QuizLogBreakdown {
     pub latest: Option<i64>,
 }
 
+/// Result of the one-shot dedup pass.
+#[derive(Debug, Clone, Serialize)]
+pub struct DedupResult {
+    pub before: i64,
+    pub after: i64,
+    pub removed: i64,
+}
+
+/// Deletes quiz_log entries that are duplicates of a prior entry within
+/// 2 seconds, matching slug + correct + mode. These were caused by a
+/// fast-double-click race in single + rapid `onPick` handlers (no
+/// idempotency guard until the bug fix in this commit). Also rebuilds
+/// technique_stats from the deduped quiz_log so per-technique counts
+/// stop reflecting the duplicates. After running this, you'll likely
+/// want to call sync_force_resync so the next push sends the cleaned
+/// state (legacy server-side duplicates remain unless cleaned there
+/// separately).
+#[tauri::command]
+pub fn dedup_quiz_log(state: tauri::State<'_, AppState>) -> AppResult<DedupResult> {
+    let conn = state.db.lock().unwrap();
+    let before: i64 = conn.query_row("SELECT COUNT(*) FROM quiz_log", [], |r| r.get(0))?;
+
+    // 1. Delete any quiz_log row that has an earlier sibling within 2s
+    //    sharing slug + correct + mode. Pair-wise comparison via self-join;
+    //    keeps the earliest (a.id < b.id), deletes b.
+    let removed = conn.execute(
+        "DELETE FROM quiz_log WHERE id IN (
+            SELECT b.id FROM quiz_log a
+            JOIN quiz_log b
+              ON a.slug = b.slug
+              AND a.correct = b.correct
+              AND a.mode = b.mode
+              AND b.id > a.id
+              AND (b.answered_at - a.answered_at) BETWEEN 0 AND 2
+         )",
+        [],
+    )? as i64;
+
+    // 2. Rebuild technique_stats counts from the deduped quiz_log so
+    //    `correct_count` / `wrong_count` reflect the cleaned data.
+    let now = chrono::Utc::now().timestamp();
+    conn.execute(
+        "UPDATE technique_stats
+            SET correct_count = 0,
+                wrong_count   = 0,
+                updated_at    = ?1",
+        rusqlite::params![now],
+    )?;
+    conn.execute(
+        "INSERT OR REPLACE INTO technique_stats
+            (slug, correct_count, wrong_count, last_shown_at, last_correct, updated_at)
+         SELECT
+            q.slug,
+            SUM(CASE WHEN q.correct = 1 THEN 1 ELSE 0 END),
+            SUM(CASE WHEN q.correct = 0 THEN 1 ELSE 0 END),
+            MAX(q.answered_at),
+            (SELECT correct FROM quiz_log
+              WHERE slug = q.slug ORDER BY id DESC LIMIT 1),
+            ?1
+         FROM quiz_log q
+         GROUP BY q.slug",
+        rusqlite::params![now],
+    )?;
+
+    // 3. Mark sync state dirty so the next push reflects the cleaned data.
+    let _ = conn.execute(
+        "UPDATE sync_state SET pending_changes = 1 WHERE id = 1",
+        [],
+    );
+
+    let after: i64 = conn.query_row("SELECT COUNT(*) FROM quiz_log", [], |r| r.get(0))?;
+    log::info!("[dedup] before={before}, after={after}, removed={removed}");
+    Ok(DedupResult { before, after, removed })
+}
+
 #[tauri::command]
 pub fn get_quiz_log_breakdown(state: tauri::State<'_, AppState>) -> AppResult<QuizLogBreakdown> {
     let conn = state.db.lock().unwrap();

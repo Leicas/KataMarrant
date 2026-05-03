@@ -277,6 +277,8 @@ const I18N = {
     "diag.mode_rapid":                  "Rapid bursts (10 per round)",
     "diag.mode_drill":                  "Drill (timed)",
     "diag.note":                        "The local count includes every individual answer across single, rapid, and drill modes — so 50 rapid rounds = 500 entries, not 50. The server's leaderboard only reflects the synced subset.",
+    "diag.dedup_btn":                   "Clean up duplicates",
+    "diag.dedup_done":                  "Removed {removed} duplicates ({before} → {after}). Trigger a sync next so the server picks up the cleaned state.",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -528,6 +530,8 @@ const I18N = {
     "diag.mode_rapid":                  "Rafales (10 par tour)",
     "diag.mode_drill":                  "Drill (chrono)",
     "diag.note":                        "Le compteur local inclut chaque réponse individuelle, donc 50 rafales = 500 entrées, pas 50. Le classement serveur ne reflète que ce qui a été synchronisé.",
+    "diag.dedup_btn":                   "Nettoyer les doublons",
+    "diag.dedup_done":                  "{removed} doublons supprimés ({before} → {after}). Déclenche une synchro pour propager l'état nettoyé au serveur.",
   },
 };
 
@@ -1640,6 +1644,13 @@ async function renderQuiz() {
     typedAnswer: store.quiz.typed_answer,
     promptMode: store.settings.quiz_prompt_mode,
     onPick: async (slug, isCorrect, extras = {}) => {
+      // Idempotency guard: between this click and the next render, the
+      // choice buttons remain enabled in the live DOM, so a fast second
+      // click (or a touch+mouse double-fire) would otherwise insert a
+      // duplicate quiz_log row. Drill mode has had this guard for a
+      // while; single + rapid were missing it — exactly why the local
+      // total_answered came in suspiciously high.
+      if (store.quiz.answered) return;
       store.quiz.answered = true;
       store.quiz.picked = slug;
       if (extras.typed != null) store.quiz.typed_answer = extras.typed;
@@ -1719,6 +1730,8 @@ async function renderRapid() {
     typedAnswer: r.typed_answer,
     promptMode: store.settings.quiz_prompt_mode,
     onPick: async (slug, isCorrect, extras = {}) => {
+      // Same idempotency guard as single mode — see explanation there.
+      if (r.answered) return;
       r.answered = true;
       r.picked = slug;
       if (extras.typed != null) r.typed_answer = extras.typed;
@@ -3410,40 +3423,66 @@ function buildDiagnosticSection() {
   const body = h("div", { class: "muted", style: "font-size:13px; line-height:1.5" },
     t("diag.loading"));
   card.appendChild(body);
-  invoke("get_quiz_log_breakdown")
-    .then((d) => {
-      body.innerHTML = "";
-      const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleDateString(
-        store.lang === "fr" ? "fr-FR" : "en-US",
-        { year: "numeric", month: "short", day: "numeric" }) : "—";
-      body.appendChild(h("div", { style: "margin-bottom:8px" },
-        h("strong", {}, t("diag.total", { n: d.total })),
-        " ",
-        h("span", { class: "muted small" },
-          d.earliest ? t("diag.range", { from: fmt(d.earliest), to: fmt(d.latest) }) : ""),
-      ));
-      const list = h("ul", { style: "list-style:none; padding-left:0; margin:0; display:grid; gap:4px;" });
-      const modeLabel = (m) => ({
-        single: t("diag.mode_single"),
-        rapid:  t("diag.mode_rapid"),
-        drill:  t("diag.mode_drill"),
-      }[m] || m);
-      for (const [m, n] of d.by_mode) {
-        const pct = d.total > 0 ? Math.round((n / d.total) * 100) : 0;
-        list.appendChild(h("li", {
-          style: "display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--stroke-soft);",
-        },
-          h("span", {}, modeLabel(m)),
-          h("span", { class: "num" }, `${n}  (${pct}%)`),
+
+  const refresh = () => {
+    invoke("get_quiz_log_breakdown")
+      .then((d) => {
+        body.innerHTML = "";
+        const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleDateString(
+          store.lang === "fr" ? "fr-FR" : "en-US",
+          { year: "numeric", month: "short", day: "numeric" }) : "—";
+        body.appendChild(h("div", { style: "margin-bottom:8px" },
+          h("strong", {}, t("diag.total", { n: d.total })),
+          " ",
+          h("span", { class: "muted small" },
+            d.earliest ? t("diag.range", { from: fmt(d.earliest), to: fmt(d.latest) }) : ""),
         ));
-      }
-      body.appendChild(list);
-      body.appendChild(h("p", { class: "muted small", style: "margin-top:10px" },
-        t("diag.note")));
-    })
-    .catch((e) => {
-      body.textContent = String(e?.message ?? e);
-    });
+        const list = h("ul", { style: "list-style:none; padding-left:0; margin:0; display:grid; gap:4px;" });
+        const modeLabel = (m) => ({
+          single: t("diag.mode_single"),
+          rapid:  t("diag.mode_rapid"),
+          drill:  t("diag.mode_drill"),
+        }[m] || m);
+        for (const [m, n] of d.by_mode) {
+          const pct = d.total > 0 ? Math.round((n / d.total) * 100) : 0;
+          list.appendChild(h("li", {
+            style: "display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--stroke-soft);",
+          },
+            h("span", {}, modeLabel(m)),
+            h("span", { class: "num" }, `${n}  (${pct}%)`),
+          ));
+        }
+        body.appendChild(list);
+        body.appendChild(h("p", { class: "muted small", style: "margin-top:10px" },
+          t("diag.note")));
+        // Cleanup button — collapses fast-double-click duplicates and
+        // rebuilds technique_stats. The duplicates were caused by a
+        // missing idempotency guard in single + rapid onPick handlers
+        // (fixed in this commit), but pre-existing logs still need a
+        // one-shot scrub.
+        body.appendChild(h("div", { style: "margin-top:12px" },
+          h("button", {
+            class: "btn ghost small",
+            type: "button",
+            onclick: async () => {
+              try {
+                const r = await invoke("dedup_quiz_log");
+                alert(t("diag.dedup_done", {
+                  removed: r.removed, before: r.before, after: r.after,
+                }));
+                refresh();
+              } catch (e) {
+                alert(String(e?.message ?? e));
+              }
+            },
+          }, t("diag.dedup_btn")),
+        ));
+      })
+      .catch((e) => {
+        body.textContent = String(e?.message ?? e);
+      });
+  };
+  refresh();
   return card;
 }
 
