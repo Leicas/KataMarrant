@@ -1,3 +1,9 @@
+## [1.4.0-beta.3](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.2...v1.4.0-beta.3) (2026-05-03)
+
+### Features
+
+* **updater:** bundle CHANGELOG.md + show current version notes from it ([2421b19](https://github.com/Leicas/KataMarrant/commit/2421b19182f0a6edd1e6827526daa0c86bf20cd2))
+
 ## [1.4.0-beta.2](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.1...v1.4.0-beta.2) (2026-05-03)
 
 ### Features
