@@ -232,6 +232,32 @@ const I18N = {
     "toast.level_up":        "Level up! → {n}",
     "toast.goal_met":        "Daily goal hit!",
     "toast.achievement":     "Achievement unlocked",
+    "updater.pill.available":    "Update available",
+    "updater.pill.downloading":  "Downloading… {p}%",
+    "updater.pill.ready":        "Restart to install",
+    "updater.modal.title":       "Update available",
+    "updater.modal.version":     "Version {from} → {to}",
+    "updater.modal.install":     "Install & restart",
+    "updater.modal.later":       "Later",
+    "updater.modal.downloading": "Downloading… {p}%",
+    "updater.modal.installing":  "Installing — the app will restart shortly.",
+    "updater.modal.no_notes":    "No release notes available.",
+    "updater.error":             "Update error: {msg}",
+    "updater.section.title":     "App updates",
+    "updater.section.mobile_help": "Updates on this platform ship through your app store. KataMarrant cannot self-update on Android or iOS.",
+    "updater.auto_label":        "Auto-check for updates",
+    "updater.auto_on":           "On (recommended)",
+    "updater.auto_off":          "Off",
+    "updater.auto_help":         "Checks GitHub for a new release ~3 seconds after launch. We never auto-install — you always confirm.",
+    "updater.check_now":         "Check for updates now",
+    "updater.status.idle":              "",
+    "updater.status.checking":          "Checking…",
+    "updater.status.up_to_date":        "You're on the latest version.",
+    "updater.status.available":         "Update {v} available.",
+    "updater.status.downloading":       "Downloading…",
+    "updater.status.ready":             "Ready — click the pill to restart.",
+    "updater.status.installing":        "Installing…",
+    "updater.whats_new.title":          "What's new in v{v}",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -438,6 +464,32 @@ const I18N = {
     "toast.level_up":        "Niveau supérieur ! → {n}",
     "toast.goal_met":        "Objectif atteint !",
     "toast.achievement":     "Succès débloqué",
+    "updater.pill.available":    "Mise à jour disponible",
+    "updater.pill.downloading":  "Téléchargement… {p}%",
+    "updater.pill.ready":        "Redémarrer pour installer",
+    "updater.modal.title":       "Mise à jour disponible",
+    "updater.modal.version":     "Version {from} → {to}",
+    "updater.modal.install":     "Installer et redémarrer",
+    "updater.modal.later":       "Plus tard",
+    "updater.modal.downloading": "Téléchargement… {p}%",
+    "updater.modal.installing":  "Installation — l'app va redémarrer.",
+    "updater.modal.no_notes":    "Aucune note de version disponible.",
+    "updater.error":             "Erreur mise à jour : {msg}",
+    "updater.section.title":     "Mises à jour",
+    "updater.section.mobile_help": "Sur cette plateforme les mises à jour passent par le store. KataMarrant ne peut pas se mettre à jour seul sur Android ou iOS.",
+    "updater.auto_label":        "Vérifier auto. les mises à jour",
+    "updater.auto_on":           "Activé (recommandé)",
+    "updater.auto_off":          "Désactivé",
+    "updater.auto_help":         "Vérifie GitHub ~3 s après le lancement. Pas d'install automatique — vous confirmez toujours.",
+    "updater.check_now":         "Vérifier maintenant",
+    "updater.status.idle":              "",
+    "updater.status.checking":          "Vérification…",
+    "updater.status.up_to_date":        "Vous êtes à jour.",
+    "updater.status.available":         "Mise à jour {v} disponible.",
+    "updater.status.downloading":       "Téléchargement…",
+    "updater.status.ready":             "Prêt — cliquez la pastille pour redémarrer.",
+    "updater.status.installing":        "Installation…",
+    "updater.whats_new.title":          "Nouveautés en v{v}",
   },
 };
 
@@ -483,6 +535,19 @@ const store = {
   // answer_question response. Used to seed UI defaults (daily-goal stepper,
   // profile card before the live fetch resolves).
   gamification: null,
+  // Auto-updater state (desktop only — supported is false on Android/iOS).
+  // The full state machine + UI live in the "Auto-updater" section near the
+  // bottom of this file. detectUpdaterPlatform() is called on boot.
+  updater: {
+    platform: null,
+    supported: false,
+    state: "idle",
+    available_update: null,
+    progress: { downloaded: 0, total: 0 },
+    error_msg: null,
+    auto_check: true,
+    last_applied: null,
+  },
 };
 
 const STORE_KEYS = {
@@ -493,6 +558,9 @@ const STORE_KEYS = {
   quizPromptMode: "kata.quiz_prompt_mode",
   drillDuration:  "kata.drill_duration_s",
   drillPromptMode:"kata.drill_prompt_mode",
+  updaterAutoCheck:    "kata.updater_auto_check",
+  updaterLastNotes:    "kata.updater_last_notes",
+  updaterLastDismiss:  "kata.updater_last_dismiss",
 };
 
 // ---------------------------------------------------------------------------
@@ -2795,6 +2863,9 @@ async function renderSettings() {
 
   root.appendChild(drillCard);
 
+  // App updates — desktop only; on mobile the card just explains store updates.
+  root.appendChild(buildUpdaterSection());
+
   // Credits card.
   const credits = h("div", { class: "card" },
     h("h2", {}, t("settings.credits")),
@@ -2882,9 +2953,356 @@ function render() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Auto-updater (desktop only)
+//
+// State machine on store.updater.state:
+//   idle → checking → up_to_date           (no update or error)
+//                  → available             (update.body shown in modal)
+//                  → downloading           (progress events)
+//                  → ready_to_install
+//                  → installing            (relaunch imminent on Linux)
+//
+// Mobile is short-circuited three ways: (1) Cargo.toml target-gates the
+// updater plugin off Android/iOS, (2) lib.rs registers it under
+// #[cfg(desktop)], and (3) detectUpdaterPlatform() flips
+// store.updater.supported to false here so the UI hides the pill and modal.
+// Even if a curious user pokes __TAURI__.updater on a mobile build, the
+// permission is missing from mobile.json/ios.json so the IPC layer rejects.
+// ---------------------------------------------------------------------------
+
+async function detectUpdaterPlatform() {
+  try {
+    if (window.__TAURI__?.os?.platform) {
+      store.updater.platform = await window.__TAURI__.os.platform();
+    } else {
+      store.updater.platform = "unknown";
+    }
+  } catch (_) {
+    store.updater.platform = "unknown";
+  }
+  store.updater.supported =
+    ["linux", "macos", "windows"].includes(store.updater.platform) &&
+    !!window.__TAURI__?.updater;
+}
+
+function loadUpdaterPrefs() {
+  try {
+    const v = localStorage.getItem(STORE_KEYS.updaterAutoCheck);
+    store.updater.auto_check = v === null ? true : v === "true";
+    const last = localStorage.getItem(STORE_KEYS.updaterLastNotes);
+    if (last) {
+      try { store.updater.last_applied = JSON.parse(last); } catch (_) {}
+    }
+  } catch (_) {}
+}
+
+function saveUpdaterAutoCheck() {
+  try {
+    localStorage.setItem(STORE_KEYS.updaterAutoCheck, String(store.updater.auto_check));
+  } catch (_) {}
+}
+
+async function updaterCheck({ silent = false } = {}) {
+  if (!store.updater.supported) return null;
+  store.updater.error_msg = null;
+  store.updater.state = "checking";
+  if (!silent) renderUpdaterPill();
+  try {
+    const update = await window.__TAURI__.updater.check();
+    if (update && update.version && update.version !== update.currentVersion) {
+      const dismissed = localStorage.getItem(STORE_KEYS.updaterLastDismiss);
+      // Only suppress for "later" dismissals on this exact version. A newer
+      // version drops → pill resurfaces.
+      const suppressed = dismissed === update.version;
+      store.updater.available_update = {
+        version: update.version,
+        currentVersion: update.currentVersion,
+        body: update.body || "",
+        date: update.date || null,
+        _handle: update,
+      };
+      store.updater.state = suppressed ? "idle" : "available";
+    } else {
+      store.updater.state = "up_to_date";
+      store.updater.available_update = null;
+    }
+  } catch (e) {
+    console.error("[updater] check failed", e);
+    store.updater.state = "idle";
+    store.updater.error_msg = String(e?.message ?? e);
+  }
+  renderUpdaterPill();
+  if (store.view === "settings") render();
+  return store.updater.available_update;
+}
+
+async function updaterDownloadAndInstall() {
+  const u = store.updater.available_update;
+  if (!u || !u._handle) return;
+  store.updater.state = "downloading";
+  store.updater.progress = { downloaded: 0, total: 0 };
+  renderUpdaterModal();
+  try {
+    await u._handle.downloadAndInstall((event) => {
+      if (event.event === "Started") {
+        store.updater.progress.total = Number(event.data?.contentLength || 0);
+      } else if (event.event === "Progress") {
+        store.updater.progress.downloaded += Number(event.data?.chunkLength || 0);
+      } else if (event.event === "Finished") {
+        store.updater.state = "ready_to_install";
+      }
+      renderUpdaterModal();
+    });
+    // Cache the notes so the "What's new in v<x>" Settings card has content
+    // on the next launch (a freshly installed user has nothing cached, which
+    // is fine — the card is hidden in that case).
+    try {
+      const payload = {
+        version: u.version,
+        body: u.body,
+        applied_at: new Date().toISOString(),
+      };
+      localStorage.setItem(STORE_KEYS.updaterLastNotes, JSON.stringify(payload));
+    } catch (_) {}
+    store.updater.state = "installing";
+    renderUpdaterModal();
+    // Linux AppImage: the bundler doesn't auto-restart, we have to call it.
+    // Windows/macOS bundlers self-relaunch — calling here is harmless because
+    // the running process is already exiting.
+    if (window.__TAURI__?.process?.relaunch) {
+      await window.__TAURI__.process.relaunch();
+    }
+  } catch (e) {
+    console.error("[updater] install failed", e);
+    store.updater.error_msg = String(e?.message ?? e);
+    store.updater.state = "available";
+    renderUpdaterModal();
+  }
+}
+
+function dismissUpdate() {
+  const u = store.updater.available_update;
+  if (u) {
+    try { localStorage.setItem(STORE_KEYS.updaterLastDismiss, u.version); } catch (_) {}
+  }
+  store.updater.state = "idle";
+  renderUpdaterPill();
+  closeUpdaterModal();
+}
+
+// Minimal markdown → safe HTML for release-notes rendering. Notes come from
+// our own GitHub Release body (semantic-release writes them) but we treat as
+// untrusted: escape everything, then opt-in to a few tags. Supports headings
+// (#…###), **bold**, `code`, bullet lists, and bare URL linkification (routed
+// through opener so the click doesn't navigate the webview).
+function renderUpdaterMarkdown(src) {
+  if (!src) return "";
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const lines = String(src).split(/\r?\n/);
+  const out = [];
+  let inList = false;
+  const flushList = () => { if (inList) { out.push("</ul>"); inList = false; } };
+  function inlineMd(s) {
+    let r = esc(s);
+    r = r.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+    r = r.replace(/\*\*([^*]+)\*\*/g, (_, c) => `<strong>${c}</strong>`);
+    r = r.replace(/(https?:\/\/[^\s<]+)/g, (u) => {
+      return `<a href="#" data-href="${u}" class="md-link">${u}</a>`;
+    });
+    return r;
+  }
+  for (const raw of lines) {
+    const line = raw;
+    const m = line.match(/^(#{1,3})\s+(.*)$/);
+    if (m) { flushList(); out.push(`<h${m[1].length}>${esc(m[2])}</h${m[1].length}>`); continue; }
+    const li = line.match(/^[\*\-]\s+(.*)$/);
+    if (li) {
+      if (!inList) { out.push("<ul>"); inList = true; }
+      out.push(`<li>${inlineMd(li[1])}</li>`);
+      continue;
+    }
+    if (line.trim() === "") { flushList(); out.push(""); continue; }
+    flushList();
+    out.push(`<p>${inlineMd(line)}</p>`);
+  }
+  flushList();
+  return out.join("\n");
+}
+
+function renderUpdaterPill() {
+  let pill = el("#updater-pill");
+  if (!store.updater.supported) {
+    if (pill) pill.remove();
+    return;
+  }
+  const state = store.updater.state;
+  const visible = state === "available" || state === "downloading" ||
+                  state === "ready_to_install" || state === "installing";
+  if (!visible) { if (pill) pill.remove(); return; }
+  const topbar = el(".topbar");
+  if (!topbar) return;
+  if (!pill) {
+    pill = h("button", {
+      id: "updater-pill", class: "updater-pill", type: "button",
+      onclick: () => openUpdaterModal(),
+    });
+    topbar.appendChild(pill);
+  }
+  pill.innerHTML = "";
+  pill.appendChild(h("span", { class: "updater-pill-dot" }));
+  let label;
+  if (state === "downloading") {
+    const p = store.updater.progress;
+    const pct = p.total > 0 ? Math.floor(p.downloaded * 100 / p.total) : 0;
+    label = t("updater.pill.downloading", { p: pct });
+  } else if (state === "ready_to_install" || state === "installing") {
+    label = t("updater.pill.ready");
+  } else {
+    label = t("updater.pill.available");
+  }
+  pill.appendChild(h("span", {}, label));
+}
+
+function openUpdaterModal() { renderUpdaterModal(true); }
+function closeUpdaterModal() {
+  const m = el("#updater-modal");
+  if (m) m.classList.add("hidden");
+}
+function renderUpdaterModal(forceOpen = false) {
+  let modal = el("#updater-modal");
+  if (!modal) {
+    modal = h("div", {
+      id: "updater-modal", class: "updater-modal hidden",
+      role: "dialog", "aria-modal": "true",
+    });
+    document.body.appendChild(modal);
+  }
+  if (forceOpen) modal.classList.remove("hidden");
+  if (modal.classList.contains("hidden")) return;
+  const u = store.updater.available_update;
+  if (!u) { closeUpdaterModal(); return; }
+  modal.innerHTML = "";
+  const card = h("div", { class: "updater-modal-card" });
+  card.appendChild(h("button", {
+    class: "updater-modal-close", type: "button", "aria-label": "Close",
+    onclick: () => closeUpdaterModal(),
+  }, "×"));
+  card.appendChild(h("h2", {}, t("updater.modal.title")));
+  card.appendChild(h("p", { class: "muted" },
+    t("updater.modal.version", { from: u.currentVersion, to: u.version })));
+
+  const notesBox = h("div", { class: "updater-notes" });
+  notesBox.innerHTML = renderUpdaterMarkdown(u.body || t("updater.modal.no_notes"));
+  notesBox.addEventListener("click", (ev) => {
+    const a = ev.target.closest("a.md-link");
+    if (!a) return;
+    ev.preventDefault();
+    if (a.dataset.href) openExternal(a.dataset.href);
+  });
+  card.appendChild(notesBox);
+
+  const state = store.updater.state;
+  if (state === "downloading") {
+    const p = store.updater.progress;
+    const pct = p.total > 0 ? Math.floor(p.downloaded * 100 / p.total) : 0;
+    card.appendChild(h("div", { class: "updater-progress" },
+      h("div", {
+        class: "updater-progress-fill",
+        style: `width: ${pct}%`,
+      })));
+    card.appendChild(h("p", { class: "muted" },
+      t("updater.modal.downloading", { p: pct })));
+  } else if (state === "ready_to_install" || state === "installing") {
+    card.appendChild(h("p", {}, t("updater.modal.installing")));
+  } else {
+    const row = h("div", { class: "updater-modal-actions" });
+    row.appendChild(h("button", {
+      class: "btn ghost", type: "button",
+      onclick: () => dismissUpdate(),
+    }, t("updater.modal.later")));
+    row.appendChild(h("button", {
+      class: "btn primary", type: "button",
+      onclick: () => updaterDownloadAndInstall(),
+    }, t("updater.modal.install")));
+    card.appendChild(row);
+  }
+  if (store.updater.error_msg) {
+    card.appendChild(h("div", { class: "updater-error" },
+      t("updater.error", { msg: store.updater.error_msg })));
+  }
+  modal.appendChild(card);
+}
+
+function buildUpdaterSection() {
+  const card = h("div", { class: "card" }, h("h2", {}, t("updater.section.title")));
+  if (!store.updater.supported) {
+    card.appendChild(h("p", { class: "muted" }, t("updater.section.mobile_help")));
+    return card;
+  }
+  // Auto-check toggle.
+  const autoSelect = h("select", {});
+  for (const [v, lbl] of [["true", t("updater.auto_on")], ["false", t("updater.auto_off")]]) {
+    const opt = h("option", { value: v }, lbl);
+    if ((v === "true") === store.updater.auto_check) opt.selected = true;
+    autoSelect.appendChild(opt);
+  }
+  autoSelect.addEventListener("change", () => {
+    store.updater.auto_check = autoSelect.value === "true";
+    saveUpdaterAutoCheck();
+  });
+  card.appendChild(h("div", { class: "field" },
+    h("label", {}, t("updater.auto_label")),
+    autoSelect,
+    h("div", { class: "muted", style: "margin-top:6px" }, t("updater.auto_help")),
+  ));
+
+  // Manual check + status line.
+  const stateMsg = {
+    idle:             t("updater.status.idle"),
+    checking:         t("updater.status.checking"),
+    up_to_date:       t("updater.status.up_to_date"),
+    available:        t("updater.status.available", {
+                        v: store.updater.available_update?.version || "?" }),
+    downloading:      t("updater.status.downloading"),
+    ready_to_install: t("updater.status.ready"),
+    installing:       t("updater.status.installing"),
+  }[store.updater.state];
+  const status = h("div", { class: "muted", style: "margin-top:8px" }, stateMsg || "");
+  card.appendChild(h("div", { class: "field" },
+    h("button", {
+      class: "btn full", type: "button",
+      onclick: () => updaterCheck({ silent: false }),
+    }, t("updater.check_now")),
+    status,
+  ));
+
+  // What's new card pulled from the cache written on the previous successful
+  // install. Hidden on first launch.
+  const last = store.updater.last_applied;
+  if (last && last.version && last.body) {
+    const wn = h("div", { class: "whats-new" });
+    wn.appendChild(h("h3", {}, t("updater.whats_new.title", { v: last.version })));
+    const md = h("div", { class: "updater-notes" });
+    md.innerHTML = renderUpdaterMarkdown(last.body);
+    md.addEventListener("click", (ev) => {
+      const a = ev.target.closest("a.md-link");
+      if (!a) return;
+      ev.preventDefault();
+      if (a.dataset.href) openExternal(a.dataset.href);
+    });
+    wn.appendChild(md);
+    card.appendChild(wn);
+  }
+  return card;
+}
+
 async function boot() {
   try {
     loadLocalSettings();
+    loadUpdaterPrefs();
+    await detectUpdaterPlatform();
     applyTabLabels();
 
     els(".tab").forEach(btn => {
@@ -2915,6 +3333,12 @@ async function boot() {
   }
 
   navigate("home");
+
+  // Auto-update boot check (desktop only). Delayed so the first paint isn't
+  // blocked and the app is fully responsive when the pill appears.
+  if (store.updater.supported && store.updater.auto_check) {
+    setTimeout(() => { updaterCheck({ silent: true }).catch(() => {}); }, 3000);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", boot);

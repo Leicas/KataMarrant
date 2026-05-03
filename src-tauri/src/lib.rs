@@ -83,6 +83,16 @@ pub fn run() {
                 .build(),
         );
 
+    // Auto-updater: desktop-only. The crate is target-gated in Cargo.toml so
+    // tauri_plugin_updater isn't even nameable on Android/iOS. Mobile uses
+    // Play Store / App Store / sideload for distribution. tauri-plugin-process
+    // is paired here so the JS side can call relaunch() after install on
+    // Linux AppImage (Windows/macOS bundlers self-relaunch).
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+
     let app = builder
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;

@@ -39,6 +39,8 @@ html, body, #app {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Anchor for the absolutely-positioned auto-updater pill (.updater-pill). */
+  position: relative;
   padding: 14px 16px 8px;
   /* Push under the Android status bar / notch via safe-area-inset (paired
      with viewport-fit=cover in index.html). 14px is the visual baseline; the
@@ -1007,4 +1009,129 @@ main {
 .sync-pane > label:first-child {
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+/* Auto-updater (desktop only) ---------------------------------------------
+   The pill lives in the topbar, the modal mounts directly under <body>. */
+.updater-pill {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: linear-gradient(135deg, #c87a3a, #a85a2a);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 4px 10px 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  animation: updater-pill-in 220ms ease-out;
+  z-index: 5;
+}
+@keyframes updater-pill-in {
+  from { transform: translateY(-6px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.updater-pill:hover { filter: brightness(1.05); }
+.updater-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffe27a;
+  box-shadow: 0 0 6px #ffe27a;
+  animation: updater-pulse 1.6s ease-in-out infinite;
+}
+@keyframes updater-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.updater-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.updater-modal.hidden { display: none; }
+.updater-modal-card {
+  background: var(--bg-card, var(--bg-elev, #1f1a16));
+  color: var(--fg, #f0e8df);
+  border: 1px solid var(--border, #3a302a);
+  border-radius: 12px;
+  padding: 20px 22px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+}
+.updater-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: 0;
+  color: var(--fg, #f0e8df);
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+}
+.updater-notes {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+.updater-notes h1, .updater-notes h2, .updater-notes h3 {
+  margin: 12px 0 6px;
+  font-size: 15px;
+}
+.updater-notes p { margin: 6px 0; }
+.updater-notes ul { padding-left: 18px; margin: 6px 0; }
+.updater-notes code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.updater-notes a.md-link { color: var(--accent, #d4a574); text-decoration: underline; }
+.updater-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.updater-progress {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.updater-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c87a3a, #ffd47a);
+  transition: width 200ms ease;
+}
+.updater-error {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(200, 80, 80, 0.12);
+  color: #f0a8a8;
+  font-size: 13px;
+}
+.whats-new {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border, #3a302a);
+}
+.whats-new h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  opacity: 0.85;
 }

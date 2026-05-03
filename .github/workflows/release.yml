@@ -106,14 +106,31 @@ jobs:
 
       - run: npm ci
 
+      # Auto-updater signing keys must be set as GH Action secrets BEFORE
+      # flipping `bundle.createUpdaterArtifacts: true` in tauri.conf.json.
+      # Until those secrets are configured, tauri-action proceeds without
+      # signing (no .sig files emitted, no latest.json uploaded). Once the
+      # user has run `npx tauri signer generate`, pasted the pubkey into
+      # tauri.conf.json, and added the two secrets, flip
+      # `createUpdaterArtifacts: true` in a follow-up commit and the next
+      # release will produce signed updater artifacts automatically.
       - name: Build & upload to release ${{ needs.release.outputs.tag }}
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ needs.release.outputs.tag }}
           releaseName: ${{ needs.release.outputs.tag }}
           args: ${{ matrix.args }}
+          # tauri-action handles updater JSON aggregation across the matrix:
+          # signs each artifact with the private key, uploads the .sig file
+          # alongside the installer, and emits a single merged latest.json
+          # at the end. updaterJsonPreferNsis points it at our setup.exe
+          # rather than .msi for the Windows entry.
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
 
   # ---------------------------------------------------------------------------
   # 3) Android signed APK + AAB. Skipped automatically when the keystore
