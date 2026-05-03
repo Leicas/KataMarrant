@@ -133,6 +133,71 @@ jobs:
           updaterJsonPreferNsis: true
 
   # ---------------------------------------------------------------------------
+  # 2.5) Patch `latest.json.notes` from CHANGELOG.md.
+  #
+  # tauri-action emits `latest.json` with EVERY platform's signature wired up
+  # but leaves the `notes` field empty — it does not auto-pull from the GH
+  # release body that semantic-release wrote. Without notes, the in-app
+  # update modal shows "No release notes available." even though the data
+  # exists in CHANGELOG.md and on the GH release page. This job fixes that:
+  # it runs once after the matrix completes, downloads `latest.json`,
+  # extracts the section for the just-released version from CHANGELOG.md,
+  # writes it into `notes`, and re-uploads (clobber).
+  #
+  # Skips silently if `latest.json` is absent (signing not yet configured)
+  # or if no CHANGELOG section exists for the version (chore/docs-only
+  # releases).
+  # ---------------------------------------------------------------------------
+  patch-updater-notes:
+    name: Patch latest.json notes from CHANGELOG
+    needs: [release, build-desktop]
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Download, patch, re-upload latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          if ! gh release download "$TAG" -p latest.json -D out --clobber 2>/dev/null; then
+            echo "::warning::latest.json not on $TAG (signing keys probably not configured); skipping"
+            exit 0
+          fi
+          if [ ! -f out/latest.json ]; then
+            echo "::warning::latest.json downloaded zero files; skipping"
+            exit 0
+          fi
+          # Extract the CHANGELOG section for $VERSION (== text under the
+          # `## [$VERSION](...)` heading, up to the next `## ` heading or EOF).
+          NOTES=$(node -e '
+            const fs = require("fs");
+            const md = fs.readFileSync("CHANGELOG.md","utf8");
+            const v = process.argv[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const re = new RegExp("(^|\\n)## \\[" + v + "\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## |$)");
+            const m = md.match(re);
+            process.stdout.write(m ? m[2].trim() : "");
+          ' "$VERSION")
+          if [ -z "$NOTES" ]; then
+            echo "::warning::No CHANGELOG section for $VERSION — leaving notes blank"
+            exit 0
+          fi
+          # Patch notes field in-place.
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("out/latest.json","utf8"));
+            m.notes = process.argv[1];
+            fs.writeFileSync("out/latest.json", JSON.stringify(m,null,2) + "\n");
+          ' "$NOTES"
+          gh release upload "$TAG" out/latest.json --clobber
+          echo "Patched latest.json.notes for $TAG (${#NOTES} chars)"
+
+  # ---------------------------------------------------------------------------
   # 3) Android signed APK + AAB. Skipped automatically when the keystore
   #    secret is unset, so the workflow keeps shipping desktop builds even
   #    without the Android signing setup.
