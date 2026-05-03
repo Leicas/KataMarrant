@@ -1,3 +1,9 @@
+## [1.4.0-beta.6](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.5...v1.4.0-beta.6) (2026-05-03)
+
+### Bug Fixes
+
+* **ui,updater:** window dragging + beta-channel updater endpoint + softer profile-hero ([3f59b69](https://github.com/Leicas/KataMarrant/commit/3f59b69ddeb890963c83725dec5b141248594d28))
+
 ## [1.4.0-beta.5](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.4...v1.4.0-beta.5) (2026-05-03)
 
 ### Features
