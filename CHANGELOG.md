@@ -1,3 +1,9 @@
+## [1.4.0-beta.9](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.8...v1.4.0-beta.9) (2026-05-03)
+
+### Bug Fixes
+
+* **ui:** window controls fallback paths + home action buttons above the fold ([d0397ec](https://github.com/Leicas/KataMarrant/commit/d0397ec85e97ab43aa5f294c5ac04db0f85e2b61))
+
 ## [1.4.0-beta.8](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.7...v1.4.0-beta.8) (2026-05-03)
 
 ### Bug Fixes
