@@ -5,8 +5,8 @@
   "identifier": "co.weill-duflos.katamarrant",
   "build": {
     "frontendDist": "../src",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "beforeDevCommand": "node -e \"require('fs').copyFileSync('CHANGELOG.md','src/CHANGELOG.md')\"",
+    "beforeBuildCommand": "node -e \"require('fs').copyFileSync('CHANGELOG.md','src/CHANGELOG.md')\""
   },
   "app": {
     "windows": [

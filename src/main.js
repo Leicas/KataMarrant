@@ -258,6 +258,10 @@ const I18N = {
     "updater.status.ready":             "Ready — click the pill to restart.",
     "updater.status.installing":        "Installing…",
     "updater.whats_new.title":          "What's new in v{v}",
+    "updater.changelog.button":         "View full changelog",
+    "updater.changelog.title":          "Changelog",
+    "updater.changelog.loading":        "Loading…",
+    "updater.changelog.empty":          "No changelog available.",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -490,6 +494,10 @@ const I18N = {
     "updater.status.ready":             "Prêt — cliquez la pastille pour redémarrer.",
     "updater.status.installing":        "Installation…",
     "updater.whats_new.title":          "Nouveautés en v{v}",
+    "updater.changelog.button":         "Voir le changelog complet",
+    "updater.changelog.title":          "Journal des modifications",
+    "updater.changelog.loading":        "Chargement…",
+    "updater.changelog.empty":          "Aucun changelog disponible.",
   },
 };
 
@@ -2864,7 +2872,7 @@ async function renderSettings() {
   root.appendChild(drillCard);
 
   // App updates — desktop only; on mobile the card just explains store updates.
-  root.appendChild(buildUpdaterSection());
+  root.appendChild(await buildUpdaterSection());
 
   // Credits card.
   const credits = h("div", { class: "card" },
@@ -3235,7 +3243,82 @@ function renderUpdaterModal(forceOpen = false) {
   modal.appendChild(card);
 }
 
-function buildUpdaterSection() {
+// Lazy single-fetch cache for CHANGELOG.md. The file is bundled into
+// frontendDist by tauri.conf.json's beforeBuildCommand (and beforeDevCommand
+// for `npm run dev`), copied from the repo-root CHANGELOG.md that
+// semantic-release regenerates on every release. Treated as same-origin under
+// the existing CSP `default-src 'self'`.
+let _changelogCache = null;
+async function loadChangelog() {
+  if (_changelogCache !== null) return _changelogCache;
+  try {
+    const res = await fetch("CHANGELOG.md");
+    if (!res.ok) { _changelogCache = ""; return ""; }
+    _changelogCache = await res.text();
+  } catch (_) {
+    _changelogCache = "";
+  }
+  return _changelogCache;
+}
+
+// Pull out the section for one version from a semantic-release-generated
+// CHANGELOG.md. Headings look like `## [1.4.0-beta.1](url) (date)`. The
+// section runs until the next `## ` heading or end-of-file.
+function extractChangelogSection(full, version) {
+  if (!full || !version) return "";
+  const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(^|\\n)## \\[${escaped}\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## |$)`);
+  const m = full.match(re);
+  return m ? m[2].trim() : "";
+}
+
+// First version heading in CHANGELOG.md == the current build's version,
+// because semantic-release commits the new section + bumps the version files
+// in one atomic chore(release) commit. Avoids needing __TAURI__.app.getVersion
+// (which would require an extra capability permission).
+function extractCurrentVersionFromChangelog(full) {
+  if (!full) return null;
+  const m = full.match(/^## \[([^\]]+)\]/m);
+  return m ? m[1] : null;
+}
+
+function openChangelogModal() {
+  let modal = el("#changelog-modal");
+  if (!modal) {
+    modal = h("div", {
+      id: "changelog-modal", class: "updater-modal hidden",
+      role: "dialog", "aria-modal": "true",
+    });
+    document.body.appendChild(modal);
+  }
+  modal.classList.remove("hidden");
+  modal.innerHTML = "";
+  const card = h("div", { class: "updater-modal-card" });
+  card.appendChild(h("button", {
+    class: "updater-modal-close", type: "button", "aria-label": "Close",
+    onclick: () => modal.classList.add("hidden"),
+  }, "×"));
+  card.appendChild(h("h2", {}, t("updater.changelog.title")));
+  const body = h("div", { class: "updater-notes" });
+  body.innerHTML = `<p class="muted">${t("updater.changelog.loading")}</p>`;
+  card.appendChild(body);
+  modal.appendChild(card);
+  loadChangelog().then((md) => {
+    if (!md) {
+      body.innerHTML = `<p class="muted">${t("updater.changelog.empty")}</p>`;
+      return;
+    }
+    body.innerHTML = renderUpdaterMarkdown(md);
+    body.addEventListener("click", (ev) => {
+      const a = ev.target.closest("a.md-link");
+      if (!a) return;
+      ev.preventDefault();
+      if (a.dataset.href) openExternal(a.dataset.href);
+    });
+  });
+}
+
+async function buildUpdaterSection() {
   const card = h("div", { class: "card" }, h("h2", {}, t("updater.section.title")));
   if (!store.updater.supported) {
     card.appendChild(h("p", { class: "muted" }, t("updater.section.mobile_help")));
@@ -3278,14 +3361,32 @@ function buildUpdaterSection() {
     status,
   ));
 
-  // What's new card pulled from the cache written on the previous successful
-  // install. Hidden on first launch.
-  const last = store.updater.last_applied;
-  if (last && last.version && last.body) {
+  // What's new — first preference is the cache written by a previous
+  // successful auto-update (because that body came from the GH release
+  // notes via the manifest, which is the most accurate source). Fresh
+  // installs hit the second branch: parse the bundled CHANGELOG.md,
+  // extract the current version's section. Either way the user sees
+  // *something* relevant the moment they open Settings.
+  const cached = store.updater.last_applied;
+  let wnVersion = null, wnBody = "";
+  if (cached && cached.version && cached.body) {
+    wnVersion = cached.version;
+    wnBody = cached.body;
+  } else {
+    const cl = await loadChangelog();
+    if (cl) {
+      const v = extractCurrentVersionFromChangelog(cl);
+      if (v) {
+        const section = extractChangelogSection(cl, v);
+        if (section) { wnVersion = v; wnBody = section; }
+      }
+    }
+  }
+  if (wnVersion && wnBody) {
     const wn = h("div", { class: "whats-new" });
-    wn.appendChild(h("h3", {}, t("updater.whats_new.title", { v: last.version })));
+    wn.appendChild(h("h3", {}, t("updater.whats_new.title", { v: wnVersion })));
     const md = h("div", { class: "updater-notes" });
-    md.innerHTML = renderUpdaterMarkdown(last.body);
+    md.innerHTML = renderUpdaterMarkdown(wnBody);
     md.addEventListener("click", (ev) => {
       const a = ev.target.closest("a.md-link");
       if (!a) return;
@@ -3295,6 +3396,17 @@ function buildUpdaterSection() {
     wn.appendChild(md);
     card.appendChild(wn);
   }
+
+  // Always-available "View full changelog" button — same source as the
+  // What's new card above (CHANGELOG.md), but opens a modal that renders
+  // the full file (every version). Useful for users who installed via the
+  // store / sideload and want to scroll back.
+  card.appendChild(h("div", { class: "field" },
+    h("button", {
+      class: "btn ghost full", type: "button",
+      onclick: () => openChangelogModal(),
+    }, t("updater.changelog.button")),
+  ));
   return card;
 }
 
