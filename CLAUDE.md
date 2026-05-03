@@ -45,7 +45,7 @@ There are no automated tests.
 | Module | Purpose |
 |---|---|
 | `lib.rs` | Tauri setup, command registration, scheduler loop spawn |
-| `state.rs` | `AppState` (db connection, scheduler state) |
+| `state.rs` | `AppState` (db connection, scheduler state, recent-shown cooldown deque) |
 | `error.rs` | `AppError` / `AppResult<T>` (serializes to JSON) |
 | `data.rs` | Static `TECHNIQUES: &[Technique]` — 40 Gokyo entries (slug, romaji, kanji, `name_fr`, group, category, judo_how/wiki/image URLs) |
 | `db.rs` | SQLite stats: `technique_stats`, `quiz_log`, helpers |
@@ -65,12 +65,24 @@ weight = 1
        + recency_bonus         (≤ 2, scales with days since last shown)
        + unseen_bonus          (+1.5 if never answered)
        + mistake_bonus         (+0.4 per cumulative wrong, capped at +3)
-       + recent_fail_bonus     (+4 if the last answer for the technique was wrong)
+       + recent_fail_bonus     (+2 if the last answer for the technique was wrong)
 ```
 
 so weak / freshly-failed / unseen / stale techniques surface much more. The
-`last_correct` flag in `technique_stats` is the trigger for the big "you just
-got it wrong" boost — that's the dominant signal for spaced-rep priority.
+`last_correct` flag in `technique_stats` is the trigger for the "you just
+got it wrong" boost — a meaningful signal for spaced-rep priority, but
+intentionally bounded (was +4, lowered to +2) so the cooldown below can
+still rotate the pick.
+
+After weighting, a within-session **no-repeat cooldown** is applied: the
+last 6 slugs returned by `next_question` are tracked in
+`AppState::recent_shown` (a `VecDeque<String>`, capped at
+`state::RECENT_SHOWN_CAP = 6`, reset on app boot). Any candidate whose
+slug is in that deque has its weight multiplied by `0.05` (95%
+suppression). Edge case: if EVERY candidate is on cooldown (small
+`group_filter` on a near-deque-sized pool), the slug shown longest ago
+(front of the deque) is exempted so the picker can still make progress.
+The cooldown is what guarantees no exact repeats inside a 10-pick run.
 
 Distractors come from the same group by default (hardest), or same-category,
 or anywhere.

@@ -101,6 +101,9 @@ pub fn run() {
                     last_fired_at: 0,
                     scheduled_task_ids: Vec::new(),
                 }),
+                recent_shown: Mutex::new(std::collections::VecDeque::with_capacity(
+                    state::RECENT_SHOWN_CAP,
+                )),
             });
 
             // Mobile: notification channel (Android no-op on iOS) + permission.
