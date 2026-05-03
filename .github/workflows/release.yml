@@ -190,6 +190,29 @@ jobs:
       - if: env.HAS_KEYSTORE == 'true'
         run: npm ci
 
+      # `tauri android init` reads key.properties at template-rendering
+      # time and only emits the `signingConfigs.release` block in
+      # app/build.gradle.kts when the file exists. If we wrote
+      # key.properties AFTER init, the generated Gradle file would have
+      # no signing block, the release APK would land at
+      # `…-release-unsigned.apk`, and the upload step would fail with
+      # `cp: cannot stat …-release.apk`. So: pre-create the file with
+      # real values BEFORE init.
+      - name: Pre-write key.properties (consumed by tauri android init)
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p src-tauri/gen/android
+          {
+            echo "storeFile=$HOME/keystores/release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > src-tauri/gen/android/key.properties
+
       # gen/android/ is gitignored (the architect's plan: regenerate
       # fresh on each CI run rather than checking the Xcode/Gradle
       # scaffolding into the public repo). Without this step, `tauri
@@ -202,9 +225,10 @@ jobs:
           ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
 
-      # tauri android init regenerates key.properties from scratch with
-      # debug placeholders, so we have to re-write it AFTER init runs.
-      - name: Re-write key.properties for release signing
+      # init may have rewritten key.properties if it had its own
+      # template — re-establish the real values so the next gradle
+      # invocation reads them.
+      - name: Ensure key.properties has release values
         if: env.HAS_KEYSTORE == 'true'
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
