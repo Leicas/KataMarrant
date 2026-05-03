@@ -1540,7 +1540,20 @@ main {
 @media (max-width: 599px) {
   .titlebar { display: none; }
   .sidebar { display: none; }
-  #view-root { padding: 0; }
+  /* Critical: .shell-body defaults to flex-row (sidebar | main) for desktop.
+     On mobile, sidebar is hidden but .topbar-mobile is still a flex sibling
+     of #view-root — without flipping to column, the topbar-mobile would
+     render to the LEFT of main as a vertical strip and break the entire
+     mobile layout. This was the regression that broke the Android UI. */
+  .shell-body { flex-direction: column; }
+  /* Side gutters so cards don't hug the screen edges. The old layout
+     achieved this via #app { max-width: 560px } + .topbar padding. */
+  #view-root {
+    padding: 12px 12px 24px;
+    padding-left: calc(12px + env(safe-area-inset-left));
+    padding-right: calc(12px + env(safe-area-inset-right));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
   #view-root .view { max-width: none; }
   .topbar-mobile { display: flex; }
   .updater-pill { /* on mobile, anchor in the .topbar-mobile not the titlebar */
