@@ -146,8 +146,12 @@ jobs:
       # under target/aarch64-apple-ios-sim/release/bundle/ios that can be
       # opened in Xcode's iOS Simulator on a Mac. No Apple Developer
       # account / cert / provisioning profile required.
+      # `tauri ios build --target` uses short names (`aarch64`,
+      # `aarch64-sim`, `x86_64`), NOT Rust triples — `aarch64-apple-ios-sim`
+      # produces "invalid value" since Tauri's CLI maps the short name to
+      # the actual Rust triple internally.
       - name: Build for iPhone Simulator (unsigned)
-        run: npx tauri ios build --target aarch64-apple-ios-sim
+        run: npx tauri ios build --target aarch64-sim
 
       # Surface the artefact so reviewers can pull it down for local
       # simulator testing without needing the runner.
