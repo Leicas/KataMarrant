@@ -1,3 +1,9 @@
+## [1.4.0-beta.13](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.12...v1.4.0-beta.13) (2026-05-03)
+
+### Bug Fixes
+
+* **android:** cfg-gate Window::minimize/maximize/close — mobile build broken ([498b730](https://github.com/Leicas/KataMarrant/commit/498b7309e86a2c32d4fd15c16fc8d0fa2dbd2530))
+
 ## [1.4.0-beta.12](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.11...v1.4.0-beta.12) (2026-05-03)
 
 ### Bug Fixes
