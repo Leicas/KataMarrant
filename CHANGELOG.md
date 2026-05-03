@@ -1,3 +1,9 @@
+## [1.4.0-beta.14](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.13...v1.4.0-beta.14) (2026-05-03)
+
+### Bug Fixes
+
+* **ui,mobile:** broken layout — .shell-body needed flex-direction: column ([28b02fc](https://github.com/Leicas/KataMarrant/commit/28b02fc44e6383b18f9f14989db244e99569237d))
+
 ## [1.4.0-beta.13](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.12...v1.4.0-beta.13) (2026-05-03)
 
 ### Bug Fixes
