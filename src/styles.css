@@ -271,22 +271,26 @@ main {
 
 .quiz-image-wrap {
   position: relative;
-  margin: 4px 0 16px;
-  border-radius: 12px;
+  margin: 0;
+  border-radius: var(--rad-3);
   overflow: hidden;
-  background: linear-gradient(180deg, #1a1f30, #0c0f17);
-  border: 1px solid var(--border);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+  background: linear-gradient(180deg, var(--bg-elev-3), var(--bg-elev-1));
+  box-shadow: 0 0 0 1px var(--stroke) inset, 0 4px 14px rgba(0, 0, 0, .25);
 }
 .quiz-image-wrap.compact { max-height: 200px; }
 .quiz-image {
   display: block;
   width: 100%;
-  max-height: 280px;
+  max-height: 220px;     /* was 280 — desktop default */
   object-fit: contain;
   background: transparent;
 }
-.quiz-image-wrap.compact .quiz-image { max-height: 200px; }
+.quiz-image-wrap.compact .quiz-image { max-height: 180px; }
+@media (max-width: 599px) {
+  /* Phone portrait keeps the original taller image — there's a single
+     vertical column to fill, so we want the prompt to dominate. */
+  .quiz-image { max-height: 280px; }
+}
 .quiz-image-wrap .hint-kanji {
   position: absolute;
   right: 10px;
@@ -354,13 +358,13 @@ main {
   text-shadow: 0 2px 12px rgba(253, 230, 138, .15);
 }
 
-/* ----- Reveal (answer) card ----- */
+/* ----- Reveal (answer) card — tightened for desktop no-scroll ----- */
 .reveal {
-  margin-top: 14px;
-  padding: 16px 18px 18px;
-  border-radius: 14px;
-  background: linear-gradient(160deg, rgba(239, 68, 68, .08), rgba(253, 230, 138, .04) 60%, transparent);
-  border: 1px solid var(--border);
+  margin-top: var(--sp-3);
+  padding: 12px 16px 14px;
+  border-radius: var(--rad-3);
+  background: linear-gradient(160deg, rgba(208, 69, 69, .06), rgba(216, 184, 106, .03) 60%, transparent);
+  box-shadow: 0 0 0 1px var(--stroke) inset;
   position: relative;
   overflow: hidden;
   animation: revealIn .35s cubic-bezier(.2,.8,.2,1);
@@ -370,46 +374,47 @@ main {
   position: absolute;
   inset: 0 0 auto 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--brand) 30%, var(--kanji) 70%, transparent);
+  background: linear-gradient(90deg, transparent, var(--accent) 30%, var(--gold) 70%, transparent);
   opacity: .8;
 }
 .reveal.bad::before { background: linear-gradient(90deg, transparent, var(--bad), transparent); }
 .reveal-status {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
 }
 .reveal.good .reveal-status { color: var(--good); }
 .reveal.bad  .reveal-status { color: var(--bad); }
 .reveal-name {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--heading);
-  letter-spacing: .3px;
-  line-height: 1.15;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--fg-heading);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 .reveal-kanji {
-  font-size: 28px;
+  font-family: var(--font-jp);
+  font-size: 22px;
   font-weight: 600;
-  color: var(--kanji);
-  letter-spacing: 3px;
-  margin-top: 4px;
-  text-shadow: 0 2px 10px rgba(253, 230, 138, .15);
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+  text-shadow: 0 1px 6px rgba(216, 184, 106, .12);
 }
 .reveal-fr {
-  font-size: 14px;
+  font-size: 13px;
   font-style: italic;
-  color: var(--text);
-  margin-top: 6px;
+  color: var(--fg);
+  margin-top: 4px;
   opacity: .9;
 }
 .reveal-meta {
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 8px;
   flex-wrap: wrap;
 }
 
@@ -1475,6 +1480,30 @@ main {
 }
 @media (min-width: 600px) {
   .topbar-mobile { display: none; }
+}
+
+/* ----- Quiz card desktop layout — 2-col grid (image left, choices right)
+   so an answered quiz fits in 744px usable height without scrolling. The
+   reveal panel + Suivant button render below the grid full-width.
+   Mobile keeps the legacy single-column flow because there's no
+   horizontal real estate to split. ----- */
+.qc-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+@media (min-width: 700px) {
+  .qc-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: var(--sp-5);
+    align-items: start;
+  }
+  .qc-grid .quiz-image-wrap { margin: 0; }
+  .qc-grid .choices { margin-top: 0; }
+  /* Make each choice tile a bit taller so the right column visually
+     balances the image on the left. */
+  .qc-grid .choice { padding: 14px 16px; }
 }
 
 /* Updater pill in the titlebar slot — override the absolute positioning

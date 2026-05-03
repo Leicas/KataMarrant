@@ -1237,18 +1237,15 @@ async function renderProfile(slot) {
         t("profile.longest", { n: g.longest_streak })),
     ),
     h("div", { class: "profile-goal" },
+      h("div", { class: "goal-text" },
+        h("span", { class: "num" },
+          t("profile.goal_progress", { cur: today.questions, goal })),
+        h("span", { class: "small muted" }, t("profile.daily_goal")),
+      ),
       h("div", { class: "goal-ring" },
         h("div", { class: "goal-ring-bar" },
           h("div", { class: "goal-ring-fill", style: `width:${goalPct}%` }),
         ),
-      ),
-      h("div", { class: "goal-text" },
-        h("span", { class: "small muted" }, t("profile.daily_goal")),
-        h("span", { class: "num" },
-          t("profile.goal_progress", { cur: today.questions, goal })),
-        g.best_combo > 1
-          ? h("div", { class: "muted small" }, t("profile.combo", { n: g.best_combo }))
-          : null,
       ),
     ),
   ));
@@ -1523,8 +1520,10 @@ function renderQuizCard(q, mode, opts = {}) {
     h("div", { class: "quiz-meta" },
       h("span", { class: "badge brand" }, `${tech.group}. ${GROUP_NAMES[tech.group] || ""}`),
     ),
-    promptEl,
-    interactionEl,
+    // 2-col grid on desktop: prompt left, choices right; collapses to a
+    // single column at narrow widths (mobile or narrow desktop). Same DOM
+    // shape on every platform, CSS does the layout.
+    h("div", { class: "qc-grid" }, promptEl, interactionEl),
   );
 
   // -- Reveal panel after answer ------------------------------------------
