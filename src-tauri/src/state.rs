@@ -6,11 +6,12 @@ use rusqlite::Connection;
 use crate::scheduler::SchedulerState;
 
 /// Cap on the no-repeat window used by `commands::quiz::next_question`.
-/// Six is large enough to comfortably cover a "10-in-a-row" session
-/// without exhausting the smallest realistic candidate pool (a single
-/// gokyo group has 8 techniques, so a 6-deep cooldown still leaves
-/// 2 freely-pickable slugs even under group_filter).
-pub const RECENT_SHOWN_CAP: usize = 6;
+/// Matches the user's "no repeats in a 10-in-a-row session" mental model.
+/// When `group_filter` narrows the pool below 10 (a single gokyo group
+/// has 8 techniques), every candidate ends up in the deque at once;
+/// `compute_weights`'s escape hatch exempts the slug shown longest ago
+/// so the picker keeps making forward progress in that case.
+pub const RECENT_SHOWN_CAP: usize = 10;
 
 pub struct AppState {
     pub db: Mutex<Connection>,

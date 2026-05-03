@@ -11,12 +11,16 @@ use crate::error::{AppError, AppResult};
 use crate::state::{AppState, RECENT_SHOWN_CAP};
 
 /// Multiplier applied to a candidate slug's weight when it appears in the
-/// recent-shown deque. 0.05 = 95% suppression — strong enough to almost
-/// always knock the slug out of contention, but non-zero so a tiny pool
-/// (e.g. group_filter on a near-empty group) still has a fallback. See
-/// `compute_weights` for the all-suppressed escape hatch that keeps
-/// progress moving when EVERY candidate is on cooldown.
-const RECENT_COOLDOWN_FACTOR: f64 = 0.05;
+/// recent-shown deque. 0.0 = hard ban: a slug in the deque cannot be
+/// re-picked while it stays inside the cooldown window. The "all on
+/// cooldown" escape hatch in `compute_weights` exempts the candidate
+/// shown longest ago so the picker still has a non-zero option when
+/// `group_filter` narrows the pool below the deque size. Was 0.05 (95%
+/// suppression), but a heavily-weighted failed slug at 0.05 still beat
+/// fresh-but-low-priority candidates often enough to surface as a "same
+/// question loop" — the user reported seeing repeats anyway. Hard ban
+/// is the only thing that cleanly kills the loop.
+const RECENT_COOLDOWN_FACTOR: f64 = 0.0;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TechniqueDto {
@@ -249,14 +253,29 @@ pub(crate) fn compute_weights(
         );
     }
 
-    // No-repeat cooldown. If every candidate is on cooldown we exempt the
-    // slug shown longest ago so the picker can still make progress.
-    let oldest_recent: Option<&str> = recents.first().map(|s| s.as_str());
+    // No-repeat cooldown. If every candidate is on cooldown we exempt
+    // the candidate whose slug appears earliest in `recents` (i.e. shown
+    // longest ago AMONG slugs that are actually in this pool — using
+    // `recents.first()` directly is wrong when the pool is a strict
+    // subset of the deque, e.g. group_filter mode).
     let all_on_cooldown = !pool.is_empty()
         && pool.iter().all(|t| recents.iter().any(|r| r == t.slug));
+    let exempt_slug: Option<&str> = if all_on_cooldown {
+        pool.iter()
+            .filter_map(|t| {
+                recents
+                    .iter()
+                    .position(|r| r == t.slug)
+                    .map(|pos| (pos, t.slug))
+            })
+            .min_by_key(|&(pos, _)| pos)
+            .map(|(_, slug)| slug)
+    } else {
+        None
+    };
     for (i, t) in pool.iter().enumerate() {
         let is_recent = recents.iter().any(|r| r == t.slug);
-        let is_exempt = all_on_cooldown && Some(t.slug) == oldest_recent;
+        let is_exempt = exempt_slug == Some(t.slug);
         if is_recent && !is_exempt {
             weights[i] *= RECENT_COOLDOWN_FACTOR;
         }
@@ -274,55 +293,48 @@ mod tests {
     }
 
     #[test]
-    fn cooldown_suppresses_recents_below_remaining() {
-        // 10 candidates, mark the first 6 as "recently shown".
-        let pool = pool_first(10);
-        assert_eq!(pool.len(), 10, "need at least 10 techniques to run this test");
-        let recents: Vec<String> = pool.iter().take(6).map(|t| t.slug.to_string()).collect();
-        let stats: Vec<TechniqueStat> = Vec::new(); // pretend nobody has answered anything
-
-        let now = 1_700_000_000;
-        let weights = compute_weights(&pool, &stats, &recents, now);
-        assert_eq!(weights.len(), 10);
-
-        let suppressed_total: f64 = weights[..6].iter().sum();
-        let fresh_total: f64 = weights[6..].iter().sum();
-
-        // The 4 fresh slugs should dominate the 6 suppressed ones —
-        // even though there are fewer of them.
-        assert!(
-            fresh_total > suppressed_total,
-            "expected fresh sum > suppressed sum, got fresh={fresh_total} suppressed={suppressed_total}"
-        );
-        // And each suppressed weight should be about 5% of a fresh one.
-        for i in 0..6 {
-            for j in 6..10 {
-                assert!(
-                    weights[i] < weights[j] * 0.2,
-                    "recent slug {i} (w={}) should be <20% of fresh slug {j} (w={})",
-                    weights[i],
-                    weights[j],
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn cooldown_escape_hatch_when_everyone_is_recent() {
-        // Pool of 3, recents covers all 3 (oldest first).
-        let pool = pool_first(3);
-        let recents: Vec<String> = pool.iter().map(|t| t.slug.to_string()).collect();
+    fn cooldown_hard_bans_recents() {
+        // 12 candidates, mark the first 8 as "recently shown".
+        let pool = pool_first(12);
+        assert!(pool.len() >= 12, "need at least 12 techniques");
+        let recents: Vec<String> = pool.iter().take(8).map(|t| t.slug.to_string()).collect();
         let stats: Vec<TechniqueStat> = Vec::new();
         let now = 1_700_000_000;
 
         let weights = compute_weights(&pool, &stats, &recents, now);
+        assert_eq!(weights.len(), 12);
 
-        // The slug shown LONGEST ago (recents[0] == pool[0].slug) must
-        // keep its full weight; the other two stay suppressed.
-        assert!(
-            weights[0] > weights[1] * 5.0 && weights[0] > weights[2] * 5.0,
-            "oldest-recent should be exempt; got {weights:?}"
-        );
+        // Hard ban: every recent slug's weight is exactly 0.
+        for (i, &w) in weights.iter().enumerate().take(8) {
+            assert_eq!(w, 0.0, "recent slug {i} should be 0, got {w}");
+        }
+        // Fresh slugs keep their priority weight.
+        for (j, &w) in weights.iter().enumerate().skip(8).take(4) {
+            assert!(w > 0.0, "fresh slug {j} should be > 0, got {w}");
+        }
+    }
+
+    #[test]
+    fn cooldown_escape_hatch_picks_oldest_in_pool() {
+        // Pool of 3 = {pool[0], pool[1], pool[2]}. Recents (oldest first):
+        // [some_other_slug, pool[2].slug, pool[0].slug, pool[1].slug].
+        // Among in-pool slugs the oldest is pool[2] (pos 1 in recents),
+        // so pool[2] is the one that should be exempted.
+        let pool = pool_first(3);
+        let recents: Vec<String> = vec![
+            "not-in-pool-zzz".to_string(),
+            pool[2].slug.to_string(),
+            pool[0].slug.to_string(),
+            pool[1].slug.to_string(),
+        ];
+        let stats: Vec<TechniqueStat> = Vec::new();
+        let now = 1_700_000_000;
+
+        let weights = compute_weights(&pool, &stats, &recents, now);
+        // pool[2] should be the only non-zero weight.
+        assert_eq!(weights[0], 0.0);
+        assert_eq!(weights[1], 0.0);
+        assert!(weights[2] > 0.0, "oldest-in-pool should be exempt; got {weights:?}");
     }
 
     #[test]
