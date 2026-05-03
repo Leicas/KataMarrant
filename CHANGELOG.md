@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/Leicas/KataMarrant/compare/v1.2.4...v1.2.5) (2026-05-03)
+
+### Bug Fixes
+
+* **android:** bump minSdkVersion to 26 for tauri-plugin-schedule-task ([fb48d38](https://github.com/Leicas/KataMarrant/commit/fb48d3830f364b35a12c6760b4d870741a5ccb88))
+* **ci:** tauri ios build --target uses short names, not Rust triples ([b4ac4c7](https://github.com/Leicas/KataMarrant/commit/b4ac4c712c519a609b9748f5cece6831988366d3))
+
 ## [1.2.4](https://github.com/Leicas/KataMarrant/compare/v1.2.3...v1.2.4) (2026-05-03)
 
 ### Bug Fixes
