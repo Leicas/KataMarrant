@@ -1,3 +1,9 @@
+## [1.4.0-beta.4](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.3...v1.4.0-beta.4) (2026-05-03)
+
+### Bug Fixes
+
+* **updater:** patch latest.json.notes from CHANGELOG.md after build ([ae8d4f3](https://github.com/Leicas/KataMarrant/commit/ae8d4f3a3ba9f810958cdc74da00b352152e29d7))
+
 ## [1.4.0-beta.3](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.2...v1.4.0-beta.3) (2026-05-03)
 
 ### Features
