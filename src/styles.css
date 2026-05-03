@@ -1,29 +1,91 @@
 :root {
-  --bg: #0f1219;
-  --bg-elev: #161a26;
-  --bg-hover: #1d2233;
-  --border: #232838;
-  --text: #d8dceb;
-  --heading: #f1f4fc;
-  --muted: #7a8194;
-  --brand: #ef4444;       /* red — judo */
-  --brand-deep: #b91c1c;
-  --brand-bright: #fca5a5;
-  --good: #34d399;
-  --good-bg: #082b1f;
-  --bad: #f87171;
-  --bad-bg: #2a1015;
-  --kanji: #fde68a;
+  /* ---- Type stack ----
+     Inter where present, Segoe UI Variable on Win11, system fallbacks. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI Variable",
+               "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono",
+               Menlo, Consolas, monospace;
+  --font-jp:   "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
+
+  /* ---- Surfaces (sumi-e ink, slightly warmer than the previous indigo) ---- */
+  --bg-app:       #15110e;
+  --bg-elev-1:    #1c1814;   /* sidebar, titlebar */
+  --bg-elev-2:    #221d18;   /* card */
+  --bg-elev-3:    #2a241e;   /* hover, popovers */
+  --bg-overlay:   rgba(21, 17, 14, 0.72);
+
+  /* ---- Strokes ---- */
+  --stroke:        #2e2722;
+  --stroke-soft:   #28221d;
+  --stroke-strong: #3a3128;
+
+  /* ---- Text ---- */
+  --fg:         #efe7dc;
+  --fg-muted:   #a39a8e;
+  --fg-faint:   #6c6357;
+  --fg-heading: #fbf6ee;
+
+  /* ---- Accents ---- judo red, toned down -28pp saturation from #ef4444 */
+  --accent:      #d04545;
+  --accent-deep: #8a2828;
+  --accent-soft: rgba(208, 69, 69, 0.12);
+  --accent-edge: rgba(208, 69, 69, 0.45);
+
+  /* ---- Gold (kanji highlight, kept quiet) ---- */
+  --gold:      #d8b86a;
+  --gold-soft: rgba(216, 184, 106, 0.10);
+
+  /* ---- Semantic ---- */
+  --good:      #4ea88c;
+  --good-soft: rgba(78, 168, 140, 0.12);
+  --good-bg:   rgba(78, 168, 140, 0.08);
+  --bad:       #d77878;
+  --bad-soft:  rgba(215, 120, 120, 0.10);
+  --bad-bg:    rgba(215, 120, 120, 0.08);
+
+  /* ---- Spacing scale ---- */
+  --sp-1:  4px;  --sp-2:  8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px; --sp-10: 40px;
+  --sp-12: 48px; --sp-16: 64px;
+
+  /* ---- Radius scale ---- */
+  --rad-1: 4px;   /* chip */
+  --rad-2: 8px;   /* button, input */
+  --rad-3: 12px;  /* card */
+  --rad-4: 16px;  /* modal */
+  --rad-pill: 999px;
+
+  /* ---- Elevation (3-step). Inset 1px stroke replaces border. ---- */
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.20), 0 0 0 1px var(--stroke-soft) inset;
+  --shadow-2: 0 4px 14px rgba(0,0,0,0.32), 0 0 0 1px var(--stroke) inset;
+  --shadow-3: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px var(--stroke-strong) inset;
+
+  /* ---- Legacy aliases ---- preserved so unmigrated selectors keep
+     working until per-view phases land. ---- */
+  --bg:           var(--bg-app);
+  --bg-elev:      var(--bg-elev-2);
+  --bg-hover:     var(--bg-elev-3);
+  --border:       var(--stroke);
+  --text:         var(--fg);
+  --heading:      var(--fg-heading);
+  --muted:        var(--fg-muted);
+  --brand:        var(--accent);
+  --brand-deep:   var(--accent-deep);
+  --brand-bright: #e88a8a;
+  --kanji:        var(--gold);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #app {
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";  /* Inter stylistic alternates if loaded */
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #app {
@@ -79,6 +141,7 @@ html, body, #app {
 }
 .tab:hover { color: var(--text); border-color: var(--brand-deep); }
 .tab.active { color: var(--heading); background: var(--bg-hover); border-color: var(--brand); }
+.tab:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
 
 /* ----- Views ----- */
 main {
@@ -90,19 +153,27 @@ main {
 .view.active { display: block; }
 
 .card {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  background: var(--bg-elev-2);
+  border: none;
+  border-radius: var(--rad-3);
+  padding: var(--sp-5);
+  margin-bottom: var(--sp-4);
+  box-shadow: var(--shadow-1);
 }
 .card h2 {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--heading);
-  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg-heading);
+  letter-spacing: -0.005em;
+  margin-bottom: var(--sp-3);
 }
-.card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+.card .label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
 
 /* ----- Buttons ----- */
 .btn {
@@ -110,27 +181,46 @@ main {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-hover);
-  color: var(--text);
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: none;
+  border-radius: var(--rad-2);
+  background: var(--bg-elev-3);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--stroke) inset;
   cursor: pointer;
-  transition: all .12s;
+  transition: background 120ms ease, box-shadow 120ms ease;
 }
-.btn:hover { border-color: var(--brand); color: var(--heading); }
-.btn:active { transform: scale(0.97); }
+.btn:hover {
+  background: color-mix(in srgb, var(--bg-elev-3) 80%, var(--fg) 4%);
+  box-shadow: 0 0 0 1px var(--stroke-strong) inset;
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent-edge) inset, 0 0 0 3px var(--accent-soft);
+}
+.btn:active { background: var(--bg-elev-2); transform: none; }
 .btn.primary {
-  background: linear-gradient(135deg, var(--brand-deep), var(--brand));
-  color: white;
-  border-color: var(--brand);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25) inset, 0 0 0 1px var(--accent-deep) inset;
 }
-.btn.primary:hover { box-shadow: 0 2px 10px rgba(239, 68, 68, .35); }
-.btn.ghost { background: transparent; }
+.btn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 92%, white 8%);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25) inset, 0 0 0 1px var(--accent-deep) inset;
+}
+.btn.primary:focus-visible {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25) inset, 0 0 0 1px var(--accent-deep) inset, 0 0 0 3px var(--accent-soft);
+}
+.btn.ghost { background: transparent; box-shadow: none; }
+.btn.ghost:hover {
+  background: var(--bg-elev-3);
+  box-shadow: 0 0 0 1px var(--stroke) inset;
+}
 .btn.full { width: 100%; }
-.btn.small { padding: 6px 11px; font-size: 11px; }
+.btn.small { padding: 6px 11px; font-size: 12px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
