@@ -478,7 +478,10 @@ pub async fn schedule_next(app: &AppHandle) {
 #[cfg(target_os = "ios")]
 pub async fn schedule_next_ios(app: &AppHandle) {
     use tauri_plugin_notification::{NotificationExt, Schedule};
-    use time::OffsetDateTime;
+    // Absolute path: line 21 brings `tokio::time` into scope as `time`,
+    // which would otherwise shadow the `time` crate and resolve to
+    // `tokio::time::OffsetDateTime` (doesn't exist).
+    use ::time::OffsetDateTime;
 
     let state = app.state::<AppState>();
     let config = {
