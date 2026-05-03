@@ -1,3 +1,10 @@
+## [1.3.1-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.3.0...v1.3.1-beta.1) (2026-05-03)
+
+### Bug Fixes
+
+* **ci:** drop pre-init key.properties step + sign universal APK explicitly ([7f2d601](https://github.com/Leicas/KataMarrant/commit/7f2d60170c3230f90eb6a4e070ebe6a6958546db))
+* **ci:** write key.properties BEFORE tauri android init for signed APK ([3c49bff](https://github.com/Leicas/KataMarrant/commit/3c49bffbdd7b1c03bc4696e28652698e34c11e04))
+
 ## [1.3.0](https://github.com/Leicas/KataMarrant/compare/v1.2.5...v1.3.0) (2026-05-03)
 
 ### Features
