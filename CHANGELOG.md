@@ -1,3 +1,9 @@
+## [1.4.0-beta.8](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.7...v1.4.0-beta.8) (2026-05-03)
+
+### Bug Fixes
+
+* **ui:** quiz card never scrolls + goal pill text squash + tighter reveal ([9d57c91](https://github.com/Leicas/KataMarrant/commit/9d57c915a4eccdc9391fd6cf4e747f54abde29c1))
+
 ## [1.4.0-beta.7](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.6...v1.4.0-beta.7) (2026-05-03)
 
 ### Bug Fixes
