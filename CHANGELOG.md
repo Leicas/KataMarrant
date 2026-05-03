@@ -1,3 +1,14 @@
+## [1.3.0](https://github.com/Leicas/KataMarrant/compare/v1.2.5...v1.3.0) (2026-05-03)
+
+### Features
+
+* **data:** add youtube_id for yoko-gake (tP1Sj1uDfSo) ([0732fdf](https://github.com/Leicas/KataMarrant/commit/0732fdf0f1f666f1135bac25fa4d34cb8d4f5b88))
+
+### Bug Fixes
+
+* **quiz:** hard-ban recents (factor 0.0), bump deque to 10, fix subset escape ([12de1a8](https://github.com/Leicas/KataMarrant/commit/12de1a883d8413ad4bf0af45a892513b19f6321f))
+* **quiz:** suppress repeats within last 6 picks; lower recent_fail_bonus to +2 ([4bfd0c7](https://github.com/Leicas/KataMarrant/commit/4bfd0c738b4843272f13e01219c6b76b48df4688))
+
 ## [1.2.5](https://github.com/Leicas/KataMarrant/compare/v1.2.4...v1.2.5) (2026-05-03)
 
 ### Bug Fixes
