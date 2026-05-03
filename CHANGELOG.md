@@ -1,3 +1,9 @@
+## [1.4.0-beta.11](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.10...v1.4.0-beta.11) (2026-05-03)
+
+### Features
+
+* **stats:** add quiz_log diagnostic to settle the "all-time count" mystery ([4808b8b](https://github.com/Leicas/KataMarrant/commit/4808b8b474f0a7f8d85844a1b69bc413d6075005))
+
 ## [1.4.0-beta.10](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.9...v1.4.0-beta.10) (2026-05-03)
 
 ### Bug Fixes
