@@ -1,3 +1,10 @@
+## [1.4.0-beta.5](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.4...v1.4.0-beta.5) (2026-05-03)
+
+### Features
+
+* **ui:** desktop UX phase 1 — frameless window, sidebar nav, custom titlebar ([eafab86](https://github.com/Leicas/KataMarrant/commit/eafab86b26f234836f6f6183c857f176acc57721)), closes [#3](https://github.com/Leicas/KataMarrant/issues/3)
+* **ui:** desktop UX phase 2 — visual system refresh (tokens, type, components) ([144857d](https://github.com/Leicas/KataMarrant/commit/144857d307aa6e90a05f825d5052ed236066c98a)), closes [#ef4444](https://github.com/Leicas/KataMarrant/issues/ef4444) [#d04545](https://github.com/Leicas/KataMarrant/issues/d04545)
+
 ## [1.4.0-beta.4](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.3...v1.4.0-beta.4) (2026-05-03)
 
 ### Bug Fixes
