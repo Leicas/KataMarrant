@@ -1,3 +1,9 @@
+## [1.4.0-beta.10](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.9...v1.4.0-beta.10) (2026-05-03)
+
+### Bug Fixes
+
+* **ui:** use Rust commands for window min/max/close (definitive) ([1c5b92e](https://github.com/Leicas/KataMarrant/commit/1c5b92eedb156f71be654e0536a022e564654f3b))
+
 ## [1.4.0-beta.9](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.8...v1.4.0-beta.9) (2026-05-03)
 
 ### Bug Fixes
