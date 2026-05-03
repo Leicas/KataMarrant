@@ -46,6 +46,9 @@
     "shortDescription": "Judo kata & gokyo trainer",
     "iOS": {
       "minimumSystemVersion": "13.0"
+    },
+    "android": {
+      "minSdkVersion": 26
     }
   },
   "plugins": {}
