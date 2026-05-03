@@ -1,3 +1,13 @@
+## [1.4.0-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.3.1-beta.1...v1.4.0-beta.1) (2026-05-03)
+
+### Features
+
+* **updater:** wire Tauri 2 auto-updater on desktop with custom UI ([cd7e011](https://github.com/Leicas/KataMarrant/commit/cd7e01167efbb02d2d0d7b59a5b7d01214f09bd7))
+
+### Bug Fixes
+
+* **updater:** sync package-lock.json with new updater + process deps ([bcb2f74](https://github.com/Leicas/KataMarrant/commit/bcb2f74e054ff41c4c9bec204d6f5a64bad961fb))
+
 ## [1.3.1-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.3.0...v1.3.1-beta.1) (2026-05-03)
 
 ### Bug Fixes
