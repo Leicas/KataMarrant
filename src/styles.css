@@ -820,11 +820,8 @@ main {
   }
 }
 
-/* ----- Profile hero card (Home) ----- */
+/* ----- Profile hero strip (Home) — compact 4-up row at desktop ----- */
 .profile-hero {
-  /* Calmer than the previous filled red gradient with full red outline —
-     the gradient now fades top-to-bottom and the accent edge is a 1px
-     inset stroke at low opacity rather than a hard 1px solid border. */
   background:
     linear-gradient(180deg, rgba(208, 69, 69, 0.08) 0%, transparent 60%),
     var(--bg-elev-2);
@@ -832,7 +829,8 @@ main {
   box-shadow:
     var(--shadow-1),
     0 0 0 1px var(--accent-edge) inset;
-  padding: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-4);
 }
 .profile-hero h3.profile-section {
   font-size: 12px;
@@ -844,39 +842,60 @@ main {
   display: flex;
   align-items: baseline;
 }
-.profile-top {
+.profile-hero-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 12px;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
 }
+.profile-hero-row > * { flex: 1 1 auto; min-width: 0; }
+.profile-hero-row .profile-level { flex: 0 0 auto; }
+.profile-hero-row .profile-xp { flex: 2 1 220px; }
+.profile-hero-row .profile-streak,
+.profile-hero-row .profile-goal {
+  flex: 1 1 160px;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 8px 12px;
+}
+.profile-hero-row .profile-streak > div,
+.profile-hero-row .profile-goal > div { text-align: left; }
+@media (max-width: 599px) {
+  .profile-hero-row { flex-wrap: wrap; }
+  .profile-hero-row .profile-xp { flex-basis: 100%; order: 2; }
+  .profile-hero-row .profile-streak,
+  .profile-hero-row .profile-goal { flex-basis: 48%; }
+}
+
 .profile-level {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 64px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--brand-deep), var(--brand));
-  border: 1px solid var(--brand);
-  box-shadow: 0 2px 10px rgba(239, 68, 68, .25);
+  justify-content: center;
+  min-width: 56px;
+  height: 56px;
+  padding: 4px 10px;
+  border-radius: var(--rad-3);
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent));
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25) inset;
 }
 .profile-level .lvl-num {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   color: white;
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 .profile-level .lvl-label {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, .85);
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, .82);
   margin-top: 2px;
 }
 .profile-xp {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -906,25 +925,23 @@ main {
 }
 .profile-streak,
 .profile-goal {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--bg-elev-3);
+  border-radius: var(--rad-2);
+  box-shadow: 0 0 0 1px var(--stroke-soft) inset;
 }
 .profile-streak .streak-num {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--kanji);
-  letter-spacing: .5px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: -0.01em;
 }
 .profile-streak .small,
 .profile-goal .small {
-  font-size: 10px;
+  font-size: 11px;
   opacity: .8;
 }
 .goal-ring {
@@ -964,21 +981,21 @@ main {
 .achievement-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 6px;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
 }
 .ach {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 4px;
-  border-radius: 8px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
+  padding: var(--sp-2) 4px;
+  border-radius: var(--rad-2);
+  background: var(--bg-elev-3);
+  box-shadow: 0 0 0 1px var(--stroke-soft) inset;
   text-align: center;
-  transition: transform .12s, border-color .12s;
+  transition: background 120ms, box-shadow 120ms;
 }
-.ach:hover { transform: translateY(-1px); border-color: var(--brand); }
+.ach:hover { background: color-mix(in srgb, var(--bg-elev-3) 80%, var(--fg) 4%); }
 .ach .ach-icon {
   font-size: 22px;
   line-height: 1;
@@ -987,31 +1004,55 @@ main {
   opacity: .35;
 }
 .ach .ach-name {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
-  line-height: 1.15;
-  min-height: 24px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  line-height: 1.2;
+  min-height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .ach .ach-date {
-  font-size: 9px;
+  font-size: 10px;
   margin-top: 3px;
   opacity: .7;
 }
 .ach.unlocked {
-  background: linear-gradient(160deg, rgba(253, 230, 138, .12), rgba(239, 68, 68, .05));
-  border-color: rgba(253, 230, 138, .35);
+  background: var(--gold-soft);
+  box-shadow: 0 0 0 1px rgba(216, 184, 106, 0.32) inset;
 }
 .ach.unlocked .ach-icon { filter: none; opacity: 1; }
-.ach.unlocked .ach-name { color: var(--heading); }
-.ach.unlocked .ach-date { color: var(--kanji); opacity: .85; }
+.ach.unlocked .ach-name { color: var(--fg-heading); }
+.ach.unlocked .ach-date { color: var(--gold); opacity: .9; }
 
 @media (max-width: 380px) {
   .achievement-grid { grid-template-columns: repeat(3, 1fr); }
   .profile-row { flex-direction: column; }
+}
+
+/* ----- Home 2-column grid (mastery + achievements side-by-side) ----- */
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+  align-items: start;
+}
+.home-grid > .card { margin-bottom: 0; }
+.mastery-card .stat-bar-row { padding: 4px 0; }
+.mastery-card .stat-bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--fg);
+}
+.ach-card .achievement-grid {
+  /* Inside the right card, keep the 4-col grid but scroll-y if achievements
+     overflow the grid's natural 3-row height (12 of them at 80px each). */
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 899px) {
+  .home-grid { grid-template-columns: 1fr; }
 }
 
 /* ----- Micro-feedback toast layer ----- */

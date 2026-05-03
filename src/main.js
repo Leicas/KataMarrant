@@ -35,6 +35,13 @@ const I18N = {
     "tab.browse":   "Browse",
     "tab.stats":    "Stats",
     "tab.settings": "⚙",
+    "nav.home":     "Home",
+    "nav.quiz":     "Quiz",
+    "nav.rapid":    "Rapid",
+    "nav.drill":    "Drill",
+    "nav.browse":   "Browse",
+    "nav.stats":    "Stats",
+    "nav.settings": "Settings",
 
     "home.today":         "Today",
     "home.questions":     "Questions answered",
@@ -271,6 +278,13 @@ const I18N = {
     "tab.browse":   "Liste",
     "tab.stats":    "Stats",
     "tab.settings": "⚙",
+    "nav.home":     "Accueil",
+    "nav.quiz":     "Quiz",
+    "nav.rapid":    "Rafale",
+    "nav.drill":    "Drill",
+    "nav.browse":   "Liste",
+    "nav.stats":    "Stats",
+    "nav.settings": "Réglages",
 
     "home.today":         "Aujourd'hui",
     "home.questions":     "Questions répondues",
@@ -833,10 +847,16 @@ function applyTabLabels() {
     btn.textContent = t(`tab.${btn.dataset.view}`);
   }
   // Desktop sidebar items have an icon + label structure; only the .lbl
-  // span gets retranslated so the icon character stays put.
+  // span gets retranslated so the icon character stays put. Use the nav.*
+  // namespace (not tab.*) so the settings sidebar entry shows "Settings"
+  // / "Réglages" and not the cog glyph (which is already in .ico).
+  const dict = I18N[store.lang] || I18N.en;
   for (const btn of els(".navitem")) {
     const lbl = btn.querySelector(".lbl");
-    if (lbl) lbl.textContent = t(`tab.${btn.dataset.view}`);
+    if (!lbl) continue;
+    const v = btn.dataset.view;
+    const navKey = `nav.${v}`;
+    lbl.textContent = (dict[navKey] || I18N.en[navKey]) || t(`tab.${v}`);
   }
 }
 
@@ -1188,13 +1208,16 @@ async function renderProfile(slot) {
   ]);
   if (!g) return;
 
-  const card = h("div", { class: "card profile-hero" });
-
-  // Top row: level + XP bar.
+  // ----- Compact hero strip (level + XP + streak + goal in one row) -----
+  const hero = h("div", { class: "card profile-hero" });
   const xpInLevel = g.xp_total - g.xp_for_current_level;
   const xpSpan = Math.max(1, g.xp_for_next_level - g.xp_for_current_level);
   const xpPct = Math.max(0, Math.min(100, (xpInLevel / xpSpan) * 100));
-  card.appendChild(h("div", { class: "profile-top" },
+  const goal = Math.max(1, g.daily_goal);
+  const today = g.today || { questions: 0, correct: 0, goal_met: false };
+  const goalPct = Math.max(0, Math.min(100, (today.questions / goal) * 100));
+
+  hero.appendChild(h("div", { class: "profile-hero-row" },
     h("div", { class: "profile-level" },
       h("span", { class: "lvl-num" }, String(g.level)),
       h("span", { class: "lvl-label" }, t("profile.level", { n: g.level })),
@@ -1204,19 +1227,11 @@ async function renderProfile(slot) {
         h("div", { class: "xp-fill", style: `width:${xpPct}%` }),
       ),
       h("div", { class: "xp-text muted" },
-        t("profile.xp", { cur: xpInLevel, next: xpSpan }),
-      ),
+        t("profile.xp", { cur: xpInLevel, next: xpSpan })),
     ),
-  ));
-
-  // Streak + daily-goal ring.
-  const goal = Math.max(1, g.daily_goal);
-  const today = g.today || { questions: 0, correct: 0, goal_met: false };
-  const goalPct = Math.max(0, Math.min(100, (today.questions / goal) * 100));
-  card.appendChild(h("div", { class: "profile-row" },
     h("div", { class: "profile-streak" },
       h("div", { class: "streak-num" }, `🔥 ${g.current_streak}`),
-      h("div", { class: "muted" },
+      h("div", { class: "muted small" },
         t("profile.streak_days", { n: g.current_streak })),
       h("div", { class: "muted small" },
         t("profile.longest", { n: g.longest_streak })),
@@ -1228,18 +1243,23 @@ async function renderProfile(slot) {
         ),
       ),
       h("div", { class: "goal-text" },
-        h("span", {}, t("profile.daily_goal")),
+        h("span", { class: "small muted" }, t("profile.daily_goal")),
         h("span", { class: "num" },
           t("profile.goal_progress", { cur: today.questions, goal })),
+        g.best_combo > 1
+          ? h("div", { class: "muted small" }, t("profile.combo", { n: g.best_combo }))
+          : null,
       ),
-      g.best_combo > 1
-        ? h("div", { class: "muted small" }, t("profile.combo", { n: g.best_combo }))
-        : null,
     ),
   ));
+  slot.appendChild(hero);
 
-  // Mastery per group — count techniques in each group with correct_count >= 3
-  // AND last_correct = 1.
+  // ----- Two-column body: mastery (left) + achievements (right) -----
+  const grid2col = h("div", { class: "home-grid" });
+
+  // Left: mastery card.
+  const masteryCard = h("div", { class: "card mastery-card" });
+  masteryCard.appendChild(h("h2", {}, t("profile.mastery")));
   const statBy = {};
   for (const s of allTech) statBy[s.slug] = s;
   const techByGroup = {};
@@ -1247,7 +1267,6 @@ async function renderProfile(slot) {
     if (!techByGroup[tech.group]) techByGroup[tech.group] = [];
     techByGroup[tech.group].push(tech);
   }
-  card.appendChild(h("h3", { class: "profile-section" }, t("profile.mastery")));
   for (let gi = 1; gi <= 5; gi++) {
     const list = techByGroup[gi] || [];
     let mastered = 0;
@@ -1257,7 +1276,7 @@ async function renderProfile(slot) {
     }
     const total = list.length || 8;
     const pct = total ? (mastered / total) * 100 : 0;
-    card.appendChild(h("div", { class: "stat-bar-row mastery-row" },
+    masteryCard.appendChild(h("div", { class: "stat-bar-row mastery-row" },
       h("div", { class: "stat-bar-label" }, `${gi}. ${GROUP_NAMES[gi] || ""}`),
       h("div", { class: "stat-bar-track" },
         h("div", {
@@ -1268,15 +1287,17 @@ async function renderProfile(slot) {
       h("div", { class: "stat-bar-value" }, `${mastered} / ${total}`),
     ));
   }
+  grid2col.appendChild(masteryCard);
 
-  // Achievements grid.
+  // Right: achievements card.
   const unlockedCount = achievements.filter(a => a.unlocked).length;
-  card.appendChild(h("h3", { class: "profile-section" },
+  const achCard = h("div", { class: "card ach-card" });
+  achCard.appendChild(h("h2", {},
     t("profile.achievements"),
-    h("span", { class: "muted small", style: "margin-left:8px" },
+    h("span", { class: "muted small", style: "margin-left:8px; font-weight:500" },
       t("profile.unlocked", { n: unlockedCount, total: achievements.length })),
   ));
-  const grid = h("div", { class: "achievement-grid" });
+  const achGrid = h("div", { class: "achievement-grid" });
   for (const a of achievements) {
     const name = store.lang === "fr" ? a.name_fr : a.name_en;
     const desc = store.lang === "fr" ? a.description_fr : a.description_en;
@@ -1290,7 +1311,7 @@ async function renderProfile(slot) {
         });
       } catch (_) {}
     }
-    grid.appendChild(h("div", { class: cls, title: desc },
+    achGrid.appendChild(h("div", { class: cls, title: desc },
       h("div", { class: "ach-icon" }, a.unlocked ? "🥋" : "🔒"),
       h("div", { class: "ach-name" }, name),
       a.unlocked && dateStr
@@ -1298,9 +1319,10 @@ async function renderProfile(slot) {
         : h("div", { class: "ach-date muted small" }, t("profile.locked")),
     ));
   }
-  card.appendChild(grid);
+  achCard.appendChild(achGrid);
+  grid2col.appendChild(achCard);
 
-  slot.appendChild(card);
+  slot.appendChild(grid2col);
 }
 
 async function renderHome() {
