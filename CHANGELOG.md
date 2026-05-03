@@ -1,3 +1,9 @@
+## [1.2.4](https://github.com/Leicas/KataMarrant/compare/v1.2.3...v1.2.4) (2026-05-03)
+
+### Bug Fixes
+
+* **scheduler:** use absolute ::time path in iOS branch to dodge tokio::time shadow ([d545944](https://github.com/Leicas/KataMarrant/commit/d5459443313cffee6cf7872ee8dff6c507b7c56a))
+
 ## [1.2.3](https://github.com/Leicas/KataMarrant/compare/v1.2.2...v1.2.3) (2026-05-02)
 
 ### Bug Fixes
