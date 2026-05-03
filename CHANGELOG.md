@@ -1,3 +1,9 @@
+## [1.3.1](https://github.com/Leicas/KataMarrant/compare/v1.3.0...v1.3.1) (2026-05-03)
+
+### Bug Fixes
+
+* **ci:** write key.properties BEFORE tauri android init for signed APK ([3c49bff](https://github.com/Leicas/KataMarrant/commit/3c49bffbdd7b1c03bc4696e28652698e34c11e04))
+
 ## [1.3.0](https://github.com/Leicas/KataMarrant/compare/v1.2.5...v1.3.0) (2026-05-03)
 
 ### Features
