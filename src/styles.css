@@ -1002,9 +1002,9 @@ main {
 }
 .ach:hover { background: color-mix(in srgb, var(--bg-elev-3) 80%, var(--fg) 4%); }
 .ach .ach-icon {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   filter: grayscale(1);
   opacity: .35;
 }
@@ -1013,14 +1013,18 @@ main {
   font-weight: 600;
   color: var(--fg-muted);
   line-height: 1.2;
-  min-height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Single-line ellipsis so the achievement card stays compact and the
+     tile height stays predictable (~60px each, 3 rows total = ~190px
+     for 12 achievements). */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 0 2px;
 }
 .ach .ach-date {
   font-size: 10px;
-  margin-top: 3px;
+  margin-top: 2px;
   opacity: .7;
 }
 .ach.unlocked {
@@ -1036,12 +1040,78 @@ main {
   .profile-row { flex-direction: column; }
 }
 
+/* ----- Home action-button row (sits under the hero) ----- */
+.home-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+.action-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-radius: var(--rad-2);
+}
+.action-btn .act-ico {
+  font-size: 16px;
+  opacity: 0.85;
+  line-height: 1;
+}
+@media (max-width: 599px) {
+  .home-actions { grid-template-columns: 1fr 1fr; }
+}
+
+/* ----- Today summary strip — 4 horizontal stat cells ----- */
+.today-strip { padding: var(--sp-3) var(--sp-4); }
+.today-strip h2 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  margin-bottom: var(--sp-2);
+}
+.today-cells {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-3);
+}
+.today-cell {
+  padding: 6px 8px;
+  border-left: 2px solid var(--stroke);
+}
+.today-cell:first-child { border-left: 2px solid var(--accent-edge); }
+.today-num {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--fg-heading);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.today-num.small { font-size: 14px; line-height: 1.3; }
+.today-lbl {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 2px;
+}
+@media (max-width: 599px) {
+  .today-cells { grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+}
+
 /* ----- Home 2-column grid (mastery + achievements side-by-side) ----- */
 .home-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-4);
   align-items: start;
+  margin-bottom: var(--sp-4);
 }
 .home-grid > .card { margin-bottom: 0; }
 .mastery-card .stat-bar-row { padding: 4px 0; }

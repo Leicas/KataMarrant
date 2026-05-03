@@ -1197,9 +1197,16 @@ function elapsedMs(shownAt) {
 // page without a tab of its own.
 // ---------------------------------------------------------------------------
 
-async function renderProfile(slot) {
+// renderProfile renders the home hero + home 2-col grid into two distinct
+// slots so renderHome can interleave the action-button row and today-strip
+// between them. Pass `gridSlot` to keep the legacy "everything appended
+// in one slot" behavior (the second arg defaults to slot itself).
+async function renderProfile(slot, gridSlot) {
   if (!slot) return;
   slot.innerHTML = "";
+  if (gridSlot && gridSlot !== slot) gridSlot.innerHTML = "";
+  const heroParent = slot;
+  const gridParent = gridSlot || slot;
 
   const [g, achievements, allTech] = await Promise.all([
     fetchGamificationState(),
@@ -1249,7 +1256,7 @@ async function renderProfile(slot) {
       ),
     ),
   ));
-  slot.appendChild(hero);
+  heroParent.appendChild(hero);
 
   // ----- Two-column body: mastery (left) + achievements (right) -----
   const grid2col = h("div", { class: "home-grid" });
@@ -1319,7 +1326,7 @@ async function renderProfile(slot) {
   achCard.appendChild(achGrid);
   grid2col.appendChild(achCard);
 
-  slot.appendChild(grid2col);
+  gridParent.appendChild(grid2col);
 }
 
 async function renderHome() {
@@ -1333,55 +1340,73 @@ async function renderHome() {
     ? Math.round((stats.total_correct / stats.total_answered) * 100)
     : 0;
 
-  // Profile hero card — pulls gamification state + achievements + technique
-  // stats. Renders synchronously below; we kick off the fetches now and
-  // append the rendered card once everything resolves. The other cards
-  // append immediately so the page paints fast.
-  const profileSlot = h("div", { class: "profile-slot" });
-  root.appendChild(profileSlot);
+  // Layout (top to bottom):
+  //   1. Profile hero strip          (level + XP + streak + goal, ~96px)
+  //   2. Action buttons row          (single / rapid / drill / browse, ~56px)
+  //   3. Today summary strip         (4 horizontal stat cells, ~80px)
+  //   4. Two-column grid             (mastery left, achievements right)
+  //
+  // Action buttons sit right under the hero so they're always visible
+  // above the fold at default window size. renderProfile fills two slots
+  // separately — the hero into heroSlot, the 2-col grid into gridSlot —
+  // so action+today can interleave between them.
+  const heroSlot = h("div", { class: "profile-slot" });
+  root.appendChild(heroSlot);
 
-  root.appendChild(h("div", { class: "card" },
+  // Practice action row — horizontal flex of 4 buttons.
+  root.appendChild(h("div", { class: "home-actions" },
+    h("button", {
+      class: "btn primary action-btn", type: "button",
+      onclick: () => startSingleQuiz(),
+    }, h("span", { class: "act-ico" }, "◆"),
+       h("span", {}, t("home.single"))),
+    h("button", {
+      class: "btn action-btn", type: "button",
+      onclick: () => startRapidFire(),
+    }, h("span", { class: "act-ico" }, "»"),
+       h("span", {}, t("home.rapid", { n: RAPID_LENGTH }))),
+    h("button", {
+      class: "btn action-btn", type: "button",
+      onclick: () => startDrill(),
+    }, h("span", { class: "act-ico" }, "⏱"),
+       h("span", {}, t("home.drill"))),
+    h("button", {
+      class: "btn ghost action-btn", type: "button",
+      onclick: () => navigate("browse"),
+    }, h("span", { class: "act-ico" }, "≡"),
+       h("span", {}, t("home.browse"))),
+  ));
+
+  // Today summary strip — 4 stat cells in a horizontal flex row.
+  root.appendChild(h("div", { class: "card today-strip" },
     h("h2", {}, t("home.today")),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.questions")),
-      h("span", { class: "num" }, String(stats.questions_today)),
-    ),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.accuracy")),
-      h("span", { class: "num" }, `${accuracy}%`),
-    ),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.total")),
-      h("span", { class: "num" }, String(stats.total_answered)),
-    ),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.prompt")),
-      h("span", { class: "num" }, scheduleSummary(store.settings.schedule)),
+    h("div", { class: "today-cells" },
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num" }, String(stats.questions_today)),
+        h("div", { class: "today-lbl" }, t("home.questions")),
+      ),
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num" }, `${accuracy}%`),
+        h("div", { class: "today-lbl" }, t("home.accuracy")),
+      ),
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num" }, String(stats.total_answered)),
+        h("div", { class: "today-lbl" }, t("home.total")),
+      ),
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num small" }, scheduleSummary(store.settings.schedule)),
+        h("div", { class: "today-lbl" }, t("home.prompt")),
+      ),
     ),
   ));
 
-  // Render the profile hero asynchronously.
-  renderProfile(profileSlot).catch(e => console.error("renderProfile", e));
+  // The home-grid (mastery + achievements) goes at the bottom — it's the
+  // overflow-it's-OK browsing portion. renderProfile injects content
+  // into both slots once the async fetches resolve.
+  const gridSlot = h("div", { class: "profile-grid-slot" });
+  root.appendChild(gridSlot);
 
-  root.appendChild(h("div", { class: "card" },
-    h("h2", {}, t("home.practice")),
-    h("div", { class: "btn-row" },
-      h("button", { class: "btn primary full", onclick: () => startSingleQuiz() },
-        t("home.single")),
-    ),
-    h("div", { class: "btn-row", style: "margin-top:8px" },
-      h("button", { class: "btn full", onclick: () => startRapidFire() },
-        t("home.rapid", { n: RAPID_LENGTH })),
-    ),
-    h("div", { class: "btn-row", style: "margin-top:8px" },
-      h("button", { class: "btn full", onclick: () => startDrill() },
-        t("home.drill")),
-    ),
-    h("div", { class: "btn-row", style: "margin-top:8px" },
-      h("button", { class: "btn ghost full", onclick: () => navigate("browse") },
-        t("home.browse")),
-    ),
-  ));
+  renderProfile(heroSlot, gridSlot).catch(e => console.error("renderProfile", e));
 }
 
 function renderQuizCard(q, mode, opts = {}) {
@@ -3473,12 +3498,47 @@ async function detectPlatformBodyClass() {
 // via window:default permissions, which core:default already grants — no
 // capability change needed. Silent no-op on mobile (where the OS handles
 // chrome and our .window-controls is hidden by CSS).
+//
+// withGlobalTauri exposure of the window class shifted between Tauri
+// 2.x minor versions: 2.0–2.6 used window.__TAURI__.window.getCurrent(),
+// 2.7+ added getCurrentWindow() and may or may not still expose getCurrent.
+// Some builds also expose .Window.getCurrent. We try every path and fall
+// back to a raw `core.invoke('plugin:window|<cmd>')` IPC call which is
+// always available as long as core:default is granted (it is).
 function bindWindowControls() {
-  const win = window.__TAURI__?.window?.getCurrentWindow?.();
-  if (!win) return;
-  el(".wc-min")?.addEventListener("click", () => win.minimize());
-  el(".wc-max")?.addEventListener("click", () => win.toggleMaximize());
-  el(".wc-close")?.addEventListener("click", () => win.close());
+  const t = window.__TAURI__;
+  if (!t) return;
+
+  const resolveWin = () => {
+    return (
+      t.window?.getCurrentWindow?.() ||
+      t.window?.getCurrent?.() ||
+      t.window?.Window?.getCurrent?.() ||
+      null
+    );
+  };
+  const ipcMap = { minimize: "minimize", toggleMaximize: "toggle_maximize", close: "close" };
+  const fire = (action) => async () => {
+    try {
+      const w = resolveWin();
+      if (w && typeof w[action] === "function") {
+        await w[action]();
+        return;
+      }
+      const cmd = ipcMap[action];
+      if (cmd && t.core?.invoke) {
+        await t.core.invoke(`plugin:window|${cmd}`);
+        return;
+      }
+      console.warn("[window-controls] no path available for", action);
+    } catch (e) {
+      console.error("[window-controls]", action, e);
+    }
+  };
+
+  el(".wc-min")?.addEventListener("click", fire("minimize"));
+  el(".wc-max")?.addEventListener("click", fire("toggleMaximize"));
+  el(".wc-close")?.addEventListener("click", fire("close"));
 }
 
 async function boot() {
