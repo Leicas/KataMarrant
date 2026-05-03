@@ -1,3 +1,9 @@
+## [1.4.0-beta.7](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.6...v1.4.0-beta.7) (2026-05-03)
+
+### Bug Fixes
+
+* **ui:** stop the home scroll, drop the double cog, tighten the hero strip ([411267e](https://github.com/Leicas/KataMarrant/commit/411267ef33e94762424fd93d399cfa5ca4767758))
+
 ## [1.4.0-beta.6](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.5...v1.4.0-beta.6) (2026-05-03)
 
 ### Bug Fixes
