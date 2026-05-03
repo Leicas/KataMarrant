@@ -3505,40 +3505,23 @@ async function detectPlatformBodyClass() {
 // Some builds also expose .Window.getCurrent. We try every path and fall
 // back to a raw `core.invoke('plugin:window|<cmd>')` IPC call which is
 // always available as long as core:default is granted (it is).
+// Custom-titlebar buttons. We call dedicated Rust commands rather than
+// the window.__TAURI__.window.* JS API because the latter's exact export
+// path shifted across Tauri 2.x minor versions and was unreliable. The
+// Rust side is in src-tauri/src/lib.rs (window_minimize, etc.).
 function bindWindowControls() {
-  const t = window.__TAURI__;
-  if (!t) return;
-
-  const resolveWin = () => {
-    return (
-      t.window?.getCurrentWindow?.() ||
-      t.window?.getCurrent?.() ||
-      t.window?.Window?.getCurrent?.() ||
-      null
-    );
-  };
-  const ipcMap = { minimize: "minimize", toggleMaximize: "toggle_maximize", close: "close" };
-  const fire = (action) => async () => {
+  const invoke = window.__TAURI__?.core?.invoke;
+  if (!invoke) return;
+  const fire = (cmd) => async () => {
     try {
-      const w = resolveWin();
-      if (w && typeof w[action] === "function") {
-        await w[action]();
-        return;
-      }
-      const cmd = ipcMap[action];
-      if (cmd && t.core?.invoke) {
-        await t.core.invoke(`plugin:window|${cmd}`);
-        return;
-      }
-      console.warn("[window-controls] no path available for", action);
+      await invoke(cmd);
     } catch (e) {
-      console.error("[window-controls]", action, e);
+      console.error("[window-controls]", cmd, e);
     }
   };
-
-  el(".wc-min")?.addEventListener("click", fire("minimize"));
-  el(".wc-max")?.addEventListener("click", fire("toggleMaximize"));
-  el(".wc-close")?.addEventListener("click", fire("close"));
+  el(".wc-min")?.addEventListener("click", fire("window_minimize"));
+  el(".wc-max")?.addEventListener("click", fire("window_toggle_maximize"));
+  el(".wc-close")?.addEventListener("click", fire("window_close"));
 }
 
 async function boot() {
