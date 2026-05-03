@@ -269,6 +269,14 @@ const I18N = {
     "updater.changelog.title":          "Changelog",
     "updater.changelog.loading":        "Loading…",
     "updater.changelog.empty":          "No changelog available.",
+    "diag.title":                       "Diagnostic — answers logged",
+    "diag.loading":                     "Loading…",
+    "diag.total":                       "{n} total entries in your local quiz log.",
+    "diag.range":                       "(from {from} to {to})",
+    "diag.mode_single":                 "Single-question quizzes",
+    "diag.mode_rapid":                  "Rapid bursts (10 per round)",
+    "diag.mode_drill":                  "Drill (timed)",
+    "diag.note":                        "The local count includes every individual answer across single, rapid, and drill modes — so 50 rapid rounds = 500 entries, not 50. The server's leaderboard only reflects the synced subset.",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -512,6 +520,14 @@ const I18N = {
     "updater.changelog.title":          "Journal des modifications",
     "updater.changelog.loading":        "Chargement…",
     "updater.changelog.empty":          "Aucun changelog disponible.",
+    "diag.title":                       "Diagnostic — réponses enregistrées",
+    "diag.loading":                     "Chargement…",
+    "diag.total":                       "{n} entrées dans le journal local.",
+    "diag.range":                       "(du {from} au {to})",
+    "diag.mode_single":                 "Quiz simples",
+    "diag.mode_rapid":                  "Rafales (10 par tour)",
+    "diag.mode_drill":                  "Drill (chrono)",
+    "diag.note":                        "Le compteur local inclut chaque réponse individuelle, donc 50 rafales = 500 entrées, pas 50. Le classement serveur ne reflète que ce qui a été synchronisé.",
   },
 };
 
@@ -2929,6 +2945,13 @@ async function renderSettings() {
   // App updates — desktop only; on mobile the card just explains store updates.
   root.appendChild(await buildUpdaterSection());
 
+  // Diagnostic — explains the local quiz_log row count by breaking it
+  // down per mode + showing the earliest/latest answer timestamps. Helps
+  // users reconcile a high-looking "Total répondu" with what they think
+  // they've answered (rapid mode logs 10 rows per round, drill logs
+  // every prompt — the count compounds quickly).
+  root.appendChild(buildDiagnosticSection());
+
   // Credits card.
   const credits = h("div", { class: "card" },
     h("h2", {}, t("settings.credits")),
@@ -3379,6 +3402,49 @@ function openChangelogModal() {
       if (a.dataset.href) openExternal(a.dataset.href);
     });
   });
+}
+
+function buildDiagnosticSection() {
+  const card = h("div", { class: "card" },
+    h("h2", {}, t("diag.title")));
+  const body = h("div", { class: "muted", style: "font-size:13px; line-height:1.5" },
+    t("diag.loading"));
+  card.appendChild(body);
+  invoke("get_quiz_log_breakdown")
+    .then((d) => {
+      body.innerHTML = "";
+      const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleDateString(
+        store.lang === "fr" ? "fr-FR" : "en-US",
+        { year: "numeric", month: "short", day: "numeric" }) : "—";
+      body.appendChild(h("div", { style: "margin-bottom:8px" },
+        h("strong", {}, t("diag.total", { n: d.total })),
+        " ",
+        h("span", { class: "muted small" },
+          d.earliest ? t("diag.range", { from: fmt(d.earliest), to: fmt(d.latest) }) : ""),
+      ));
+      const list = h("ul", { style: "list-style:none; padding-left:0; margin:0; display:grid; gap:4px;" });
+      const modeLabel = (m) => ({
+        single: t("diag.mode_single"),
+        rapid:  t("diag.mode_rapid"),
+        drill:  t("diag.mode_drill"),
+      }[m] || m);
+      for (const [m, n] of d.by_mode) {
+        const pct = d.total > 0 ? Math.round((n / d.total) * 100) : 0;
+        list.appendChild(h("li", {
+          style: "display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--stroke-soft);",
+        },
+          h("span", {}, modeLabel(m)),
+          h("span", { class: "num" }, `${n}  (${pct}%)`),
+        ));
+      }
+      body.appendChild(list);
+      body.appendChild(h("p", { class: "muted small", style: "margin-top:10px" },
+        t("diag.note")));
+    })
+    .catch((e) => {
+      body.textContent = String(e?.message ?? e);
+    });
+  return card;
 }
 
 async function buildUpdaterSection() {

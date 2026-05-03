@@ -12,6 +12,39 @@ pub fn get_overall_stats(state: tauri::State<'_, AppState>) -> AppResult<Overall
     db::overall_stats(&conn)
 }
 
+/// Diagnostic breakdown of `quiz_log` by mode + earliest/latest timestamp.
+/// Surfaces in the Settings → Diagnostic card so users can sanity-check
+/// the local "Total répondu" count when it diverges from the server's
+/// leaderboard total (which only reflects the synced subset).
+#[derive(Debug, Clone, Serialize)]
+pub struct QuizLogBreakdown {
+    pub total: i64,
+    pub by_mode: Vec<(String, i64)>,
+    pub earliest: Option<i64>,
+    pub latest: Option<i64>,
+}
+
+#[tauri::command]
+pub fn get_quiz_log_breakdown(state: tauri::State<'_, AppState>) -> AppResult<QuizLogBreakdown> {
+    let conn = state.db.lock().unwrap();
+    let total: i64 = conn.query_row("SELECT COUNT(*) FROM quiz_log", [], |r| r.get(0))?;
+    let earliest: Option<i64> = conn
+        .query_row("SELECT MIN(answered_at) FROM quiz_log", [], |r| r.get(0))
+        .ok()
+        .flatten();
+    let latest: Option<i64> = conn
+        .query_row("SELECT MAX(answered_at) FROM quiz_log", [], |r| r.get(0))
+        .ok()
+        .flatten();
+    let mut stmt = conn.prepare(
+        "SELECT IFNULL(mode, 'unknown') AS m, COUNT(*) FROM quiz_log GROUP BY m ORDER BY 2 DESC",
+    )?;
+    let by_mode: Vec<(String, i64)> = stmt
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(QuizLogBreakdown { total, by_mode, earliest, latest })
+}
+
 /// DTO enrichi: agrégats SQL + métriques dérivées (accuracy, status) calculées
 /// dans la couche commande pour garder le schéma DB inchangé.
 ///
