@@ -20,16 +20,24 @@ const STORE_FILE: &str = "settings.json";
 const KEY_SCHEDULE: &str = "quiz_schedule";
 const KEY_LEGACY_INTERVAL: &str = "quiz_interval_minutes";
 
-// Custom-titlebar window controls. We register these as Rust commands and
-// invoke them from JS rather than relying on window.__TAURI__.window.* —
-// the exact JS API path under withGlobalTauri shifted across Tauri 2.x
-// minor versions and got flaky for us. This route is bulletproof: the
-// command receives the calling Window directly via Tauri's extractor.
+// Custom-titlebar window controls. Registered as Rust commands and
+// invoked from JS rather than relying on window.__TAURI__.window.* —
+// the JS API path under withGlobalTauri shifted across Tauri 2.x minor
+// versions and was flaky. Going through the IPC + extractor is bulletproof.
+//
+// On mobile (Android/iOS), tauri::Window doesn't expose minimize / maximize
+// / unmaximize / close (the OS owns chrome). We compile no-op stubs there
+// so generate_handler! still finds the symbols and the build succeeds.
+#[cfg(desktop)]
 #[tauri::command]
 async fn window_minimize(window: tauri::Window) -> Result<(), String> {
     window.minimize().map_err(|e| e.to_string())
 }
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn window_minimize(_window: tauri::Window) -> Result<(), String> { Ok(()) }
 
+#[cfg(desktop)]
 #[tauri::command]
 async fn window_toggle_maximize(window: tauri::Window) -> Result<(), String> {
     let max = window.is_maximized().map_err(|e| e.to_string())?;
@@ -39,11 +47,18 @@ async fn window_toggle_maximize(window: tauri::Window) -> Result<(), String> {
         window.maximize().map_err(|e| e.to_string())
     }
 }
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn window_toggle_maximize(_window: tauri::Window) -> Result<(), String> { Ok(()) }
 
+#[cfg(desktop)]
 #[tauri::command]
 async fn window_close(window: tauri::Window) -> Result<(), String> {
     window.close().map_err(|e| e.to_string())
 }
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn window_close(_window: tauri::Window) -> Result<(), String> { Ok(()) }
 
 /// Default schedule for brand-new users: 7pm every day.
 fn default_schedule() -> ScheduleConfig {
