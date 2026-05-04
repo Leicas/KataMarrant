@@ -98,11 +98,25 @@ NDK_HOME=/c/Users/antoi/AppData/Local/Android/Sdk/ndk/30.0.14904198 \
 
 Output: `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`.
 
-Verify it's signed:
+**The AAB that gradle emits is unsigned.** Tauri 2.10/2.11's stock
+`build.gradle.kts` does not wire `signingConfig` into the bundle task,
+so the AAB falls out of the build with no MANIFEST.MF / .RSA in
+`META-INF/`. Sign it explicitly with `jarsigner` (AABs use JAR signing
+v1 — APK Signing Scheme v2/v3 does not apply to bundles, and Play
+re-signs with its own deployment cert when distributing):
 
 ```bash
-$ANDROID_HOME/build-tools/<latest>/apksigner verify --verbose <aab>
+AAB=src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
+jarsigner \
+  -sigalg SHA256withRSA -digestalg SHA-256 \
+  -keystore "$HOME/keystores/katamarrant-release.jks" \
+  "$AAB" katamarrant
+jarsigner -verify "$AAB"           # must print "jar verified."
 ```
+
+The `apksigner verify` command does **not** work on AABs (it's
+APK-specific) — use `jarsigner -verify` for AABs and `apksigner verify`
+for APKs.
 
 For local sideload verification, generate a universal APK from the AAB via
 `bundletool`:
