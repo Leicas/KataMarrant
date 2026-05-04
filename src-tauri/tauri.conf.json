@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KataMarrant",
-  "version": "1.4.0-beta.15",
+  "version": "1.4.0-beta.16",
   "identifier": "co.weill-duflos.katamarrant",
   "build": {
     "frontendDist": "../src",

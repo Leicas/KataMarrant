@@ -1,3 +1,10 @@
+## [1.4.0-beta.16](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.15...v1.4.0-beta.16) (2026-05-04)
+
+### Bug Fixes
+
+* **ui,mobile:** more breathing room between hero/actions/achievements ([f4336c5](https://github.com/Leicas/KataMarrant/commit/f4336c5f6095bfa9434e3f58de0708efe38f5d8c))
+* **ui,mobile:** show achievements again — 3-col compact grid, hide mastery+today ([b91c104](https://github.com/Leicas/KataMarrant/commit/b91c1043250e2181a31385c27838bfe297d4bc58))
+
 ## [1.4.0-beta.15](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.14...v1.4.0-beta.15) (2026-05-04)
 
 ### Bug Fixes
