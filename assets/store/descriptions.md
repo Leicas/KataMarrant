@@ -1,158 +1,139 @@
-# KataMarrant — Play Store listing
+# KataMarrant Play Store listing
 
 Default language: **English (US)**. Translation: **French (France)**.
+
+Source of truth for what the app actually does: `CLAUDE.md` in the repo
+root. Update this file when you ship a new feature surface, otherwise
+the Play listing will drift.
 
 ## English
 
 ### App name
-KataMarrant — Gokyo no Waza
+Katamarrant
 
 ### Short description (≤ 80 chars)
-> Learn the 40 Gokyo no Waza throws — image quiz, drill mode, spaced repetition.
+> Learn the 40 Gokyo no Waza judo throws: image quizzes and spaced repetition.
 
-(78 chars)
+(76 chars)
 
 ### Long description (≤ 4000 chars)
 
-KataMarrant is an offline trainer for the **40 Gokyo no Waza** — the canonical
-Kodokan judo throwing techniques.
+Katamarrant is a focused, offline-first study companion for the 40 Gokyo no Waza, the classical curriculum of judo throws taught in dojos worldwide. Whether you are preparing for a grading, refreshing your memory, or just curious about the names behind the techniques, Katamarrant turns review into a quick daily habit.
 
-Identify each technique from its image, drill against the clock, or learn the
-kanji and Japanese pronunciation. Your weak techniques surface more often
-thanks to a spaced-repetition weighting that tracks every answer.
+KEY FEATURES
 
-— No ads. No accounts. No internet required.
-— All data stays on your device.
+• Image-first quizzes: see the technique, identify it from three romaji choices. The reveal panel shows the romaji name, the kanji, and the literal French translation side by side.
+• Spaced repetition: techniques you miss surface more often, fresh ones rotate in, and a built-in cooldown stops the same throw from repeating back-to-back.
+• Rapid-fire mode: 10-question bursts for warm-ups before practice or quick travel review.
+• Browse mode: flip through the full Gokyo, grouped by Kyo (1st through 5th), with kanji and translations always visible.
+• Customizable scheduling: daily, twice-daily, smart "if you haven't reached your goal yet", or every-N-minutes with quiet hours.
+• Local notifications gently remind you to practice on your own schedule. No push server, no tracking.
+• Bilingual interface: full English and French, with auto-detection on first launch.
+• Optional cross-device sync: sign in with a magic link by email (no password) to keep your stats consistent across phones, tablets, and desktop.
 
-**Practice modes**
-• Single quiz — one technique at a time, three rōmaji choices.
-• Rapid-fire — burst of 10 questions to time your recall.
-• Drill — adjustable timer (5, 10, or 20 s) with auto-reveal on timeout.
-• Audio drill — listen to the Japanese name, identify the meaning.
+PRIVACY-FIRST BY DESIGN
 
-**Prompt variants**
-• Image (default) — the canonical Gokyo poster drawing.
-• Kanji + rōmaji — read the technique name.
-• Kanji only — harder reading test.
-• Free text — type the rōmaji from memory, fuzzy-matched.
+Katamarrant works fully offline. Your quiz history stays on your device by default. There are no ads, no analytics, no third-party trackers, no advertising IDs. The optional sync feature, when enabled, only sends your email and your quiz statistics to our server over HTTPS, nothing else.
 
-**Stats & analytics**
-• Per-technique status: acquired / needs work / not acquired.
-• Weekly accuracy over the last 8 weeks.
-• Per-group and per-category breakdowns.
-• Response-time distribution.
+OPEN SOURCE
 
-**Data depth for each of the 40 techniques**
-• Rōmaji name (canonical).
-• Kanji.
-• French and English literal translation.
-• Gokyo group (1–5) and category (te / koshi / ashi / sutemi-waza).
-• Direct links to the judo.how reference page and Wikipedia article.
+The whole app is open source. Read the code, file an issue, or contribute on GitHub: github.com/Leicas/KataMarrant
 
-**Optional reminder**
-Schedule a quiz prompt at a chosen interval (5 min – 8 h). The notification
-opens the app on a single fresh question.
+WHO IT IS FOR
 
-KataMarrant is a personal study tool — not a substitute for a sensei. Every
-external reference link points to community sources (judo.how, Wikipedia,
-YouTube uploaders) that retain ownership of their content.
+• Judoka of any rank preparing for a grading or refreshing terminology.
+• Coaches drilling vocabulary with students.
+• Anyone curious about the structure of the Gokyo no Waza and the Japanese names of these techniques.
+
+NOT AFFILIATED
+
+Katamarrant is an independent learning tool. It is not affiliated with the Kodokan, the International Judo Federation, or any national judo federation.
 
 
 ## Français
 
 ### Nom de l'app
-KataMarrant — Gokyo no Waza
+Katamarrant
 
 ### Description courte (≤ 80 car.)
-> Apprends les 40 prises du Gokyo no Waza — quiz image, drill, répétition espacée.
+> Apprenez les 40 prises du Gokyo no Waza : quiz image, répétition espacée.
 
-(78 car.)
+(76 car.)
 
 ### Description longue (≤ 4000 car.)
 
-KataMarrant est une appli hors-ligne pour mémoriser les **40 Gokyo no Waza** —
-la liste canonique des projections du judo Kodokan.
+Katamarrant est un compagnon d'étude hors-ligne dédié aux 40 Gokyo no Waza, le programme classique des projections de judo enseigné dans les dojos du monde entier. Que vous prépariez un passage de grade, que vous rafraîchissiez votre mémoire ou que vous soyez simplement curieux des noms japonais derrière chaque prise, Katamarrant transforme la révision en une courte habitude quotidienne.
 
-Identifie chaque prise à partir de son image, entraîne-toi contre le chrono,
-ou travaille les kanji et la prononciation japonaise. Les techniques que tu
-maîtrises moins reviennent plus souvent grâce à une pondération de répétition
-espacée qui suit chacune de tes réponses.
+PRINCIPALES FONCTIONNALITÉS
 
-— Aucune pub. Aucun compte. Pas besoin d'internet.
-— Toutes les données restent sur ton appareil.
+• Quiz par image : voyez la technique, identifiez-la parmi trois propositions en romaji. Le panneau de révélation affiche ensuite le nom romaji, les kanji et la traduction littérale française côte à côte.
+• Répétition espacée : les techniques que vous ratez reviennent plus souvent, les nouvelles tournent dans le pool, et un système anti-répétition empêche la même prise de tomber deux fois de suite.
+• Mode rafale : séries de 10 questions pour s'échauffer avant l'entraînement ou réviser en déplacement.
+• Mode parcours : feuilletez l'intégralité du Gokyo, classé par Kyo (1er à 5e), avec kanji et traductions toujours visibles.
+• Planification personnalisable : quotidien, deux fois par jour, mode intelligent (« seulement si l'objectif n'est pas atteint »), ou toutes les N minutes avec heures de silence.
+• Notifications locales pour vous rappeler de pratiquer selon votre rythme. Pas de serveur push, pas de pistage.
+• Interface bilingue : français et anglais complets, détection automatique au premier lancement.
+• Synchronisation entre appareils optionnelle : connectez-vous via un lien magique par e-mail (sans mot de passe) pour garder vos stats cohérentes entre téléphone, tablette et ordinateur.
 
-**Modes d'entraînement**
-• Quiz simple — une prise à la fois, trois choix en rōmaji.
-• Rafale — série de 10 questions pour chronométrer ta mémoire.
-• Drill — chrono ajustable (5, 10, ou 20 s) avec révélation auto en fin de temps.
-• Drill audio — écoute le nom japonais, identifie la prise.
+CONFIDENTIALITÉ PAR CONCEPTION
 
-**Variantes de question**
-• Image (par défaut) — le dessin canonique du poster du Gokyo.
-• Kanji + rōmaji — lis le nom de la prise.
-• Kanji seul — test de lecture plus difficile.
-• Texte libre — tape le rōmaji de mémoire, comparaison tolérante.
+Katamarrant fonctionne entièrement hors-ligne. Par défaut, votre historique de quiz reste sur votre appareil. Aucune publicité, aucune analyse, aucun pisteur tiers, aucun identifiant publicitaire. La synchronisation optionnelle, si vous l'activez, n'envoie que votre adresse e-mail et vos statistiques de quiz à notre serveur en HTTPS, rien d'autre.
 
-**Stats et analytics**
-• Statut par prise : acquise / à renforcer / non acquise.
-• Précision hebdomadaire sur les 8 dernières semaines.
-• Répartition par groupe et par catégorie.
-• Distribution des temps de réponse.
+OPEN SOURCE
 
-**Données par prise (les 40)**
-• Nom rōmaji (canonique).
-• Kanji.
-• Traduction littérale française et anglaise.
-• Groupe Gokyo (1–5) et catégorie (te / koshi / ashi / sutemi-waza).
-• Liens directs vers la fiche judo.how et la page Wikipédia.
+L'application est entièrement open source. Lisez le code, signalez un problème, ou contribuez sur GitHub : github.com/Leicas/KataMarrant
 
-**Rappel optionnel**
-Programme un rappel quiz à l'intervalle de ton choix (5 min – 8 h). La
-notification ouvre l'appli sur une question fraîche.
+POUR QUI
 
-KataMarrant est un outil d'étude personnel — il ne remplace pas un sensei. Les
-liens externes pointent vers les sources communautaires (judo.how, Wikipédia,
-auteurs YouTube) qui restent propriétaires de leur contenu.
+• Judokas de tous grades préparant un passage ou rafraîchissant le vocabulaire.
+• Entraîneurs qui veulent faire répéter le vocabulaire à leurs élèves.
+• Toute personne curieuse de la structure du Gokyo no Waza et des noms japonais des techniques.
+
+NON AFFILIÉ
+
+Katamarrant est un outil d'étude indépendant. Il n'est pas affilié au Kodokan, à la Fédération Internationale de Judo, ni à aucune fédération nationale.
 
 
 ## Metadata
 
 - **Category**: Education
-- **Content rating**: Everyone (PEGI 3 / ESRB Everyone) — no UGC, no ads, no purchases
+- **Content rating**: Everyone (PEGI 3 / ESRB Everyone). No UGC, no ads, no purchases.
 - **Contains ads**: No
 - **In-app purchases**: No
 - **Target audience**: 13+ (judo practice context)
 - **Tags**: education, sport, judo, japanese, language
 
-## Privacy policy
+## Data safety form (Google Play Console)
 
-Required by Play even for fully offline apps. Short version, host this as a
-static page (e.g. GitHub Pages or a subdomain of weill-duflos.fr) and paste
-the URL into the listing:
+- Collects user data: **Yes** (only if the user enables cross-device sync).
+- All data encrypted in transit: **Yes** (HTTPS / TLS to katamarrant.weill-duflos.fr).
+- Account creation methods: **Username and other authentication** (email + magic-link code, no password).
+- Data types collected (when sync enabled):
+  - Email address (account purpose, app functionality).
+  - App activity / app usage stats (the quiz statistics, for cross-device sync).
+- Data sharing with third parties: **None**.
+- Account-deletion URL: `https://leicas.github.io/KataMarrant/delete-account.html`
 
-> KataMarrant runs entirely on your device. The app does not collect, transmit,
-> or share any personal data. Quiz history and settings are stored in a local
-> SQLite database inside the app's private storage and are deleted when you
-> uninstall the app. The app does not contain advertising, analytics SDKs, or
-> third-party trackers.
->
-> The app embeds the YouTube IFrame Player to display reference videos
-> curated by judo.how. Loading a video may cause YouTube to set its own
-> cookies in the embedded player; this is governed by the YouTube /
-> Google privacy policy.
->
-> Contact: antoine@weill-duflos.fr
+## URLs
 
-## Screenshots needed (4–8)
+- Privacy policy: `https://leicas.github.io/KataMarrant/privacy.html`
+- Account & data deletion: `https://leicas.github.io/KataMarrant/delete-account.html`
+- Source code: `https://github.com/Leicas/KataMarrant`
+- Contact email: `contact@katamarrant.weill-duflos.fr`
 
-Capture on the Pixel 7 (`adb -s 28111FDH200FHZ exec-out screencap -p > screen.png`),
-one per major flow:
+## Screenshots
 
-1. Home — stats card + practice buttons.
-2. Quiz — mid-question, image visible.
-3. Quiz — post-answer reveal panel (kanji + rōmaji + French).
-4. Drill — countdown bar visible.
-5. Browse — list with status badges.
-6. Stats — weekly accuracy + group breakdown.
-7. (Optional) Settings — language + prompt mode pickers.
-8. (Optional) Audio drill — diagnostic line visible.
+Phone screenshots already in `docs/screenshots/` (1080×2400):
+
+1. `android-home.png`: home / dashboard.
+2. `android-quiz.png`: mid-question, image visible.
+3. `android-list.png`: browse list.
+4. `android-drill.png`: drill / rapid-fire mode.
+
+Optional desktop screenshot (`desktop-home.png`, 1196×789) for the
+"Tablet" Play Store screenshot category if you want to fill it.
+
+## Graphic assets
+
+- App icon: `assets/store/play-icon-512.png` (512×512, no alpha).
+- Feature graphic: `assets/store/feature-graphic.png` (1024×500).
