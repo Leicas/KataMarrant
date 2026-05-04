@@ -1,24 +1,28 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KataMarrant",
-  "version": "1.3.1",
+  "version": "1.4.0-beta.16",
   "identifier": "co.weill-duflos.katamarrant",
   "build": {
     "frontendDist": "../src",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "beforeDevCommand": "node -e \"require('fs').copyFileSync('CHANGELOG.md','src/CHANGELOG.md')\"",
+    "beforeBuildCommand": "node -e \"require('fs').copyFileSync('CHANGELOG.md','src/CHANGELOG.md')\""
   },
   "app": {
     "windows": [
       {
         "title": "KataMarrant",
-        "width": 420,
-        "height": 720,
+        "width": 1180,
+        "height": 780,
         "minWidth": 360,
         "minHeight": 560,
         "resizable": true,
         "center": true,
-        "visible": true
+        "visible": true,
+        "decorations": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "shadow": true
       }
     ],
     "withGlobalTauri": true,
@@ -28,6 +32,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": [
       "deb",
       "appimage",
@@ -51,5 +56,18 @@
       "minSdkVersion": 26
     }
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUwNjQ4NUY3QkIxRDNDODgKUldTSVBCMjc5NFZrVUppa1pOT0ZMMEVQZUM4VDZ4NGtIUDBGd29ER3RGLzU3QjhKNWVicDRLbHMK",
+      "endpoints": [
+        "https://github.com/Leicas/KataMarrant/releases/latest/download/latest.json",
+        "https://github.com/Leicas/KataMarrant/releases/download/beta-latest/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }

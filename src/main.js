@@ -35,6 +35,13 @@ const I18N = {
     "tab.browse":   "Browse",
     "tab.stats":    "Stats",
     "tab.settings": "⚙",
+    "nav.home":     "Home",
+    "nav.quiz":     "Quiz",
+    "nav.rapid":    "Rapid",
+    "nav.drill":    "Drill",
+    "nav.browse":   "Browse",
+    "nav.stats":    "Stats",
+    "nav.settings": "Settings",
 
     "home.today":         "Today",
     "home.questions":     "Questions answered",
@@ -232,6 +239,46 @@ const I18N = {
     "toast.level_up":        "Level up! → {n}",
     "toast.goal_met":        "Daily goal hit!",
     "toast.achievement":     "Achievement unlocked",
+    "updater.pill.available":    "Update available",
+    "updater.pill.downloading":  "Downloading… {p}%",
+    "updater.pill.ready":        "Restart to install",
+    "updater.modal.title":       "Update available",
+    "updater.modal.version":     "Version {from} → {to}",
+    "updater.modal.install":     "Install & restart",
+    "updater.modal.later":       "Later",
+    "updater.modal.downloading": "Downloading… {p}%",
+    "updater.modal.installing":  "Installing — the app will restart shortly.",
+    "updater.modal.no_notes":    "No release notes available.",
+    "updater.error":             "Update error: {msg}",
+    "updater.section.title":     "App updates",
+    "updater.section.mobile_help": "Updates on this platform ship through your app store. KataMarrant cannot self-update on Android or iOS.",
+    "updater.auto_label":        "Auto-check for updates",
+    "updater.auto_on":           "On (recommended)",
+    "updater.auto_off":          "Off",
+    "updater.auto_help":         "Checks GitHub for a new release ~3 seconds after launch. We never auto-install — you always confirm.",
+    "updater.check_now":         "Check for updates now",
+    "updater.status.idle":              "",
+    "updater.status.checking":          "Checking…",
+    "updater.status.up_to_date":        "You're on the latest version.",
+    "updater.status.available":         "Update {v} available.",
+    "updater.status.downloading":       "Downloading…",
+    "updater.status.ready":             "Ready — click the pill to restart.",
+    "updater.status.installing":        "Installing…",
+    "updater.whats_new.title":          "What's new in v{v}",
+    "updater.changelog.button":         "View full changelog",
+    "updater.changelog.title":          "Changelog",
+    "updater.changelog.loading":        "Loading…",
+    "updater.changelog.empty":          "No changelog available.",
+    "diag.title":                       "Diagnostic — answers logged",
+    "diag.loading":                     "Loading…",
+    "diag.total":                       "{n} total entries in your local quiz log.",
+    "diag.range":                       "(from {from} to {to})",
+    "diag.mode_single":                 "Single-question quizzes",
+    "diag.mode_rapid":                  "Rapid bursts (10 per round)",
+    "diag.mode_drill":                  "Drill (timed)",
+    "diag.note":                        "The local count includes every individual answer across single, rapid, and drill modes — so 50 rapid rounds = 500 entries, not 50. The server's leaderboard only reflects the synced subset.",
+    "diag.dedup_btn":                   "Clean up duplicates",
+    "diag.dedup_done":                  "Removed {removed} duplicates ({before} → {after}). Trigger a sync next so the server picks up the cleaned state.",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -241,6 +288,13 @@ const I18N = {
     "tab.browse":   "Liste",
     "tab.stats":    "Stats",
     "tab.settings": "⚙",
+    "nav.home":     "Accueil",
+    "nav.quiz":     "Quiz",
+    "nav.rapid":    "Rafale",
+    "nav.drill":    "Drill",
+    "nav.browse":   "Liste",
+    "nav.stats":    "Stats",
+    "nav.settings": "Réglages",
 
     "home.today":         "Aujourd'hui",
     "home.questions":     "Questions répondues",
@@ -438,6 +492,46 @@ const I18N = {
     "toast.level_up":        "Niveau supérieur ! → {n}",
     "toast.goal_met":        "Objectif atteint !",
     "toast.achievement":     "Succès débloqué",
+    "updater.pill.available":    "Mise à jour disponible",
+    "updater.pill.downloading":  "Téléchargement… {p}%",
+    "updater.pill.ready":        "Redémarrer pour installer",
+    "updater.modal.title":       "Mise à jour disponible",
+    "updater.modal.version":     "Version {from} → {to}",
+    "updater.modal.install":     "Installer et redémarrer",
+    "updater.modal.later":       "Plus tard",
+    "updater.modal.downloading": "Téléchargement… {p}%",
+    "updater.modal.installing":  "Installation — l'app va redémarrer.",
+    "updater.modal.no_notes":    "Aucune note de version disponible.",
+    "updater.error":             "Erreur mise à jour : {msg}",
+    "updater.section.title":     "Mises à jour",
+    "updater.section.mobile_help": "Sur cette plateforme les mises à jour passent par le store. KataMarrant ne peut pas se mettre à jour seul sur Android ou iOS.",
+    "updater.auto_label":        "Vérifier auto. les mises à jour",
+    "updater.auto_on":           "Activé (recommandé)",
+    "updater.auto_off":          "Désactivé",
+    "updater.auto_help":         "Vérifie GitHub ~3 s après le lancement. Pas d'install automatique — vous confirmez toujours.",
+    "updater.check_now":         "Vérifier maintenant",
+    "updater.status.idle":              "",
+    "updater.status.checking":          "Vérification…",
+    "updater.status.up_to_date":        "Vous êtes à jour.",
+    "updater.status.available":         "Mise à jour {v} disponible.",
+    "updater.status.downloading":       "Téléchargement…",
+    "updater.status.ready":             "Prêt — cliquez la pastille pour redémarrer.",
+    "updater.status.installing":        "Installation…",
+    "updater.whats_new.title":          "Nouveautés en v{v}",
+    "updater.changelog.button":         "Voir le changelog complet",
+    "updater.changelog.title":          "Journal des modifications",
+    "updater.changelog.loading":        "Chargement…",
+    "updater.changelog.empty":          "Aucun changelog disponible.",
+    "diag.title":                       "Diagnostic — réponses enregistrées",
+    "diag.loading":                     "Chargement…",
+    "diag.total":                       "{n} entrées dans le journal local.",
+    "diag.range":                       "(du {from} au {to})",
+    "diag.mode_single":                 "Quiz simples",
+    "diag.mode_rapid":                  "Rafales (10 par tour)",
+    "diag.mode_drill":                  "Drill (chrono)",
+    "diag.note":                        "Le compteur local inclut chaque réponse individuelle, donc 50 rafales = 500 entrées, pas 50. Le classement serveur ne reflète que ce qui a été synchronisé.",
+    "diag.dedup_btn":                   "Nettoyer les doublons",
+    "diag.dedup_done":                  "{removed} doublons supprimés ({before} → {after}). Déclenche une synchro pour propager l'état nettoyé au serveur.",
   },
 };
 
@@ -483,6 +577,19 @@ const store = {
   // answer_question response. Used to seed UI defaults (daily-goal stepper,
   // profile card before the live fetch resolves).
   gamification: null,
+  // Auto-updater state (desktop only — supported is false on Android/iOS).
+  // The full state machine + UI live in the "Auto-updater" section near the
+  // bottom of this file. detectUpdaterPlatform() is called on boot.
+  updater: {
+    platform: null,
+    supported: false,
+    state: "idle",
+    available_update: null,
+    progress: { downloaded: 0, total: 0 },
+    error_msg: null,
+    auto_check: true,
+    last_applied: null,
+  },
 };
 
 const STORE_KEYS = {
@@ -493,6 +600,9 @@ const STORE_KEYS = {
   quizPromptMode: "kata.quiz_prompt_mode",
   drillDuration:  "kata.drill_duration_s",
   drillPromptMode:"kata.drill_prompt_mode",
+  updaterAutoCheck:    "kata.updater_auto_check",
+  updaterLastNotes:    "kata.updater_last_notes",
+  updaterLastDismiss:  "kata.updater_last_dismiss",
 };
 
 // ---------------------------------------------------------------------------
@@ -584,7 +694,9 @@ function navigate(view) {
     if (typeof stopSyncPoll === "function") stopSyncPoll();
   }
   store.view = view;
-  els(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+  // Desktop sidebar nav (.navitem) and mobile bottom-tab-bar (.tab) both
+  // carry data-view; toggle .active on every match in either set.
+  els(".tab, .navitem").forEach(t => t.classList.toggle("active", t.dataset.view === view));
   els(".view").forEach(v => v.classList.toggle("active", v.id === `view-${view}`));
   render();
 }
@@ -750,8 +862,21 @@ function makeImageEl(tech, alt) {
 
 function applyTabLabels() {
   document.documentElement.lang = store.lang;
+  // Mobile tab buttons hold a single text label.
   for (const btn of els(".tab")) {
     btn.textContent = t(`tab.${btn.dataset.view}`);
+  }
+  // Desktop sidebar items have an icon + label structure; only the .lbl
+  // span gets retranslated so the icon character stays put. Use the nav.*
+  // namespace (not tab.*) so the settings sidebar entry shows "Settings"
+  // / "Réglages" and not the cog glyph (which is already in .ico).
+  const dict = I18N[store.lang] || I18N.en;
+  for (const btn of els(".navitem")) {
+    const lbl = btn.querySelector(".lbl");
+    if (!lbl) continue;
+    const v = btn.dataset.view;
+    const navKey = `nav.${v}`;
+    lbl.textContent = (dict[navKey] || I18N.en[navKey]) || t(`tab.${v}`);
   }
 }
 
@@ -1092,9 +1217,16 @@ function elapsedMs(shownAt) {
 // page without a tab of its own.
 // ---------------------------------------------------------------------------
 
-async function renderProfile(slot) {
+// renderProfile renders the home hero + home 2-col grid into two distinct
+// slots so renderHome can interleave the action-button row and today-strip
+// between them. Pass `gridSlot` to keep the legacy "everything appended
+// in one slot" behavior (the second arg defaults to slot itself).
+async function renderProfile(slot, gridSlot) {
   if (!slot) return;
   slot.innerHTML = "";
+  if (gridSlot && gridSlot !== slot) gridSlot.innerHTML = "";
+  const heroParent = slot;
+  const gridParent = gridSlot || slot;
 
   const [g, achievements, allTech] = await Promise.all([
     fetchGamificationState(),
@@ -1103,13 +1235,16 @@ async function renderProfile(slot) {
   ]);
   if (!g) return;
 
-  const card = h("div", { class: "card profile-hero" });
-
-  // Top row: level + XP bar.
+  // ----- Compact hero strip (level + XP + streak + goal in one row) -----
+  const hero = h("div", { class: "card profile-hero" });
   const xpInLevel = g.xp_total - g.xp_for_current_level;
   const xpSpan = Math.max(1, g.xp_for_next_level - g.xp_for_current_level);
   const xpPct = Math.max(0, Math.min(100, (xpInLevel / xpSpan) * 100));
-  card.appendChild(h("div", { class: "profile-top" },
+  const goal = Math.max(1, g.daily_goal);
+  const today = g.today || { questions: 0, correct: 0, goal_met: false };
+  const goalPct = Math.max(0, Math.min(100, (today.questions / goal) * 100));
+
+  hero.appendChild(h("div", { class: "profile-hero-row" },
     h("div", { class: "profile-level" },
       h("span", { class: "lvl-num" }, String(g.level)),
       h("span", { class: "lvl-label" }, t("profile.level", { n: g.level })),
@@ -1119,42 +1254,36 @@ async function renderProfile(slot) {
         h("div", { class: "xp-fill", style: `width:${xpPct}%` }),
       ),
       h("div", { class: "xp-text muted" },
-        t("profile.xp", { cur: xpInLevel, next: xpSpan }),
-      ),
+        t("profile.xp", { cur: xpInLevel, next: xpSpan })),
     ),
-  ));
-
-  // Streak + daily-goal ring.
-  const goal = Math.max(1, g.daily_goal);
-  const today = g.today || { questions: 0, correct: 0, goal_met: false };
-  const goalPct = Math.max(0, Math.min(100, (today.questions / goal) * 100));
-  card.appendChild(h("div", { class: "profile-row" },
     h("div", { class: "profile-streak" },
       h("div", { class: "streak-num" }, `🔥 ${g.current_streak}`),
-      h("div", { class: "muted" },
+      h("div", { class: "muted small" },
         t("profile.streak_days", { n: g.current_streak })),
       h("div", { class: "muted small" },
         t("profile.longest", { n: g.longest_streak })),
     ),
     h("div", { class: "profile-goal" },
+      h("div", { class: "goal-text" },
+        h("span", { class: "num" },
+          t("profile.goal_progress", { cur: today.questions, goal })),
+        h("span", { class: "small muted" }, t("profile.daily_goal")),
+      ),
       h("div", { class: "goal-ring" },
         h("div", { class: "goal-ring-bar" },
           h("div", { class: "goal-ring-fill", style: `width:${goalPct}%` }),
         ),
       ),
-      h("div", { class: "goal-text" },
-        h("span", {}, t("profile.daily_goal")),
-        h("span", { class: "num" },
-          t("profile.goal_progress", { cur: today.questions, goal })),
-      ),
-      g.best_combo > 1
-        ? h("div", { class: "muted small" }, t("profile.combo", { n: g.best_combo }))
-        : null,
     ),
   ));
+  heroParent.appendChild(hero);
 
-  // Mastery per group — count techniques in each group with correct_count >= 3
-  // AND last_correct = 1.
+  // ----- Two-column body: mastery (left) + achievements (right) -----
+  const grid2col = h("div", { class: "home-grid" });
+
+  // Left: mastery card.
+  const masteryCard = h("div", { class: "card mastery-card" });
+  masteryCard.appendChild(h("h2", {}, t("profile.mastery")));
   const statBy = {};
   for (const s of allTech) statBy[s.slug] = s;
   const techByGroup = {};
@@ -1162,7 +1291,6 @@ async function renderProfile(slot) {
     if (!techByGroup[tech.group]) techByGroup[tech.group] = [];
     techByGroup[tech.group].push(tech);
   }
-  card.appendChild(h("h3", { class: "profile-section" }, t("profile.mastery")));
   for (let gi = 1; gi <= 5; gi++) {
     const list = techByGroup[gi] || [];
     let mastered = 0;
@@ -1172,7 +1300,7 @@ async function renderProfile(slot) {
     }
     const total = list.length || 8;
     const pct = total ? (mastered / total) * 100 : 0;
-    card.appendChild(h("div", { class: "stat-bar-row mastery-row" },
+    masteryCard.appendChild(h("div", { class: "stat-bar-row mastery-row" },
       h("div", { class: "stat-bar-label" }, `${gi}. ${GROUP_NAMES[gi] || ""}`),
       h("div", { class: "stat-bar-track" },
         h("div", {
@@ -1183,15 +1311,17 @@ async function renderProfile(slot) {
       h("div", { class: "stat-bar-value" }, `${mastered} / ${total}`),
     ));
   }
+  grid2col.appendChild(masteryCard);
 
-  // Achievements grid.
+  // Right: achievements card.
   const unlockedCount = achievements.filter(a => a.unlocked).length;
-  card.appendChild(h("h3", { class: "profile-section" },
+  const achCard = h("div", { class: "card ach-card" });
+  achCard.appendChild(h("h2", {},
     t("profile.achievements"),
-    h("span", { class: "muted small", style: "margin-left:8px" },
+    h("span", { class: "muted small", style: "margin-left:8px; font-weight:500" },
       t("profile.unlocked", { n: unlockedCount, total: achievements.length })),
   ));
-  const grid = h("div", { class: "achievement-grid" });
+  const achGrid = h("div", { class: "achievement-grid" });
   for (const a of achievements) {
     const name = store.lang === "fr" ? a.name_fr : a.name_en;
     const desc = store.lang === "fr" ? a.description_fr : a.description_en;
@@ -1205,7 +1335,7 @@ async function renderProfile(slot) {
         });
       } catch (_) {}
     }
-    grid.appendChild(h("div", { class: cls, title: desc },
+    achGrid.appendChild(h("div", { class: cls, title: desc },
       h("div", { class: "ach-icon" }, a.unlocked ? "🥋" : "🔒"),
       h("div", { class: "ach-name" }, name),
       a.unlocked && dateStr
@@ -1213,9 +1343,10 @@ async function renderProfile(slot) {
         : h("div", { class: "ach-date muted small" }, t("profile.locked")),
     ));
   }
-  card.appendChild(grid);
+  achCard.appendChild(achGrid);
+  grid2col.appendChild(achCard);
 
-  slot.appendChild(card);
+  gridParent.appendChild(grid2col);
 }
 
 async function renderHome() {
@@ -1229,55 +1360,73 @@ async function renderHome() {
     ? Math.round((stats.total_correct / stats.total_answered) * 100)
     : 0;
 
-  // Profile hero card — pulls gamification state + achievements + technique
-  // stats. Renders synchronously below; we kick off the fetches now and
-  // append the rendered card once everything resolves. The other cards
-  // append immediately so the page paints fast.
-  const profileSlot = h("div", { class: "profile-slot" });
-  root.appendChild(profileSlot);
+  // Layout (top to bottom):
+  //   1. Profile hero strip          (level + XP + streak + goal, ~96px)
+  //   2. Action buttons row          (single / rapid / drill / browse, ~56px)
+  //   3. Today summary strip         (4 horizontal stat cells, ~80px)
+  //   4. Two-column grid             (mastery left, achievements right)
+  //
+  // Action buttons sit right under the hero so they're always visible
+  // above the fold at default window size. renderProfile fills two slots
+  // separately — the hero into heroSlot, the 2-col grid into gridSlot —
+  // so action+today can interleave between them.
+  const heroSlot = h("div", { class: "profile-slot" });
+  root.appendChild(heroSlot);
 
-  root.appendChild(h("div", { class: "card" },
+  // Practice action row — horizontal flex of 4 buttons.
+  root.appendChild(h("div", { class: "home-actions" },
+    h("button", {
+      class: "btn primary action-btn", type: "button",
+      onclick: () => startSingleQuiz(),
+    }, h("span", { class: "act-ico" }, "◆"),
+       h("span", {}, t("home.single"))),
+    h("button", {
+      class: "btn action-btn", type: "button",
+      onclick: () => startRapidFire(),
+    }, h("span", { class: "act-ico" }, "»"),
+       h("span", {}, t("home.rapid", { n: RAPID_LENGTH }))),
+    h("button", {
+      class: "btn action-btn", type: "button",
+      onclick: () => startDrill(),
+    }, h("span", { class: "act-ico" }, "⏱"),
+       h("span", {}, t("home.drill"))),
+    h("button", {
+      class: "btn ghost action-btn", type: "button",
+      onclick: () => navigate("browse"),
+    }, h("span", { class: "act-ico" }, "≡"),
+       h("span", {}, t("home.browse"))),
+  ));
+
+  // Today summary strip — 4 stat cells in a horizontal flex row.
+  root.appendChild(h("div", { class: "card today-strip" },
     h("h2", {}, t("home.today")),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.questions")),
-      h("span", { class: "num" }, String(stats.questions_today)),
-    ),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.accuracy")),
-      h("span", { class: "num" }, `${accuracy}%`),
-    ),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.total")),
-      h("span", { class: "num" }, String(stats.total_answered)),
-    ),
-    h("div", { class: "stat-row" },
-      h("span", {}, t("home.prompt")),
-      h("span", { class: "num" }, scheduleSummary(store.settings.schedule)),
+    h("div", { class: "today-cells" },
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num" }, String(stats.questions_today)),
+        h("div", { class: "today-lbl" }, t("home.questions")),
+      ),
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num" }, `${accuracy}%`),
+        h("div", { class: "today-lbl" }, t("home.accuracy")),
+      ),
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num" }, String(stats.total_answered)),
+        h("div", { class: "today-lbl" }, t("home.total")),
+      ),
+      h("div", { class: "today-cell" },
+        h("div", { class: "today-num small" }, scheduleSummary(store.settings.schedule)),
+        h("div", { class: "today-lbl" }, t("home.prompt")),
+      ),
     ),
   ));
 
-  // Render the profile hero asynchronously.
-  renderProfile(profileSlot).catch(e => console.error("renderProfile", e));
+  // The home-grid (mastery + achievements) goes at the bottom — it's the
+  // overflow-it's-OK browsing portion. renderProfile injects content
+  // into both slots once the async fetches resolve.
+  const gridSlot = h("div", { class: "profile-grid-slot" });
+  root.appendChild(gridSlot);
 
-  root.appendChild(h("div", { class: "card" },
-    h("h2", {}, t("home.practice")),
-    h("div", { class: "btn-row" },
-      h("button", { class: "btn primary full", onclick: () => startSingleQuiz() },
-        t("home.single")),
-    ),
-    h("div", { class: "btn-row", style: "margin-top:8px" },
-      h("button", { class: "btn full", onclick: () => startRapidFire() },
-        t("home.rapid", { n: RAPID_LENGTH })),
-    ),
-    h("div", { class: "btn-row", style: "margin-top:8px" },
-      h("button", { class: "btn full", onclick: () => startDrill() },
-        t("home.drill")),
-    ),
-    h("div", { class: "btn-row", style: "margin-top:8px" },
-      h("button", { class: "btn ghost full", onclick: () => navigate("browse") },
-        t("home.browse")),
-    ),
-  ));
+  renderProfile(heroSlot, gridSlot).catch(e => console.error("renderProfile", e));
 }
 
 function renderQuizCard(q, mode, opts = {}) {
@@ -1416,8 +1565,10 @@ function renderQuizCard(q, mode, opts = {}) {
     h("div", { class: "quiz-meta" },
       h("span", { class: "badge brand" }, `${tech.group}. ${GROUP_NAMES[tech.group] || ""}`),
     ),
-    promptEl,
-    interactionEl,
+    // 2-col grid on desktop: prompt left, choices right; collapses to a
+    // single column at narrow widths (mobile or narrow desktop). Same DOM
+    // shape on every platform, CSS does the layout.
+    h("div", { class: "qc-grid" }, promptEl, interactionEl),
   );
 
   // -- Reveal panel after answer ------------------------------------------
@@ -1493,6 +1644,13 @@ async function renderQuiz() {
     typedAnswer: store.quiz.typed_answer,
     promptMode: store.settings.quiz_prompt_mode,
     onPick: async (slug, isCorrect, extras = {}) => {
+      // Idempotency guard: between this click and the next render, the
+      // choice buttons remain enabled in the live DOM, so a fast second
+      // click (or a touch+mouse double-fire) would otherwise insert a
+      // duplicate quiz_log row. Drill mode has had this guard for a
+      // while; single + rapid were missing it — exactly why the local
+      // total_answered came in suspiciously high.
+      if (store.quiz.answered) return;
       store.quiz.answered = true;
       store.quiz.picked = slug;
       if (extras.typed != null) store.quiz.typed_answer = extras.typed;
@@ -1572,6 +1730,8 @@ async function renderRapid() {
     typedAnswer: r.typed_answer,
     promptMode: store.settings.quiz_prompt_mode,
     onPick: async (slug, isCorrect, extras = {}) => {
+      // Same idempotency guard as single mode — see explanation there.
+      if (r.answered) return;
       r.answered = true;
       r.picked = slug;
       if (extras.typed != null) r.typed_answer = extras.typed;
@@ -2795,6 +2955,16 @@ async function renderSettings() {
 
   root.appendChild(drillCard);
 
+  // App updates — desktop only; on mobile the card just explains store updates.
+  root.appendChild(await buildUpdaterSection());
+
+  // Diagnostic — explains the local quiz_log row count by breaking it
+  // down per mode + showing the earliest/latest answer timestamps. Helps
+  // users reconcile a high-looking "Total répondu" with what they think
+  // they've answered (rapid mode logs 10 rows per round, drill logs
+  // every prompt — the count compounds quickly).
+  root.appendChild(buildDiagnosticSection());
+
   // Credits card.
   const credits = h("div", { class: "card" },
     h("h2", {}, t("settings.credits")),
@@ -2882,16 +3052,600 @@ function render() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Auto-updater (desktop only)
+//
+// State machine on store.updater.state:
+//   idle → checking → up_to_date           (no update or error)
+//                  → available             (update.body shown in modal)
+//                  → downloading           (progress events)
+//                  → ready_to_install
+//                  → installing            (relaunch imminent on Linux)
+//
+// Mobile is short-circuited three ways: (1) Cargo.toml target-gates the
+// updater plugin off Android/iOS, (2) lib.rs registers it under
+// #[cfg(desktop)], and (3) detectUpdaterPlatform() flips
+// store.updater.supported to false here so the UI hides the pill and modal.
+// Even if a curious user pokes __TAURI__.updater on a mobile build, the
+// permission is missing from mobile.json/ios.json so the IPC layer rejects.
+// ---------------------------------------------------------------------------
+
+async function detectUpdaterPlatform() {
+  // The tauri-plugin-updater crate is target-gated to desktop in Cargo.toml,
+  // so window.__TAURI__.updater simply doesn't exist on Android/iOS — making
+  // feature-presence the most reliable signal (and removing the need for
+  // tauri-plugin-os, which we don't ship). Earlier code expected
+  // window.__TAURI__.os.platform() to exist, but the os plugin isn't
+  // registered, so the fallback path was returning "unknown" and treating
+  // desktop as mobile — that's why the screenshots showed the mobile
+  // "platform updates via the store" copy on Windows.
+  store.updater.supported = !!window.__TAURI__?.updater;
+  store.updater.platform = store.updater.supported ? "desktop" : "mobile";
+}
+
+function loadUpdaterPrefs() {
+  try {
+    const v = localStorage.getItem(STORE_KEYS.updaterAutoCheck);
+    store.updater.auto_check = v === null ? true : v === "true";
+    const last = localStorage.getItem(STORE_KEYS.updaterLastNotes);
+    if (last) {
+      try { store.updater.last_applied = JSON.parse(last); } catch (_) {}
+    }
+  } catch (_) {}
+}
+
+function saveUpdaterAutoCheck() {
+  try {
+    localStorage.setItem(STORE_KEYS.updaterAutoCheck, String(store.updater.auto_check));
+  } catch (_) {}
+}
+
+async function updaterCheck({ silent = false } = {}) {
+  if (!store.updater.supported) return null;
+  store.updater.error_msg = null;
+  store.updater.state = "checking";
+  if (!silent) renderUpdaterPill();
+  try {
+    const update = await window.__TAURI__.updater.check();
+    if (update && update.version && update.version !== update.currentVersion) {
+      const dismissed = localStorage.getItem(STORE_KEYS.updaterLastDismiss);
+      // Only suppress for "later" dismissals on this exact version. A newer
+      // version drops → pill resurfaces.
+      const suppressed = dismissed === update.version;
+      store.updater.available_update = {
+        version: update.version,
+        currentVersion: update.currentVersion,
+        body: update.body || "",
+        date: update.date || null,
+        _handle: update,
+      };
+      store.updater.state = suppressed ? "idle" : "available";
+    } else {
+      store.updater.state = "up_to_date";
+      store.updater.available_update = null;
+    }
+  } catch (e) {
+    console.error("[updater] check failed", e);
+    store.updater.state = "idle";
+    store.updater.error_msg = String(e?.message ?? e);
+  }
+  renderUpdaterPill();
+  if (store.view === "settings") render();
+  return store.updater.available_update;
+}
+
+async function updaterDownloadAndInstall() {
+  const u = store.updater.available_update;
+  if (!u || !u._handle) return;
+  store.updater.state = "downloading";
+  store.updater.progress = { downloaded: 0, total: 0 };
+  renderUpdaterModal();
+  try {
+    await u._handle.downloadAndInstall((event) => {
+      if (event.event === "Started") {
+        store.updater.progress.total = Number(event.data?.contentLength || 0);
+      } else if (event.event === "Progress") {
+        store.updater.progress.downloaded += Number(event.data?.chunkLength || 0);
+      } else if (event.event === "Finished") {
+        store.updater.state = "ready_to_install";
+      }
+      renderUpdaterModal();
+    });
+    // Cache the notes so the "What's new in v<x>" Settings card has content
+    // on the next launch (a freshly installed user has nothing cached, which
+    // is fine — the card is hidden in that case).
+    try {
+      const payload = {
+        version: u.version,
+        body: u.body,
+        applied_at: new Date().toISOString(),
+      };
+      localStorage.setItem(STORE_KEYS.updaterLastNotes, JSON.stringify(payload));
+    } catch (_) {}
+    store.updater.state = "installing";
+    renderUpdaterModal();
+    // Linux AppImage: the bundler doesn't auto-restart, we have to call it.
+    // Windows/macOS bundlers self-relaunch — calling here is harmless because
+    // the running process is already exiting.
+    if (window.__TAURI__?.process?.relaunch) {
+      await window.__TAURI__.process.relaunch();
+    }
+  } catch (e) {
+    console.error("[updater] install failed", e);
+    store.updater.error_msg = String(e?.message ?? e);
+    store.updater.state = "available";
+    renderUpdaterModal();
+  }
+}
+
+function dismissUpdate() {
+  const u = store.updater.available_update;
+  if (u) {
+    try { localStorage.setItem(STORE_KEYS.updaterLastDismiss, u.version); } catch (_) {}
+  }
+  store.updater.state = "idle";
+  renderUpdaterPill();
+  closeUpdaterModal();
+}
+
+// Minimal markdown → safe HTML for release-notes rendering. Notes come from
+// our own GitHub Release body (semantic-release writes them) but we treat as
+// untrusted: escape everything, then opt-in to a few tags. Supports headings
+// (#…###), **bold**, `code`, bullet lists, and bare URL linkification (routed
+// through opener so the click doesn't navigate the webview).
+function renderUpdaterMarkdown(src) {
+  if (!src) return "";
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const lines = String(src).split(/\r?\n/);
+  const out = [];
+  let inList = false;
+  const flushList = () => { if (inList) { out.push("</ul>"); inList = false; } };
+  function inlineMd(s) {
+    let r = esc(s);
+    r = r.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+    r = r.replace(/\*\*([^*]+)\*\*/g, (_, c) => `<strong>${c}</strong>`);
+    r = r.replace(/(https?:\/\/[^\s<]+)/g, (u) => {
+      return `<a href="#" data-href="${u}" class="md-link">${u}</a>`;
+    });
+    return r;
+  }
+  for (const raw of lines) {
+    const line = raw;
+    const m = line.match(/^(#{1,3})\s+(.*)$/);
+    if (m) { flushList(); out.push(`<h${m[1].length}>${esc(m[2])}</h${m[1].length}>`); continue; }
+    const li = line.match(/^[\*\-]\s+(.*)$/);
+    if (li) {
+      if (!inList) { out.push("<ul>"); inList = true; }
+      out.push(`<li>${inlineMd(li[1])}</li>`);
+      continue;
+    }
+    if (line.trim() === "") { flushList(); out.push(""); continue; }
+    flushList();
+    out.push(`<p>${inlineMd(line)}</p>`);
+  }
+  flushList();
+  return out.join("\n");
+}
+
+function renderUpdaterPill() {
+  let pill = el("#updater-pill");
+  if (!store.updater.supported) {
+    if (pill) pill.remove();
+    return;
+  }
+  const state = store.updater.state;
+  const visible = state === "available" || state === "downloading" ||
+                  state === "ready_to_install" || state === "installing";
+  if (!visible) { if (pill) pill.remove(); return; }
+  // Anchor: the desktop titlebar (preferred — pill becomes a chrome element
+  // alongside the window controls), with fallback to the mobile topbar.
+  const anchor = el(".titlebar-right") || el(".topbar-mobile");
+  if (!anchor) return;
+  if (!pill) {
+    pill = h("button", {
+      id: "updater-pill", class: "updater-pill", type: "button",
+      style: "-webkit-app-region: no-drag",
+      onclick: () => openUpdaterModal(),
+    });
+    if (anchor.classList.contains("titlebar-right")) {
+      // Insert before .window-controls so the controls stay flush right.
+      const controls = anchor.querySelector(".window-controls");
+      if (controls) anchor.insertBefore(pill, controls);
+      else anchor.appendChild(pill);
+    } else {
+      anchor.appendChild(pill);
+    }
+  }
+  pill.innerHTML = "";
+  pill.appendChild(h("span", { class: "updater-pill-dot" }));
+  let label;
+  if (state === "downloading") {
+    const p = store.updater.progress;
+    const pct = p.total > 0 ? Math.floor(p.downloaded * 100 / p.total) : 0;
+    label = t("updater.pill.downloading", { p: pct });
+  } else if (state === "ready_to_install" || state === "installing") {
+    label = t("updater.pill.ready");
+  } else {
+    label = t("updater.pill.available");
+  }
+  pill.appendChild(h("span", {}, label));
+}
+
+function openUpdaterModal() { renderUpdaterModal(true); }
+function closeUpdaterModal() {
+  const m = el("#updater-modal");
+  if (m) m.classList.add("hidden");
+}
+function renderUpdaterModal(forceOpen = false) {
+  let modal = el("#updater-modal");
+  if (!modal) {
+    modal = h("div", {
+      id: "updater-modal", class: "updater-modal hidden",
+      role: "dialog", "aria-modal": "true",
+    });
+    document.body.appendChild(modal);
+  }
+  if (forceOpen) modal.classList.remove("hidden");
+  if (modal.classList.contains("hidden")) return;
+  const u = store.updater.available_update;
+  if (!u) { closeUpdaterModal(); return; }
+  modal.innerHTML = "";
+  const card = h("div", { class: "updater-modal-card" });
+  card.appendChild(h("button", {
+    class: "updater-modal-close", type: "button", "aria-label": "Close",
+    onclick: () => closeUpdaterModal(),
+  }, "×"));
+  card.appendChild(h("h2", {}, t("updater.modal.title")));
+  card.appendChild(h("p", { class: "muted" },
+    t("updater.modal.version", { from: u.currentVersion, to: u.version })));
+
+  const notesBox = h("div", { class: "updater-notes" });
+  notesBox.innerHTML = renderUpdaterMarkdown(u.body || t("updater.modal.no_notes"));
+  notesBox.addEventListener("click", (ev) => {
+    const a = ev.target.closest("a.md-link");
+    if (!a) return;
+    ev.preventDefault();
+    if (a.dataset.href) openExternal(a.dataset.href);
+  });
+  card.appendChild(notesBox);
+
+  const state = store.updater.state;
+  if (state === "downloading") {
+    const p = store.updater.progress;
+    const pct = p.total > 0 ? Math.floor(p.downloaded * 100 / p.total) : 0;
+    card.appendChild(h("div", { class: "updater-progress" },
+      h("div", {
+        class: "updater-progress-fill",
+        style: `width: ${pct}%`,
+      })));
+    card.appendChild(h("p", { class: "muted" },
+      t("updater.modal.downloading", { p: pct })));
+  } else if (state === "ready_to_install" || state === "installing") {
+    card.appendChild(h("p", {}, t("updater.modal.installing")));
+  } else {
+    const row = h("div", { class: "updater-modal-actions" });
+    row.appendChild(h("button", {
+      class: "btn ghost", type: "button",
+      onclick: () => dismissUpdate(),
+    }, t("updater.modal.later")));
+    row.appendChild(h("button", {
+      class: "btn primary", type: "button",
+      onclick: () => updaterDownloadAndInstall(),
+    }, t("updater.modal.install")));
+    card.appendChild(row);
+  }
+  if (store.updater.error_msg) {
+    card.appendChild(h("div", { class: "updater-error" },
+      t("updater.error", { msg: store.updater.error_msg })));
+  }
+  modal.appendChild(card);
+}
+
+// Lazy single-fetch cache for CHANGELOG.md. The file is bundled into
+// frontendDist by tauri.conf.json's beforeBuildCommand (and beforeDevCommand
+// for `npm run dev`), copied from the repo-root CHANGELOG.md that
+// semantic-release regenerates on every release. Treated as same-origin under
+// the existing CSP `default-src 'self'`.
+let _changelogCache = null;
+async function loadChangelog() {
+  if (_changelogCache !== null) return _changelogCache;
+  try {
+    const res = await fetch("CHANGELOG.md");
+    if (!res.ok) { _changelogCache = ""; return ""; }
+    _changelogCache = await res.text();
+  } catch (_) {
+    _changelogCache = "";
+  }
+  return _changelogCache;
+}
+
+// Pull out the section for one version from a semantic-release-generated
+// CHANGELOG.md. Headings look like `## [1.4.0-beta.1](url) (date)`. The
+// section runs until the next `## ` heading or end-of-file.
+function extractChangelogSection(full, version) {
+  if (!full || !version) return "";
+  const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(^|\\n)## \\[${escaped}\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## |$)`);
+  const m = full.match(re);
+  return m ? m[2].trim() : "";
+}
+
+// First version heading in CHANGELOG.md == the current build's version,
+// because semantic-release commits the new section + bumps the version files
+// in one atomic chore(release) commit. Avoids needing __TAURI__.app.getVersion
+// (which would require an extra capability permission).
+function extractCurrentVersionFromChangelog(full) {
+  if (!full) return null;
+  const m = full.match(/^## \[([^\]]+)\]/m);
+  return m ? m[1] : null;
+}
+
+function openChangelogModal() {
+  let modal = el("#changelog-modal");
+  if (!modal) {
+    modal = h("div", {
+      id: "changelog-modal", class: "updater-modal hidden",
+      role: "dialog", "aria-modal": "true",
+    });
+    document.body.appendChild(modal);
+  }
+  modal.classList.remove("hidden");
+  modal.innerHTML = "";
+  const card = h("div", { class: "updater-modal-card" });
+  card.appendChild(h("button", {
+    class: "updater-modal-close", type: "button", "aria-label": "Close",
+    onclick: () => modal.classList.add("hidden"),
+  }, "×"));
+  card.appendChild(h("h2", {}, t("updater.changelog.title")));
+  const body = h("div", { class: "updater-notes" });
+  body.innerHTML = `<p class="muted">${t("updater.changelog.loading")}</p>`;
+  card.appendChild(body);
+  modal.appendChild(card);
+  loadChangelog().then((md) => {
+    if (!md) {
+      body.innerHTML = `<p class="muted">${t("updater.changelog.empty")}</p>`;
+      return;
+    }
+    body.innerHTML = renderUpdaterMarkdown(md);
+    body.addEventListener("click", (ev) => {
+      const a = ev.target.closest("a.md-link");
+      if (!a) return;
+      ev.preventDefault();
+      if (a.dataset.href) openExternal(a.dataset.href);
+    });
+  });
+}
+
+function buildDiagnosticSection() {
+  const card = h("div", { class: "card" },
+    h("h2", {}, t("diag.title")));
+  const body = h("div", { class: "muted", style: "font-size:13px; line-height:1.5" },
+    t("diag.loading"));
+  card.appendChild(body);
+
+  const refresh = () => {
+    invoke("get_quiz_log_breakdown")
+      .then((d) => {
+        body.innerHTML = "";
+        const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleDateString(
+          store.lang === "fr" ? "fr-FR" : "en-US",
+          { year: "numeric", month: "short", day: "numeric" }) : "—";
+        body.appendChild(h("div", { style: "margin-bottom:8px" },
+          h("strong", {}, t("diag.total", { n: d.total })),
+          " ",
+          h("span", { class: "muted small" },
+            d.earliest ? t("diag.range", { from: fmt(d.earliest), to: fmt(d.latest) }) : ""),
+        ));
+        const list = h("ul", { style: "list-style:none; padding-left:0; margin:0; display:grid; gap:4px;" });
+        const modeLabel = (m) => ({
+          single: t("diag.mode_single"),
+          rapid:  t("diag.mode_rapid"),
+          drill:  t("diag.mode_drill"),
+        }[m] || m);
+        for (const [m, n] of d.by_mode) {
+          const pct = d.total > 0 ? Math.round((n / d.total) * 100) : 0;
+          list.appendChild(h("li", {
+            style: "display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--stroke-soft);",
+          },
+            h("span", {}, modeLabel(m)),
+            h("span", { class: "num" }, `${n}  (${pct}%)`),
+          ));
+        }
+        body.appendChild(list);
+        body.appendChild(h("p", { class: "muted small", style: "margin-top:10px" },
+          t("diag.note")));
+        // Cleanup button — collapses fast-double-click duplicates and
+        // rebuilds technique_stats. The duplicates were caused by a
+        // missing idempotency guard in single + rapid onPick handlers
+        // (fixed in this commit), but pre-existing logs still need a
+        // one-shot scrub.
+        body.appendChild(h("div", { style: "margin-top:12px" },
+          h("button", {
+            class: "btn ghost small",
+            type: "button",
+            onclick: async () => {
+              try {
+                const r = await invoke("dedup_quiz_log");
+                alert(t("diag.dedup_done", {
+                  removed: r.removed, before: r.before, after: r.after,
+                }));
+                refresh();
+              } catch (e) {
+                alert(String(e?.message ?? e));
+              }
+            },
+          }, t("diag.dedup_btn")),
+        ));
+      })
+      .catch((e) => {
+        body.textContent = String(e?.message ?? e);
+      });
+  };
+  refresh();
+  return card;
+}
+
+async function buildUpdaterSection() {
+  const card = h("div", { class: "card" }, h("h2", {}, t("updater.section.title")));
+  if (!store.updater.supported) {
+    card.appendChild(h("p", { class: "muted" }, t("updater.section.mobile_help")));
+    return card;
+  }
+  // Auto-check toggle.
+  const autoSelect = h("select", {});
+  for (const [v, lbl] of [["true", t("updater.auto_on")], ["false", t("updater.auto_off")]]) {
+    const opt = h("option", { value: v }, lbl);
+    if ((v === "true") === store.updater.auto_check) opt.selected = true;
+    autoSelect.appendChild(opt);
+  }
+  autoSelect.addEventListener("change", () => {
+    store.updater.auto_check = autoSelect.value === "true";
+    saveUpdaterAutoCheck();
+  });
+  card.appendChild(h("div", { class: "field" },
+    h("label", {}, t("updater.auto_label")),
+    autoSelect,
+    h("div", { class: "muted", style: "margin-top:6px" }, t("updater.auto_help")),
+  ));
+
+  // Manual check + status line.
+  const stateMsg = {
+    idle:             t("updater.status.idle"),
+    checking:         t("updater.status.checking"),
+    up_to_date:       t("updater.status.up_to_date"),
+    available:        t("updater.status.available", {
+                        v: store.updater.available_update?.version || "?" }),
+    downloading:      t("updater.status.downloading"),
+    ready_to_install: t("updater.status.ready"),
+    installing:       t("updater.status.installing"),
+  }[store.updater.state];
+  const status = h("div", { class: "muted", style: "margin-top:8px" }, stateMsg || "");
+  card.appendChild(h("div", { class: "field" },
+    h("button", {
+      class: "btn full", type: "button",
+      onclick: () => updaterCheck({ silent: false }),
+    }, t("updater.check_now")),
+    status,
+  ));
+
+  // What's new — first preference is the cache written by a previous
+  // successful auto-update (because that body came from the GH release
+  // notes via the manifest, which is the most accurate source). Fresh
+  // installs hit the second branch: parse the bundled CHANGELOG.md,
+  // extract the current version's section. Either way the user sees
+  // *something* relevant the moment they open Settings.
+  const cached = store.updater.last_applied;
+  let wnVersion = null, wnBody = "";
+  if (cached && cached.version && cached.body) {
+    wnVersion = cached.version;
+    wnBody = cached.body;
+  } else {
+    const cl = await loadChangelog();
+    if (cl) {
+      const v = extractCurrentVersionFromChangelog(cl);
+      if (v) {
+        const section = extractChangelogSection(cl, v);
+        if (section) { wnVersion = v; wnBody = section; }
+      }
+    }
+  }
+  if (wnVersion && wnBody) {
+    const wn = h("div", { class: "whats-new" });
+    wn.appendChild(h("h3", {}, t("updater.whats_new.title", { v: wnVersion })));
+    const md = h("div", { class: "updater-notes" });
+    md.innerHTML = renderUpdaterMarkdown(wnBody);
+    md.addEventListener("click", (ev) => {
+      const a = ev.target.closest("a.md-link");
+      if (!a) return;
+      ev.preventDefault();
+      if (a.dataset.href) openExternal(a.dataset.href);
+    });
+    wn.appendChild(md);
+    card.appendChild(wn);
+  }
+
+  // Always-available "View full changelog" button — same source as the
+  // What's new card above (CHANGELOG.md), but opens a modal that renders
+  // the full file (every version). Useful for users who installed via the
+  // store / sideload and want to scroll back.
+  card.appendChild(h("div", { class: "field" },
+    h("button", {
+      class: "btn ghost full", type: "button",
+      onclick: () => openChangelogModal(),
+    }, t("updater.changelog.button")),
+  ));
+  return card;
+}
+
+// Detect the OS so CSS can branch (e.g. macOS hides our window controls in
+// favor of the OS-drawn traffic lights, and insets the titlebar 78px to
+// avoid colliding with them). Falls back to navigator.userAgent when the
+// Tauri os plugin isn't registered (we don't ship it; this is a pure-CSS
+// hint, not a load-bearing capability).
+async function detectPlatformBodyClass() {
+  let p = "unknown";
+  try {
+    if (window.__TAURI__?.os?.platform) p = await window.__TAURI__.os.platform();
+  } catch (_) {}
+  if (p === "unknown") {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes("mac"))                                    p = "macos";
+    else if (ua.includes("win"))                               p = "windows";
+    else if (ua.includes("android"))                           p = "android";
+    else if (ua.includes("iphone") || ua.includes("ipad"))     p = "ios";
+    else if (ua.includes("linux"))                             p = "linux";
+  }
+  document.body.dataset.platform = p;
+}
+
+// Wire the custom titlebar's window controls. Tauri 2 exposes window ops
+// via window:default permissions, which core:default already grants — no
+// capability change needed. Silent no-op on mobile (where the OS handles
+// chrome and our .window-controls is hidden by CSS).
+//
+// withGlobalTauri exposure of the window class shifted between Tauri
+// 2.x minor versions: 2.0–2.6 used window.__TAURI__.window.getCurrent(),
+// 2.7+ added getCurrentWindow() and may or may not still expose getCurrent.
+// Some builds also expose .Window.getCurrent. We try every path and fall
+// back to a raw `core.invoke('plugin:window|<cmd>')` IPC call which is
+// always available as long as core:default is granted (it is).
+// Custom-titlebar buttons. We call dedicated Rust commands rather than
+// the window.__TAURI__.window.* JS API because the latter's exact export
+// path shifted across Tauri 2.x minor versions and was unreliable. The
+// Rust side is in src-tauri/src/lib.rs (window_minimize, etc.).
+function bindWindowControls() {
+  const invoke = window.__TAURI__?.core?.invoke;
+  if (!invoke) return;
+  const fire = (cmd) => async () => {
+    try {
+      await invoke(cmd);
+    } catch (e) {
+      console.error("[window-controls]", cmd, e);
+    }
+  };
+  el(".wc-min")?.addEventListener("click", fire("window_minimize"));
+  el(".wc-max")?.addEventListener("click", fire("window_toggle_maximize"));
+  el(".wc-close")?.addEventListener("click", fire("window_close"));
+}
+
 async function boot() {
   try {
     loadLocalSettings();
+    loadUpdaterPrefs();
+    await detectUpdaterPlatform();
+    await detectPlatformBodyClass();
     applyTabLabels();
 
-    els(".tab").forEach(btn => {
+    // Wire both the mobile bottom-tab-bar (.tab) and the desktop sidebar
+    // (.navitem). `navigate()` toggles .active on both sets so they stay
+    // in sync across the responsive breakpoints.
+    els(".tab, .navitem").forEach(btn => {
       btn.addEventListener("click", () => navigate(btn.dataset.view));
     });
 
     bindVideoModal();
+    bindWindowControls();
   } catch (e) {
     console.error("boot: setup failed", e);
   }
@@ -2915,6 +3669,12 @@ async function boot() {
   }
 
   navigate("home");
+
+  // Auto-update boot check (desktop only). Delayed so the first paint isn't
+  // blocked and the app is fully responsive when the pill appears.
+  if (store.updater.supported && store.updater.auto_check) {
+    setTimeout(() => { updaterCheck({ silent: true }).catch(() => {}); }, 3000);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", boot);

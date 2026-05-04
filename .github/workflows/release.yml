@@ -106,14 +106,126 @@ jobs:
 
       - run: npm ci
 
+      # Auto-updater signing keys must be set as GH Action secrets BEFORE
+      # flipping `bundle.createUpdaterArtifacts: true` in tauri.conf.json.
+      # Until those secrets are configured, tauri-action proceeds without
+      # signing (no .sig files emitted, no latest.json uploaded). Once the
+      # user has run `npx tauri signer generate`, pasted the pubkey into
+      # tauri.conf.json, and added the two secrets, flip
+      # `createUpdaterArtifacts: true` in a follow-up commit and the next
+      # release will produce signed updater artifacts automatically.
       - name: Build & upload to release ${{ needs.release.outputs.tag }}
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ needs.release.outputs.tag }}
           releaseName: ${{ needs.release.outputs.tag }}
           args: ${{ matrix.args }}
+          # tauri-action handles updater JSON aggregation across the matrix:
+          # signs each artifact with the private key, uploads the .sig file
+          # alongside the installer, and emits a single merged latest.json
+          # at the end. updaterJsonPreferNsis points it at our setup.exe
+          # rather than .msi for the Windows entry.
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
+
+  # ---------------------------------------------------------------------------
+  # 2.5) Patch `latest.json.notes` from CHANGELOG.md.
+  #
+  # tauri-action emits `latest.json` with EVERY platform's signature wired up
+  # but leaves the `notes` field empty — it does not auto-pull from the GH
+  # release body that semantic-release wrote. Without notes, the in-app
+  # update modal shows "No release notes available." even though the data
+  # exists in CHANGELOG.md and on the GH release page. This job fixes that:
+  # it runs once after the matrix completes, downloads `latest.json`,
+  # extracts the section for the just-released version from CHANGELOG.md,
+  # writes it into `notes`, and re-uploads (clobber).
+  #
+  # Skips silently if `latest.json` is absent (signing not yet configured)
+  # or if no CHANGELOG section exists for the version (chore/docs-only
+  # releases).
+  # ---------------------------------------------------------------------------
+  patch-updater-notes:
+    name: Patch latest.json notes from CHANGELOG
+    needs: [release, build-desktop]
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Download, patch, re-upload latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          if ! gh release download "$TAG" -p latest.json -D out --clobber 2>/dev/null; then
+            echo "::warning::latest.json not on $TAG (signing keys probably not configured); skipping"
+            exit 0
+          fi
+          if [ ! -f out/latest.json ]; then
+            echo "::warning::latest.json downloaded zero files; skipping"
+            exit 0
+          fi
+          # Extract the CHANGELOG section for $VERSION (== text under the
+          # `## [$VERSION](...)` heading, up to the next `## ` heading or EOF).
+          NOTES=$(node -e '
+            const fs = require("fs");
+            const md = fs.readFileSync("CHANGELOG.md","utf8");
+            const v = process.argv[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const re = new RegExp("(^|\\n)## \\[" + v + "\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## |$)");
+            const m = md.match(re);
+            process.stdout.write(m ? m[2].trim() : "");
+          ' "$VERSION")
+          if [ -z "$NOTES" ]; then
+            echo "::warning::No CHANGELOG section for $VERSION — leaving notes blank"
+            exit 0
+          fi
+          # Patch notes field in-place.
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("out/latest.json","utf8"));
+            m.notes = process.argv[1];
+            fs.writeFileSync("out/latest.json", JSON.stringify(m,null,2) + "\n");
+          ' "$NOTES"
+          gh release upload "$TAG" out/latest.json --clobber
+          echo "Patched latest.json.notes for $TAG (${#NOTES} chars)"
+
+      # ----- Maintain a rolling `beta-latest` GH release that points at
+      # the most recent build's manifest. Without this, beta builders'
+      # auto-updater 404s on `releases/latest/download/latest.json`,
+      # because GH's "Latest" only ever resolves to a non-prerelease.
+      #
+      # Mechanism: delete the previous `beta-latest` release + tag (so we
+      # get a clean slot), then create a new prerelease tagged
+      # `beta-latest` with `latest.json` attached. Tauri tries the stable
+      # endpoint first (works once a non-prerelease ships) and falls
+      # through to this `beta-latest` URL for prerelease testers.
+      - name: Refresh `beta-latest` release pointer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ ! -f out/latest.json ]; then
+            echo "::notice::No latest.json from $TAG (skipped earlier) — not updating beta-latest"
+            exit 0
+          fi
+          # Best-effort delete; ignore errors (release may not exist yet).
+          gh release delete beta-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create beta-latest \
+            --prerelease \
+            --notes "Rolling pointer to the most recent prerelease build's latest.json. Updated by CI on every release. Source build: $TAG ($VERSION)." \
+            --title "Beta channel — current: $TAG" \
+            out/latest.json
+          echo "beta-latest now points at $TAG"
 
   # ---------------------------------------------------------------------------
   # 3) Android signed APK + AAB. Skipped automatically when the keystore
@@ -190,34 +302,16 @@ jobs:
       - if: env.HAS_KEYSTORE == 'true'
         run: npm ci
 
-      # `tauri android init` reads key.properties at template-rendering
-      # time and only emits the `signingConfigs.release` block in
-      # app/build.gradle.kts when the file exists. If we wrote
-      # key.properties AFTER init, the generated Gradle file would have
-      # no signing block, the release APK would land at
-      # `…-release-unsigned.apk`, and the upload step would fail with
-      # `cp: cannot stat …-release.apk`. So: pre-create the file with
-      # real values BEFORE init.
-      - name: Pre-write key.properties (consumed by tauri android init)
-        if: env.HAS_KEYSTORE == 'true'
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          mkdir -p src-tauri/gen/android
-          {
-            echo "storeFile=$HOME/keystores/release.jks"
-            echo "storePassword=$KEYSTORE_PASSWORD"
-            echo "keyAlias=$KEY_ALIAS"
-            echo "keyPassword=$KEY_PASSWORD"
-          } > src-tauri/gen/android/key.properties
-
       # gen/android/ is gitignored (the architect's plan: regenerate
       # fresh on each CI run rather than checking the Xcode/Gradle
       # scaffolding into the public repo). Without this step, `tauri
       # android build` fails with: "Project directory ... does not
       # exist. Did you update the package name…"
+      #
+      # NOTE: do NOT pre-create gen/android/ before this step (e.g. by
+      # writing key.properties first). `tauri android init` aborts when
+      # the directory already exists with: "Project directory
+      # …/gen/android/app/src/main/java/<pkg> does not exist."
       - name: Generate gen/android/ project
         if: env.HAS_KEYSTORE == 'true'
         run: npx tauri android init
@@ -225,10 +319,15 @@ jobs:
           ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
 
-      # init may have rewritten key.properties if it had its own
-      # template — re-establish the real values so the next gradle
-      # invocation reads them.
-      - name: Ensure key.properties has release values
+      # The Tauri-generated app/build.gradle.kts reads key.properties
+      # from the gradle root (gen/android/) and wires the release
+      # signingConfig when present — see the template at
+      # https://github.com/tauri-apps/tauri/blob/dev/crates/tauri-cli/templates/mobile/android/app/build.gradle.kts.hbs
+      # Per-ABI APKs and the AAB are signed by gradle. The MERGED
+      # universal APK from `assembleUniversalRelease` is NOT signed by
+      # gradle in tauri 2.10/2.11 — that's why we sign it explicitly
+      # post-build below with apksigner.
+      - name: Write key.properties (post-init)
         if: env.HAS_KEYSTORE == 'true'
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -265,6 +364,50 @@ jobs:
           AR_x86_64_linux_android: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
           CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android24-clang
         run: npm run android:build
+
+      # Tauri 2.10/2.11 emits the universal APK as
+      # `app-universal-release-unsigned.apk` even when key.properties is
+      # in place — the merged-ABI APK bypasses gradle's signingConfig
+      # (per-ABI APKs and the AAB ARE signed). Sign it ourselves with
+      # apksigner so the upload step finds `app-universal-release.apk`.
+      - name: Sign universal APK if gradle skipped it
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APK_DIR=src-tauri/gen/android/app/build/outputs/apk/universal/release
+          UNSIGNED="$APK_DIR/app-universal-release-unsigned.apk"
+          SIGNED="$APK_DIR/app-universal-release.apk"
+          if [ -f "$SIGNED" ]; then
+            echo "Universal APK already signed by gradle: $SIGNED"
+            exit 0
+          fi
+          if [ ! -f "$UNSIGNED" ]; then
+            echo "::error::neither $SIGNED nor $UNSIGNED exists; check the build step"
+            ls -la "$APK_DIR" || true
+            exit 1
+          fi
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
+          ZIPALIGN=$(ls -d "$ANDROID_HOME"/build-tools/*/zipalign 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$APKSIGNER" ] || [ -z "$ZIPALIGN" ]; then
+            echo "::error::apksigner/zipalign not found under $ANDROID_HOME/build-tools/"
+            ls -d "$ANDROID_HOME"/build-tools/* || true
+            exit 1
+          fi
+          echo "Using $APKSIGNER"
+          ALIGNED="$APK_DIR/app-universal-release-aligned.apk"
+          "$ZIPALIGN" -p -f 4 "$UNSIGNED" "$ALIGNED"
+          "$APKSIGNER" sign \
+            --ks "$HOME/keystores/release.jks" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            --out "$SIGNED" \
+            "$ALIGNED"
+          "$APKSIGNER" verify --verbose "$SIGNED"
 
       - name: Upload APK + AAB to ${{ needs.release.outputs.tag }}
         if: env.HAS_KEYSTORE == 'true'

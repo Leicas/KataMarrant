@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop",
+  "description": "Desktop-only permissions: Tauri auto-updater + restart-after-install via tauri-plugin-process. Mobile capability files (mobile.json, ios.json) intentionally do NOT grant updater:default — Tauri's updater plugin has no Android/iOS impl, and mobile updates ship through the platform stores.",
+  "platforms": ["linux", "macOS", "windows"],
+  "windows": ["main"],
+  "permissions": [
+    "updater:default",
+    "process:default"
+  ]
+}

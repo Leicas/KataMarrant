@@ -1,6 +1,6 @@
 [package]
 name = "kata-marrant"
-version = "1.3.1"
+version = "1.4.0-beta.16"
 description = "Judo kata & gokyo trainer"
 authors = ["Antoine"]
 license = ""
@@ -48,3 +48,13 @@ time = { version = "0.3", features = ["std"] }
 # instead, see scheduler::schedule_next_ios.
 [target.'cfg(target_os = "android")'.dependencies]
 tauri-plugin-schedule-task = { git = "https://github.com/charlesschaefer/tauri-plugin-schedule-task", branch = "main" }
+
+# Auto-updater: desktop-only. Tauri's updater plugin has no Android/iOS
+# implementation — mobile updates ship through Play Store / App Store /
+# sideload. Target-gating (rather than runtime cfg!) keeps the crate's
+# minisign-verify + http transitive deps off mobile binaries entirely.
+# tauri-plugin-process is paired with the updater for app.restart() after
+# install on Linux AppImage (Windows/macOS bundlers self-relaunch).
+[target.'cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))'.dependencies]
+tauri-plugin-updater = "2.10.1"
+tauri-plugin-process = "2.3.1"

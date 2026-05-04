@@ -20,6 +20,46 @@ const STORE_FILE: &str = "settings.json";
 const KEY_SCHEDULE: &str = "quiz_schedule";
 const KEY_LEGACY_INTERVAL: &str = "quiz_interval_minutes";
 
+// Custom-titlebar window controls. Registered as Rust commands and
+// invoked from JS rather than relying on window.__TAURI__.window.* —
+// the JS API path under withGlobalTauri shifted across Tauri 2.x minor
+// versions and was flaky. Going through the IPC + extractor is bulletproof.
+//
+// On mobile (Android/iOS), tauri::Window doesn't expose minimize / maximize
+// / unmaximize / close (the OS owns chrome). We compile no-op stubs there
+// so generate_handler! still finds the symbols and the build succeeds.
+#[cfg(desktop)]
+#[tauri::command]
+async fn window_minimize(window: tauri::Window) -> Result<(), String> {
+    window.minimize().map_err(|e| e.to_string())
+}
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn window_minimize(_window: tauri::Window) -> Result<(), String> { Ok(()) }
+
+#[cfg(desktop)]
+#[tauri::command]
+async fn window_toggle_maximize(window: tauri::Window) -> Result<(), String> {
+    let max = window.is_maximized().map_err(|e| e.to_string())?;
+    if max {
+        window.unmaximize().map_err(|e| e.to_string())
+    } else {
+        window.maximize().map_err(|e| e.to_string())
+    }
+}
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn window_toggle_maximize(_window: tauri::Window) -> Result<(), String> { Ok(()) }
+
+#[cfg(desktop)]
+#[tauri::command]
+async fn window_close(window: tauri::Window) -> Result<(), String> {
+    window.close().map_err(|e| e.to_string())
+}
+#[cfg(not(desktop))]
+#[tauri::command]
+async fn window_close(_window: tauri::Window) -> Result<(), String> { Ok(()) }
+
 /// Default schedule for brand-new users: 7pm every day.
 fn default_schedule() -> ScheduleConfig {
     ScheduleConfig::Daily {
@@ -82,6 +122,16 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .build(),
         );
+
+    // Auto-updater: desktop-only. The crate is target-gated in Cargo.toml so
+    // tauri_plugin_updater isn't even nameable on Android/iOS. Mobile uses
+    // Play Store / App Store / sideload for distribution. tauri-plugin-process
+    // is paired here so the JS side can call relaunch() after install on
+    // Linux AppImage (Windows/macOS bundlers self-relaunch).
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
 
     let app = builder
         .setup(|app| {
@@ -171,6 +221,8 @@ pub fn run() {
             commands::stats::get_all_technique_stats,
             commands::stats::get_technique_stat,
             commands::stats::get_analytics,
+            commands::stats::get_quiz_log_breakdown,
+            commands::stats::dedup_quiz_log,
             commands::scheduler::set_quiz_schedule,
             commands::scheduler::get_quiz_schedule,
             commands::scheduler::trigger_quiz_now,
@@ -188,6 +240,9 @@ pub fn run() {
             commands::sync::sync_push,
             commands::sync::sync_pull,
             commands::sync::sync_force_resync,
+            window_minimize,
+            window_toggle_maximize,
+            window_close,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
