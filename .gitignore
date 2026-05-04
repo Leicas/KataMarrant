@@ -23,7 +23,8 @@ SECRETS.local.md
 .secrets/
 
 # Dev screenshots / build artifacts (not for the public repo).
-screenshots/
+# Anchored at root so docs/screenshots/ stays committed for README assets.
+/screenshots/
 build-android.log
 
 # Auto-copied at build time from CHANGELOG.md (root) → src/CHANGELOG.md by
