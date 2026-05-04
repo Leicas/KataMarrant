@@ -1561,12 +1561,22 @@ main {
     right: calc(12px + env(safe-area-inset-right));
   }
 
-  /* ----- Mobile home: minimal "what to do next" surface, no scroll -----
-     Only show the hero strip + action buttons. Today/Mastery/Achievements
-     move out of the home view on mobile — they live in the Stats tab.
-     Result: home fits in ~520px viewport without scroll. */
+  /* ----- Mobile home: hero + actions + compact achievements -----
+     Today strip and Mastery card hidden (Stats tab has them). Achievements
+     stay visible but in a tight 3-col grid so the card height stays under
+     ~200px (4 rows of 12 / 3 cols ≈ 4 short rows). */
   .today-strip { display: none; }
-  .profile-grid-slot { display: none; }
+  .home-grid { grid-template-columns: 1fr; gap: var(--sp-3); }
+  .mastery-card { display: none; }
+  .ach-card { margin-bottom: 0; }
+  .ach-card .achievement-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .ach { padding: 6px 4px; }
+  .ach .ach-icon { font-size: 18px; margin-bottom: 2px; }
+  .ach .ach-name { font-size: 10px; }
+  .ach .ach-date { font-size: 9px; }
 
   .profile-hero { padding: 12px 14px; margin-bottom: 12px; }
   .profile-hero-row { gap: 10px; }
