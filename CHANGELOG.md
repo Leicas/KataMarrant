@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/Leicas/KataMarrant/compare/v1.4.1...v1.5.0) (2026-05-04)
+
+### Features
+
+* **sync:** add Delete sync account flow ([87b76bb](https://github.com/Leicas/KataMarrant/commit/87b76bb310c182109711210e57c97595d852882f))
+
 ## [1.4.1](https://github.com/Leicas/KataMarrant/compare/v1.4.0...v1.4.1) (2026-05-04)
 
 ### Bug Fixes
