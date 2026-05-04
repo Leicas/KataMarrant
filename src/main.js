@@ -221,6 +221,10 @@ const I18N = {
     "settings.sync.force_resync": "Force full resync",
     "settings.sync.force_resync_confirm": "This will mark every local stat as new and pull everything from the server. Continue?",
     "settings.sync.force_resync_done":    "Full resync complete.",
+    "settings.sync.delete_account":         "Delete sync account",
+    "settings.sync.delete_account_confirm": "Permanently delete your sync account?\n\nThis removes your email, session, and all synced quiz data from the server. Local stats on this device are kept. This cannot be undone.",
+    "settings.sync.delete_account_done":    "Sync account deleted. Your local quiz history is unchanged.",
+    "settings.sync.delete_account_error":   "Could not reach the server to delete your account. Please try again, or email contact@katamarrant.weill-duflos.fr.",
     "settings.sync.auto_sync":    "Auto-sync changes in the background",
     "settings.sync.error.network":       "Server unreachable — your data stays local.",
     "settings.sync.error.invalid_token": "Code invalid or expired — try sending a new link.",
@@ -474,6 +478,10 @@ const I18N = {
     "settings.sync.force_resync": "Resynchro complète",
     "settings.sync.force_resync_confirm": "Toutes les stats locales seront marquées comme nouvelles et tout sera récupéré depuis le serveur. Continuer ?",
     "settings.sync.force_resync_done":    "Resynchro complète terminée.",
+    "settings.sync.delete_account":         "Supprimer le compte de synchronisation",
+    "settings.sync.delete_account_confirm": "Supprimer définitivement votre compte de synchronisation ?\n\nCela retire votre e-mail, votre session et toutes les données de quiz synchronisées du serveur. Les statistiques locales sur cet appareil sont conservées. Action irréversible.",
+    "settings.sync.delete_account_done":    "Compte de synchronisation supprimé. Votre historique local reste intact.",
+    "settings.sync.delete_account_error":   "Impossible de joindre le serveur pour supprimer votre compte. Réessayez, ou écrivez à contact@katamarrant.weill-duflos.fr.",
     "settings.sync.auto_sync":    "Synchronisation automatique en arrière-plan",
     "settings.sync.error.network":       "Serveur injoignable — tes données restent locales.",
     "settings.sync.error.invalid_token": "Code invalide ou expiré — redemande un nouveau lien.",
@@ -2592,6 +2600,36 @@ function buildSyncSection() {
         render();
       },
     }, t("settings.sync.signout"));
+    const deleteBtn = h("button", {
+      class: "btn danger",
+      onclick: async () => {
+        if (s.ui.busy) return;
+        if (!confirm(t("settings.sync.delete_account_confirm"))) return;
+        s.ui.busy = true; s.ui.error_msg = null; s.ui.info_msg = null;
+        render();
+        try {
+          const r = await invoke("sync_delete_account");
+          if (r && r.ok === false) {
+            s.ui.error_msg = `${t("settings.sync.delete_account_error")} (${r.error || "unknown"})`;
+          } else {
+            s.ui.info_msg = t("settings.sync.delete_account_done");
+          }
+        } catch (e) {
+          console.warn("sync_delete_account", e);
+          s.ui.error_msg = `${t("settings.sync.delete_account_error")} (${String(e)})`;
+        }
+        stopSyncPoll();
+        s.ui.phase = "login";
+        s.ui.email_input = "";
+        s.ui.token_input = "";
+        s.ui.poll = null;
+        s.ui.show_fallback_input = false;
+        s.ui.status = null;
+        await refreshSyncStatus();
+        s.ui.busy = false;
+        render();
+      },
+    }, t("settings.sync.delete_account"));
     const resyncBtn = h("button", {
       class: "btn ghost",
       onclick: async () => {
@@ -2630,7 +2668,13 @@ function buildSyncSection() {
     buttons.appendChild(syncBtn);
     buttons.appendChild(resyncBtn);
     buttons.appendChild(outBtn);
+    buttons.appendChild(deleteBtn);
     wrap.appendChild(buttons);
+
+    if (s.ui.info_msg) {
+      wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px" },
+        s.ui.info_msg));
+    }
 
     if (s.ui.error_msg) {
       wrap.appendChild(h("div", { class: "muted", style: "margin-top:8px; color:var(--accent, #c87a7a)" },

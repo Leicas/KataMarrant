@@ -237,6 +237,7 @@ pub fn run() {
             commands::sync::sync_set_pending_email,
             commands::sync::sync_status,
             commands::sync::sync_logout,
+            commands::sync::sync_delete_account,
             commands::sync::sync_push,
             commands::sync::sync_pull,
             commands::sync::sync_force_resync,
