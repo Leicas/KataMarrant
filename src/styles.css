@@ -219,6 +219,18 @@ main {
   background: var(--bg-elev-3);
   box-shadow: 0 0 0 1px var(--stroke) inset;
 }
+.btn.danger {
+  background: transparent;
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-edge) inset;
+}
+.btn.danger:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.btn.danger:focus-visible {
+  box-shadow: 0 0 0 1px var(--accent) inset, 0 0 0 3px var(--accent-soft);
+}
 .btn.full { width: 100%; }
 .btn.small { padding: 6px 11px; font-size: 12px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
