@@ -110,20 +110,22 @@
     <h2>2. Optional cross-device sync</h2>
     <p>
       KataMarrant offers an <strong>optional</strong> sync feature, disabled by
-      default. If you choose to create a sync account, the app will send the
-      following to our sync server at
-      <code>https://katamarrant.weill-duflos.fr</code> over HTTPS:
+      default. All communication with our sync server at
+      <code>https://katamarrant.weill-duflos.fr</code> is encrypted in transit
+      using HTTPS (TLS). If you choose to create a sync account, the app will
+      send the following to the server:
     </p>
     <ul>
-      <li>Your email address (used as your account identifier and for password reset).</li>
-      <li>A salted hash of your password (your plaintext password is never sent or stored).</li>
+      <li>Your email address (used as your account identifier and to deliver the magic-link sign-in code).</li>
+      <li>A short-lived session token issued by the server after you confirm the magic-link code (no password is ever used or stored — KataMarrant does not have password-based accounts).</li>
       <li>Your local quiz statistics and quiz log, so they can be merged across your devices.</li>
     </ul>
     <p>
       The sync server is operated personally by the app's author. Data is
       stored only to provide the sync feature. It is not sold, shared with
-      advertisers, or used for profiling. You can delete your sync account at
-      any time from within the app, which removes your data from the server.
+      advertisers, or used for profiling. You can delete your sync account
+      and all associated data at any time — see
+      <a href="delete-account.html">Account &amp; data deletion</a>.
     </p>
 
     <h2>3. What we do not collect</h2>
@@ -201,13 +203,14 @@
     <h2>2. Synchronisation entre appareils (optionnelle)</h2>
     <p>
       KataMarrant propose une synchronisation <strong>optionnelle</strong>,
-      désactivée par défaut. Si vous créez un compte de synchronisation,
-      l'application transmettra les éléments suivants à notre serveur
-      <code>https://katamarrant.weill-duflos.fr</code> via HTTPS :
+      désactivée par défaut. Toutes les communications avec notre serveur
+      <code>https://katamarrant.weill-duflos.fr</code> sont chiffrées en
+      transit via HTTPS (TLS). Si vous créez un compte de synchronisation,
+      l'application transmettra :
     </p>
     <ul>
-      <li>Votre adresse e-mail (identifiant du compte et réinitialisation de mot de passe).</li>
-      <li>Une empreinte salée de votre mot de passe (le mot de passe en clair n'est jamais transmis ni stocké).</li>
+      <li>Votre adresse e-mail (identifiant du compte, et destinataire du code de connexion par lien magique).</li>
+      <li>Un jeton de session à durée limitée émis par le serveur après validation du code (aucun mot de passe n'est utilisé ni stocké — KataMarrant n'a pas de comptes avec mot de passe).</li>
       <li>Vos statistiques et votre journal de quiz, afin de les fusionner entre vos appareils.</li>
     </ul>
     <p>
@@ -215,8 +218,8 @@
       de l'application. Les données ne sont conservées que pour fournir la
       synchronisation. Elles ne sont jamais vendues, partagées avec des
       annonceurs, ni utilisées à des fins de profilage. Vous pouvez supprimer
-      votre compte de synchronisation à tout moment depuis l'application, ce
-      qui efface vos données du serveur.
+      votre compte et toutes les données associées à tout moment — voir
+      <a href="delete-account.html">Suppression de compte et de données</a>.
     </p>
 
     <h2>3. Ce que nous ne collectons pas</h2>
