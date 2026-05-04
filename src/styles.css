@@ -1578,7 +1578,7 @@ main {
   .ach .ach-name { font-size: 10px; }
   .ach .ach-date { font-size: 9px; }
 
-  .profile-hero { padding: 12px 14px; margin-bottom: 12px; }
+  .profile-hero { padding: 12px 14px; margin-bottom: 16px; }
   .profile-hero-row { gap: 10px; }
   .profile-level { width: 48px; height: 48px; min-width: 48px; }
   .profile-level .lvl-num { font-size: 18px; }
@@ -1590,7 +1590,7 @@ main {
   .home-actions {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-bottom: 0;
+    margin-bottom: 16px;
   }
   .action-btn {
     padding: 14px 12px;
