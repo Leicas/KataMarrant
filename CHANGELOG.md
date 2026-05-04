@@ -1,3 +1,31 @@
+## [1.4.0](https://github.com/Leicas/KataMarrant/compare/v1.3.1...v1.4.0) (2026-05-04)
+
+### Features
+
+* **stats:** add quiz_log diagnostic to settle the "all-time count" mystery ([4808b8b](https://github.com/Leicas/KataMarrant/commit/4808b8b474f0a7f8d85844a1b69bc413d6075005))
+* **ui:** desktop UX phase 1 — frameless window, sidebar nav, custom titlebar ([eafab86](https://github.com/Leicas/KataMarrant/commit/eafab86b26f234836f6f6183c857f176acc57721)), closes [#3](https://github.com/Leicas/KataMarrant/issues/3)
+* **ui:** desktop UX phase 2 — visual system refresh (tokens, type, components) ([144857d](https://github.com/Leicas/KataMarrant/commit/144857d307aa6e90a05f825d5052ed236066c98a)), closes [#ef4444](https://github.com/Leicas/KataMarrant/issues/ef4444) [#d04545](https://github.com/Leicas/KataMarrant/issues/d04545)
+* **updater:** activate signing — pubkey + createUpdaterArtifacts on ([dfb50df](https://github.com/Leicas/KataMarrant/commit/dfb50df54b7b798c8fc9a8d3c33e08c9a0325262))
+* **updater:** bundle CHANGELOG.md + show current version notes from it ([2421b19](https://github.com/Leicas/KataMarrant/commit/2421b19182f0a6edd1e6827526daa0c86bf20cd2))
+* **updater:** wire Tauri 2 auto-updater on desktop with custom UI ([cd7e011](https://github.com/Leicas/KataMarrant/commit/cd7e01167efbb02d2d0d7b59a5b7d01214f09bd7))
+
+### Bug Fixes
+
+* **android:** cfg-gate Window::minimize/maximize/close — mobile build broken ([498b730](https://github.com/Leicas/KataMarrant/commit/498b7309e86a2c32d4fd15c16fc8d0fa2dbd2530))
+* **ci:** drop pre-init key.properties step + sign universal APK explicitly ([7f2d601](https://github.com/Leicas/KataMarrant/commit/7f2d60170c3230f90eb6a4e070ebe6a6958546db))
+* **quiz:** missing idempotency guard let fast-double-click double-log answers ([997f7cd](https://github.com/Leicas/KataMarrant/commit/997f7cd1c39366fe486f0850d8bf06db2770191d))
+* **ui,mobile:** broken layout — .shell-body needed flex-direction: column ([28b02fc](https://github.com/Leicas/KataMarrant/commit/28b02fc44e6383b18f9f14989db244e99569237d))
+* **ui,mobile:** home no-scroll — hide today-strip + home-grid below 600px ([2cac703](https://github.com/Leicas/KataMarrant/commit/2cac7038244e8b2c1f7253caf4d57ea6720502de))
+* **ui,mobile:** more breathing room between hero/actions/achievements ([f4336c5](https://github.com/Leicas/KataMarrant/commit/f4336c5f6095bfa9434e3f58de0708efe38f5d8c))
+* **ui,mobile:** show achievements again — 3-col compact grid, hide mastery+today ([b91c104](https://github.com/Leicas/KataMarrant/commit/b91c1043250e2181a31385c27838bfe297d4bc58))
+* **ui,updater:** window dragging + beta-channel updater endpoint + softer profile-hero ([3f59b69](https://github.com/Leicas/KataMarrant/commit/3f59b69ddeb890963c83725dec5b141248594d28))
+* **ui:** quiz card never scrolls + goal pill text squash + tighter reveal ([9d57c91](https://github.com/Leicas/KataMarrant/commit/9d57c915a4eccdc9391fd6cf4e747f54abde29c1))
+* **ui:** stop the home scroll, drop the double cog, tighten the hero strip ([411267e](https://github.com/Leicas/KataMarrant/commit/411267ef33e94762424fd93d399cfa5ca4767758))
+* **ui:** use Rust commands for window min/max/close (definitive) ([1c5b92e](https://github.com/Leicas/KataMarrant/commit/1c5b92eedb156f71be654e0536a022e564654f3b))
+* **ui:** window controls fallback paths + home action buttons above the fold ([d0397ec](https://github.com/Leicas/KataMarrant/commit/d0397ec85e97ab43aa5f294c5ac04db0f85e2b61))
+* **updater:** patch latest.json.notes from CHANGELOG.md after build ([ae8d4f3](https://github.com/Leicas/KataMarrant/commit/ae8d4f3a3ba9f810958cdc74da00b352152e29d7))
+* **updater:** sync package-lock.json with new updater + process deps ([bcb2f74](https://github.com/Leicas/KataMarrant/commit/bcb2f74e054ff41c4c9bec204d6f5a64bad961fb))
+
 ## [1.4.0-beta.16](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.15...v1.4.0-beta.16) (2026-05-04)
 
 ### Bug Fixes
@@ -105,6 +133,11 @@
 ### Bug Fixes
 
 * **ci:** drop pre-init key.properties step + sign universal APK explicitly ([7f2d601](https://github.com/Leicas/KataMarrant/commit/7f2d60170c3230f90eb6a4e070ebe6a6958546db))
+
+## [1.3.1](https://github.com/Leicas/KataMarrant/compare/v1.3.0...v1.3.1) (2026-05-03)
+
+### Bug Fixes
+
 * **ci:** write key.properties BEFORE tauri android init for signed APK ([3c49bff](https://github.com/Leicas/KataMarrant/commit/3c49bffbdd7b1c03bc4696e28652698e34c11e04))
 
 ## [1.3.0](https://github.com/Leicas/KataMarrant/compare/v1.2.5...v1.3.0) (2026-05-03)
