@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KataMarrant",
   "version": "1.4.0",
-  "identifier": "co.weill-duflos.katamarrant",
+  "identifier": "fr.weill-duflos.katamarrant",
   "build": {
     "frontendDist": "../src",
     "beforeDevCommand": "node -e \"require('fs').copyFileSync('CHANGELOG.md','src/CHANGELOG.md')\"",

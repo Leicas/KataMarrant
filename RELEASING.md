@@ -4,8 +4,11 @@ End-to-end procedure for cutting a signed Android release and pushing it to
 the Google Play Store. The desktop side has no public release flow — its
 artifacts are produced by `npm run build` for personal use only.
 
-The package id is **`co.weill-duflos.katamarrant`**. Distribution target is
-**Google Play Store**.
+The package id is **`fr.weill-duflos.katamarrant`** (Tauri identifier). Note
+that Android disallows hyphens in package names, so Tauri sanitizes the
+applicationId to **`fr.weill_duflos.katamarrant`** — that is the value the
+Play Console uses to identify the app and the value that appears in
+`AndroidManifest.xml`. Distribution target is **Google Play Store**.
 
 ## 1. One-time setup
 
@@ -129,7 +132,8 @@ Before uploading, install the universal APK on the Pixel
 ### 3.1 Console setup
 
 1. Create the app in [Play Console](https://play.google.com/console) under
-   `co.weill-duflos.katamarrant`.
+   `fr.weill_duflos.katamarrant` (the underscore form — see the note at the
+   top of this file).
 2. Default language: English (US). Add French (France) as a translation.
 3. Category: **Education**. Content rating: complete the questionnaire
    (likely **Everyone**).
