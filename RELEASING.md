@@ -4,8 +4,11 @@ End-to-end procedure for cutting a signed Android release and pushing it to
 the Google Play Store. The desktop side has no public release flow — its
 artifacts are produced by `npm run build` for personal use only.
 
-The package id is **`co.weill-duflos.katamarrant`**. Distribution target is
-**Google Play Store**.
+The package id is **`fr.weill-duflos.katamarrant`** (Tauri identifier). Note
+that Android disallows hyphens in package names, so Tauri sanitizes the
+applicationId to **`fr.weill_duflos.katamarrant`** — that is the value the
+Play Console uses to identify the app and the value that appears in
+`AndroidManifest.xml`. Distribution target is **Google Play Store**.
 
 ## 1. One-time setup
 
@@ -95,11 +98,25 @@ NDK_HOME=/c/Users/antoi/AppData/Local/Android/Sdk/ndk/30.0.14904198 \
 
 Output: `src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab`.
 
-Verify it's signed:
+**The AAB that gradle emits is unsigned.** Tauri 2.10/2.11's stock
+`build.gradle.kts` does not wire `signingConfig` into the bundle task,
+so the AAB falls out of the build with no MANIFEST.MF / .RSA in
+`META-INF/`. Sign it explicitly with `jarsigner` (AABs use JAR signing
+v1 — APK Signing Scheme v2/v3 does not apply to bundles, and Play
+re-signs with its own deployment cert when distributing):
 
 ```bash
-$ANDROID_HOME/build-tools/<latest>/apksigner verify --verbose <aab>
+AAB=src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
+jarsigner \
+  -sigalg SHA256withRSA -digestalg SHA-256 \
+  -keystore "$HOME/keystores/katamarrant-release.jks" \
+  "$AAB" katamarrant
+jarsigner -verify "$AAB"           # must print "jar verified."
 ```
+
+The `apksigner verify` command does **not** work on AABs (it's
+APK-specific) — use `jarsigner -verify` for AABs and `apksigner verify`
+for APKs.
 
 For local sideload verification, generate a universal APK from the AAB via
 `bundletool`:
@@ -129,7 +146,8 @@ Before uploading, install the universal APK on the Pixel
 ### 3.1 Console setup
 
 1. Create the app in [Play Console](https://play.google.com/console) under
-   `co.weill-duflos.katamarrant`.
+   `fr.weill_duflos.katamarrant` (the underscore form — see the note at the
+   top of this file).
 2. Default language: English (US). Add French (France) as a translation.
 3. Category: **Education**. Content rating: complete the questionnaire
    (likely **Everyone**).

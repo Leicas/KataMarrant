@@ -367,9 +367,12 @@ jobs:
 
       # Tauri 2.10/2.11 emits the universal APK as
       # `app-universal-release-unsigned.apk` even when key.properties is
-      # in place — the merged-ABI APK bypasses gradle's signingConfig
-      # (per-ABI APKs and the AAB ARE signed). Sign it ourselves with
-      # apksigner so the upload step finds `app-universal-release.apk`.
+      # in place — the merged-ABI APK bypasses gradle's signingConfig.
+      # We also can't trust gradle to sign the AAB (verified empirically:
+      # v1.4.0's released app-universal-release.aab is unsigned per
+      # `jarsigner -verify`), so we re-sign it explicitly below. Sign
+      # both ourselves so the upload step finds `app-universal-release.apk`
+      # and a Play-uploadable AAB.
       - name: Sign universal APK if gradle skipped it
         if: env.HAS_KEYSTORE == 'true'
         env:
@@ -408,6 +411,40 @@ jobs:
             --out "$SIGNED" \
             "$ALIGNED"
           "$APKSIGNER" verify --verbose "$SIGNED"
+
+      # AABs use JAR signing (v1) — Play Store re-signs with its own
+      # deployment cert when distributing, so the upload only needs to
+      # be signed by the upload key. Gradle's release task does NOT do
+      # this for Tauri-generated projects (verified against v1.4.0's
+      # release artifact), so we sign with jarsigner unconditionally.
+      # Idempotent: jarsigner replaces any prior signature block.
+      - name: Sign AAB with jarsigner
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          AAB=src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
+          if [ ! -f "$AAB" ]; then
+            echo "::error::AAB not found at $AAB"
+            ls -la "$(dirname "$AAB")" || true
+            exit 1
+          fi
+          jarsigner \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            -keystore "$HOME/keystores/release.jks" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            "$AAB" "$KEY_ALIAS"
+          # `-strict` is intentionally NOT set: Play Store accepts (and
+          # expects) self-signed upload keys, but `-strict` exits 4 on
+          # them with "certificate chain is invalid". Plain `-verify`
+          # exits 0 and prints "jar verified." for self-signed sigs.
+          jarsigner -verify "$AAB"
+          echo "AAB signed and verified: $AAB"
 
       - name: Upload APK + AAB to ${{ needs.release.outputs.tag }}
         if: env.HAS_KEYSTORE == 'true'
