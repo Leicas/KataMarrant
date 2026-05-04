@@ -1,3 +1,9 @@
+## [1.4.0-beta.15](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.14...v1.4.0-beta.15) (2026-05-04)
+
+### Bug Fixes
+
+* **ui,mobile:** home no-scroll — hide today-strip + home-grid below 600px ([2cac703](https://github.com/Leicas/KataMarrant/commit/2cac7038244e8b2c1f7253caf4d57ea6720502de))
+
 ## [1.4.0-beta.14](https://github.com/Leicas/KataMarrant/compare/v1.4.0-beta.13...v1.4.0-beta.14) (2026-05-03)
 
 ### Bug Fixes
