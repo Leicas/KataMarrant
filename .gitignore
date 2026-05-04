@@ -25,6 +25,9 @@ SECRETS.local.md
 # Dev screenshots / build artifacts (not for the public repo).
 # Anchored at root so docs/screenshots/ stays committed for README assets.
 /screenshots/
+# Scratch screenshots dropped at the repo root with an underscore prefix
+# (e.g. _swipetry.png) — used for in-progress UI experiments, never shipped.
+/_*.png
 build-android.log
 
 # Auto-copied at build time from CHANGELOG.md (root) → src/CHANGELOG.md by
