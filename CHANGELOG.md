@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/Leicas/KataMarrant/compare/v1.4.0...v1.4.1) (2026-05-04)
+
+### Bug Fixes
+
+* **android:** sign AAB with jarsigner before upload ([a4691e7](https://github.com/Leicas/KataMarrant/commit/a4691e7e4ac0405ee89206ed5d1e0897b165cc76))
+
 ## [1.4.0](https://github.com/Leicas/KataMarrant/compare/v1.3.1...v1.4.0) (2026-05-04)
 
 ### Features
