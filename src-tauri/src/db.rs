@@ -782,6 +782,26 @@ pub fn count_mastered_in(conn: &Connection, slugs: &[&str]) -> AppResult<i64> {
     Ok(n)
 }
 
+/// Number of techniques in `slugs` that have been answered correctly at
+/// least once (correct_count >= 1). Looser bar than `count_mastered_in`,
+/// used by group-completion achievements where we only want "saw it,
+/// got it right once" rather than the harder mastery threshold.
+pub fn count_correct_at_least_once_in(conn: &Connection, slugs: &[&str]) -> AppResult<i64> {
+    if slugs.is_empty() {
+        return Ok(0);
+    }
+    let placeholders: Vec<&str> = slugs.iter().map(|_| "?").collect();
+    let sql = format!(
+        "SELECT COUNT(*) FROM technique_stats
+         WHERE slug IN ({}) AND correct_count >= 1",
+        placeholders.join(", ")
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let params_vec: Vec<&dyn rusqlite::ToSql> = slugs.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
+    let n: i64 = stmt.query_row(params_vec.as_slice(), |r| r.get(0))?;
+    Ok(n)
+}
+
 pub fn count_distinct_attempted(conn: &Connection) -> AppResult<i64> {
     let n: i64 = conn.query_row(
         "SELECT COUNT(*) FROM technique_stats",

@@ -179,11 +179,13 @@ const I18N = {
     "group.3": "3rd group",
     "group.4": "4th group",
     "group.5": "5th group",
+    "group.6": "Pinning techniques",
 
     "cat.ashi-waza":   "Leg techniques",
     "cat.koshi-waza":  "Hip techniques",
     "cat.te-waza":     "Hand techniques",
     "cat.sutemi-waza": "Sacrifice throws",
+    "cat.katame-waza": "Grappling holds",
 
     "profile.title":         "Your dōjō progress",
     "profile.level":         "Level {n}",
@@ -436,11 +438,13 @@ const I18N = {
     "group.3": "Troisième groupe",
     "group.4": "Quatrième groupe",
     "group.5": "Cinquième groupe",
+    "group.6": "Immobilisations",
 
     "cat.ashi-waza":   "Techniques de jambe",
     "cat.koshi-waza":  "Techniques de hanche",
     "cat.te-waza":     "Techniques de bras",
     "cat.sutemi-waza": "Techniques de sacrifice",
+    "cat.katame-waza": "Techniques de contrôle",
 
     "profile.title":         "Ta progression au dōjō",
     "profile.level":         "Niveau {n}",
@@ -543,7 +547,12 @@ const I18N = {
   },
 };
 
-const GROUP_NAMES = ["", "Dai Ikkyō", "Dai Nikyō", "Dai Sankyō", "Dai Yonkyō", "Dai Gokyō"];
+// Index 0 is intentionally empty so `GROUP_NAMES[g]` lines up with the
+// 1-based group ids in the backend `Technique.group` field. Groups 1..=5
+// are the Gokyo throws; group 6 is the classical Kodokan Osaekomi-waza
+// pinning syllabus.
+const GROUP_NAMES = ["", "Dai Ikkyō", "Dai Nikyō", "Dai Sankyō", "Dai Yonkyō", "Dai Gokyō", "Osaekomi-waza"];
+const GROUPS_LAST = GROUP_NAMES.length - 1;
 
 function t(key, vars = {}) {
   const dict = I18N[store.lang] || I18N.en;
@@ -2055,7 +2064,7 @@ async function renderBrowse() {
   try { allStats = await fetchAllStats(); } catch (_) {}
   const statBy = Object.fromEntries(allStats.map(s => [s.slug, s]));
 
-  for (let g = 1; g <= 5; g++) {
+  for (let g = 1; g <= GROUPS_LAST; g++) {
     const card = h("div", { class: "card" },
       h("h2", {}, t("browse.group", { g, name: GROUP_NAMES[g] })),
       h("div", { class: "muted", style: "margin: -2px 0 8px; font-size: 11px" }, groupTrans(g)),
@@ -2891,7 +2900,7 @@ async function renderSettings() {
   groupSelect.appendChild(
     Object.assign(h("option", { value: "0" }, t("settings.group_all")),
       { selected: store.settings.group_filter === 0 }));
-  for (let g = 1; g <= 5; g++) {
+  for (let g = 1; g <= GROUPS_LAST; g++) {
     const opt = h("option", { value: String(g) },
       t("settings.group_only", { g, name: GROUP_NAMES[g], tr: groupTrans(g) }));
     if (g === store.settings.group_filter) opt.selected = true;
