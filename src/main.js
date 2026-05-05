@@ -53,6 +53,9 @@ const I18N = {
     "home.rapid":         "Rapid-fire ({n})",
     "home.drill":         "Drill (timed)",
     "home.browse":        "Browse all 40 techniques",
+    "home.family.gokyo":    "Gokyo",
+    "home.family.osaekomi": "Osaekomi",
+    "home.family.both":     "Gokyo + Osaekomi",
 
     "quiz.start":         "Start",
     "quiz.intro":         "Press start to draw a question.",
@@ -179,11 +182,13 @@ const I18N = {
     "group.3": "3rd group",
     "group.4": "4th group",
     "group.5": "5th group",
+    "group.6": "Pinning techniques",
 
     "cat.ashi-waza":   "Leg techniques",
     "cat.koshi-waza":  "Hip techniques",
     "cat.te-waza":     "Hand techniques",
     "cat.sutemi-waza": "Sacrifice throws",
+    "cat.katame-waza": "Grappling holds",
 
     "profile.title":         "Your dōjō progress",
     "profile.level":         "Level {n}",
@@ -310,6 +315,9 @@ const I18N = {
     "home.rapid":         "Rafale ({n})",
     "home.drill":         "Drill (chrono)",
     "home.browse":        "Parcourir les 40 techniques",
+    "home.family.gokyo":    "Gokyo",
+    "home.family.osaekomi": "Osaekomi",
+    "home.family.both":     "Gokyo + Osaekomi",
 
     "quiz.start":         "Commencer",
     "quiz.intro":         "Appuie sur Commencer pour tirer une question.",
@@ -436,11 +444,13 @@ const I18N = {
     "group.3": "Troisième groupe",
     "group.4": "Quatrième groupe",
     "group.5": "Cinquième groupe",
+    "group.6": "Immobilisations",
 
     "cat.ashi-waza":   "Techniques de jambe",
     "cat.koshi-waza":  "Techniques de hanche",
     "cat.te-waza":     "Techniques de bras",
     "cat.sutemi-waza": "Techniques de sacrifice",
+    "cat.katame-waza": "Techniques de contrôle",
 
     "profile.title":         "Ta progression au dōjō",
     "profile.level":         "Niveau {n}",
@@ -543,7 +553,12 @@ const I18N = {
   },
 };
 
-const GROUP_NAMES = ["", "Dai Ikkyō", "Dai Nikyō", "Dai Sankyō", "Dai Yonkyō", "Dai Gokyō"];
+// Index 0 is intentionally empty so `GROUP_NAMES[g]` lines up with the
+// 1-based group ids in the backend `Technique.group` field. Groups 1..=5
+// are the Gokyo throws; group 6 is the classical Kodokan Osaekomi-waza
+// pinning syllabus.
+const GROUP_NAMES = ["", "Dai Ikkyō", "Dai Nikyō", "Dai Sankyō", "Dai Yonkyō", "Dai Gokyō", "Osaekomi-waza"];
+const GROUPS_LAST = GROUP_NAMES.length - 1;
 
 function t(key, vars = {}) {
   const dict = I18N[store.lang] || I18N.en;
@@ -566,6 +581,11 @@ const store = {
     schedule: { ...DEFAULT_SCHEDULE },
     distractor_mode: "same-group",
     group_filter: 0,
+    // Coarse family selector exposed on the home screen as 3 quick-select
+    // buttons: "all" (all 47), "gokyo" (groups 1..=5, the 40 throws), or
+    // "osaekomi" (group 6, the 7 pins). The settings dropdown for a
+    // SPECIFIC group still wins over this when set (1..=6).
+    family_filter: "all",
     show_kanji_hint: false,   // image-first quiz; kanji always revealed after answer
     quiz_prompt_mode: "image", // "image" | "japanese" (kanji+romaji card, FR choices)
     drill: {
@@ -604,6 +624,7 @@ const STORE_KEYS = {
   lang:           "kata.lang",
   distractor:     "kata.distractor_mode",
   groupFilter:    "kata.group_filter",
+  familyFilter:   "kata.family_filter",
   showKanjiHint:  "kata.show_kanji_hint",
   quizPromptMode: "kata.quiz_prompt_mode",
   drillDuration:  "kata.drill_duration_s",
@@ -720,6 +741,10 @@ function loadLocalSettings() {
     store.settings.distractor_mode =
       localStorage.getItem(STORE_KEYS.distractor) || "same-group";
     store.settings.group_filter = parseInt(localStorage.getItem(STORE_KEYS.groupFilter) || "0", 10);
+    const savedFamily = localStorage.getItem(STORE_KEYS.familyFilter);
+    if (["all", "gokyo", "osaekomi"].includes(savedFamily)) {
+      store.settings.family_filter = savedFamily;
+    }
     store.settings.show_kanji_hint = localStorage.getItem(STORE_KEYS.showKanjiHint) === "true";
     const savedPromptMode = localStorage.getItem(STORE_KEYS.quizPromptMode);
     if (["image", "japanese", "kanji", "free_text"].includes(savedPromptMode)) {
@@ -741,6 +766,7 @@ function saveLocalSettings() {
     localStorage.setItem(STORE_KEYS.lang, store.lang);
     localStorage.setItem(STORE_KEYS.distractor, store.settings.distractor_mode);
     localStorage.setItem(STORE_KEYS.groupFilter, String(store.settings.group_filter));
+    localStorage.setItem(STORE_KEYS.familyFilter, store.settings.family_filter || "all");
     localStorage.setItem(STORE_KEYS.showKanjiHint, String(store.settings.show_kanji_hint));
     localStorage.setItem(STORE_KEYS.quizPromptMode, store.settings.quiz_prompt_mode);
     localStorage.setItem(STORE_KEYS.drillDuration, String(store.settings.drill.duration_s));
@@ -754,7 +780,7 @@ function saveLocalSettings() {
 
 function imageCandidates(tech) {
   const local = `assets/illustrations/${tech.slug}`;
-  const cands = [`${local}.gif`, `${local}.webp`, `${local}.png`, `${local}.jpg`];
+  const cands = [`${local}.gif`, `${local}.webp`, `${local}.svg`, `${local}.png`, `${local}.jpg`];
   if (tech.image_url) cands.push(tech.image_url);
   cands.push(`assets/silhouettes/${tech.category}.svg`);
   return cands;
@@ -1075,10 +1101,23 @@ async function fetchAnalytics() {
   return invoke("get_analytics");
 }
 
+// A specific group picked in settings (1..=6) wins over the home family
+// quick-select. "gokyo" expands to [1,2,3,4,5]; "osaekomi" to [6]; "all"
+// means no group constraint.
+function resolveGroupsFilter() {
+  const single = store.settings.group_filter;
+  if (single >= 1 && single <= 6) return [single];
+  const family = store.settings.family_filter || "all";
+  if (family === "gokyo") return [1, 2, 3, 4, 5];
+  if (family === "osaekomi") return [6];
+  return null;
+}
+
 async function fetchNextQuestion() {
   return invoke("next_question", {
     distractorMode: store.settings.distractor_mode,
-    groupFilter: store.settings.group_filter || null,
+    groupFilter: null,
+    groupsFilter: resolveGroupsFilter(),
   });
 }
 
@@ -1397,6 +1436,26 @@ async function renderHome() {
       onclick: () => navigate("browse"),
     }, h("span", { class: "act-ico" }, "≡"),
        h("span", {}, t("home.browse"))),
+  ));
+
+  // Family quick-select — 3 toggle buttons (Gokyo / Osaekomi / Both).
+  // Sets `family_filter` and re-renders so the active state updates.
+  // Backend filtering is applied in resolveGroupsFilter().
+  const setFamily = (v) => {
+    store.settings.family_filter = v;
+    saveLocalSettings();
+    renderHome();
+  };
+  const family = store.settings.family_filter || "all";
+  const famBtn = (v, labelKey) => h("button", {
+    class: "btn family-btn" + (family === v ? " active" : ""),
+    type: "button",
+    onclick: () => setFamily(v),
+  }, t(labelKey));
+  root.appendChild(h("div", { class: "family-select" },
+    famBtn("gokyo",    "home.family.gokyo"),
+    famBtn("osaekomi", "home.family.osaekomi"),
+    famBtn("all",      "home.family.both"),
   ));
 
   // Today summary strip — 4 stat cells in a horizontal flex row.
@@ -2049,7 +2108,7 @@ async function renderBrowse() {
   try { allStats = await fetchAllStats(); } catch (_) {}
   const statBy = Object.fromEntries(allStats.map(s => [s.slug, s]));
 
-  for (let g = 1; g <= 5; g++) {
+  for (let g = 1; g <= GROUPS_LAST; g++) {
     const card = h("div", { class: "card" },
       h("h2", {}, t("browse.group", { g, name: GROUP_NAMES[g] })),
       h("div", { class: "muted", style: "margin: -2px 0 8px; font-size: 11px" }, groupTrans(g)),
@@ -2885,7 +2944,7 @@ async function renderSettings() {
   groupSelect.appendChild(
     Object.assign(h("option", { value: "0" }, t("settings.group_all")),
       { selected: store.settings.group_filter === 0 }));
-  for (let g = 1; g <= 5; g++) {
+  for (let g = 1; g <= GROUPS_LAST; g++) {
     const opt = h("option", { value: String(g) },
       t("settings.group_only", { g, name: GROUP_NAMES[g], tr: groupTrans(g) }));
     if (g === store.settings.group_filter) opt.selected = true;

@@ -1,4 +1,5 @@
-//! Static data for the 40 Gokyo no Waza techniques.
+//! Static data for the syllabus techniques: the 40 Gokyo no Waza throws
+//! (groups 1..=5) plus the 7 classical Kodokan Osaekomi-waza pins (group 6).
 //!
 //! `slug` matches the judo.how URL pattern. `name_fr` and `name_en` are the
 //! conventional literal translations (FFJDA/Kodokan style). `image_url` is
@@ -75,6 +76,22 @@ pub const TECHNIQUES: &[Technique] = &[
     Technique { slug: "ura-nage",               name: "Ura-nage",               kanji: "裏投",     name_fr: "Projection en arrière",                    name_en: "Back throw",                                group: 5, category: "sutemi-waza",judo_how_url: "https://judo.how/en/nage-waza/sutemi-waza/ma-sutemi-waza/ura-nage/",         wikipedia_url: "https://fr.wikipedia.org/wiki/Ura-nage",               image_url: "", youtube_id: "Fgi9b8DJ5sQ" },
     Technique { slug: "sumi-otoshi",            name: "Sumi-otoshi",            kanji: "隅落",     name_fr: "Renversement de l'angle",                  name_en: "Corner drop",                               group: 5, category: "te-waza",    judo_how_url: "https://judo.how/en/nage-waza/tachi-waza/te-waza/sumi-otoshi/",              wikipedia_url: "https://en.wikipedia.org/wiki/Sumi_otoshi",            image_url: "", youtube_id: "lLU9wv52ni0" },
     Technique { slug: "yoko-gake",              name: "Yoko-gake",              kanji: "横掛",     name_fr: "Accrochage de côté",                       name_en: "Side hook",                                 group: 5, category: "sutemi-waza",judo_how_url: "https://judo.how/en/nage-waza/sutemi-waza/yoko-sutemi-waza/yoko-gake/",      wikipedia_url: "https://en.wikipedia.org/wiki/Yoko_gake",              image_url: "", youtube_id: "tP1Sj1uDfSo" },
+
+    // ----- Osaekomi-waza (pinning techniques, classical Kodokan list of 7) -----
+    // Group 6 — added as a sibling syllabus to the Gokyo throws. Category
+    // `katame-waza` is the parent grappling family. judo.how hosts these
+    // under `/ne-waza/osaekomi-waza/<slug>/` (no `/en/` prefix, unlike the
+    // throws). YouTube IDs point at the official KODOKAN × IJF Academy
+    // "100 Techniques" demonstrations on https://www.youtube.com/@KODOKANJUDO
+    // (judo.how does not ship video for the pins, so we use the Kodokan
+    // canonical demos directly).
+    Technique { slug: "kesa-gatame",              name: "Kesa-gatame",              kanji: "袈裟固",     name_fr: "Contrôle en écharpe",                      name_en: "Scarf hold",                                group: 6, category: "katame-waza", judo_how_url: "https://judo.how/ne-waza/osaekomi-waza/kesa-gatame/",              wikipedia_url: "https://en.wikipedia.org/wiki/Kesa-gatame",              image_url: "", youtube_id: "NDaQuJOFBYk" },
+    Technique { slug: "kuzure-kesa-gatame",       name: "Kuzure-kesa-gatame",       kanji: "崩袈裟固",   name_fr: "Contrôle en écharpe modifié",              name_en: "Broken scarf hold",                         group: 6, category: "katame-waza", judo_how_url: "https://judo.how/ne-waza/osaekomi-waza/kuzure-kesa-gatame/",       wikipedia_url: "https://en.wikipedia.org/wiki/Kuzure-kesa-gatame",       image_url: "", youtube_id: "Q2fb9jaoUFQ" },
+    Technique { slug: "kata-gatame",              name: "Kata-gatame",              kanji: "肩固",       name_fr: "Contrôle par l'épaule",                    name_en: "Shoulder hold",                             group: 6, category: "katame-waza", judo_how_url: "https://judo.how/ne-waza/osaekomi-waza/kata-gatame/",              wikipedia_url: "https://en.wikipedia.org/wiki/Kata-gatame",              image_url: "", youtube_id: "zQR3IOXxO_Q" },
+    Technique { slug: "kami-shiho-gatame",        name: "Kami-shiho-gatame",        kanji: "上四方固",   name_fr: "Contrôle des quatre coins par le haut",    name_en: "Upper four-quarter hold",                   group: 6, category: "katame-waza", judo_how_url: "https://judo.how/ne-waza/osaekomi-waza/kami-shiho-gatame/",        wikipedia_url: "https://en.wikipedia.org/wiki/Kami_shiho_gatame",        image_url: "", youtube_id: "HFuMjOv0WN8" },
+    Technique { slug: "kuzure-kami-shiho-gatame", name: "Kuzure-kami-shiho-gatame", kanji: "崩上四方固", name_fr: "Contrôle des quatre coins par le haut modifié", name_en: "Broken upper four-quarter hold",        group: 6, category: "katame-waza", judo_how_url: "https://judo.how/ne-waza/osaekomi-waza/kuzure-kami-shiho-gatame/", wikipedia_url: "https://en.wikipedia.org/wiki/Kuzure-kami-shiho-gatame", image_url: "", youtube_id: "YUrogQWdwiY" },
+    Technique { slug: "yoko-shiho-gatame",        name: "Yoko-shiho-gatame",        kanji: "横四方固",   name_fr: "Contrôle des quatre coins par le côté",    name_en: "Side four-quarter hold",                    group: 6, category: "katame-waza", judo_how_url: "https://judo.how/ne-waza/osaekomi-waza/yoko-shiho-gatame/",        wikipedia_url: "https://en.wikipedia.org/wiki/Yoko-shiho-gatame",        image_url: "", youtube_id: "TT7XJVSEQxA" },
+    Technique { slug: "tate-shiho-gatame",        name: "Tate-shiho-gatame",        kanji: "縦四方固",   name_fr: "Contrôle des quatre coins à cheval",       name_en: "Vertical four-quarter hold",                group: 6, category: "katame-waza", judo_how_url: "https://judo.how/ne-waza/osaekomi-waza/tate-shiho-gatame/",        wikipedia_url: "https://en.wikipedia.org/wiki/Tate-shiho-gatame",        image_url: "", youtube_id: "55-rFmBx53g" },
 ];
 
 pub fn find(slug: &str) -> Option<&'static Technique> {
