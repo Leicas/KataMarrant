@@ -206,7 +206,8 @@ fn weighted_pick<R: Rng>(weights: &[f64], rng: &mut R) -> usize {
 /// Then a "no-repeat" pass:
 ///
 /// - any slug present in `recents` has its weight multiplied by
-///   `RECENT_COOLDOWN_FACTOR` (95% suppression).
+///   `RECENT_COOLDOWN_FACTOR` (currently 0.0 — hard ban; see the constant's
+///   doc-comment for why we landed there instead of 0.05).
 /// - escape hatch: if EVERY candidate is in `recents` (e.g. the user is
 ///   filtering on a tiny group whose entire size fits in the deque), the
 ///   slug shown LONGEST ago — front of `recents` — gets its full
