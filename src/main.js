@@ -763,7 +763,7 @@ function saveLocalSettings() {
 
 function imageCandidates(tech) {
   const local = `assets/illustrations/${tech.slug}`;
-  const cands = [`${local}.gif`, `${local}.webp`, `${local}.png`, `${local}.jpg`];
+  const cands = [`${local}.gif`, `${local}.webp`, `${local}.svg`, `${local}.png`, `${local}.jpg`];
   if (tech.image_url) cands.push(tech.image_url);
   cands.push(`assets/silhouettes/${tech.category}.svg`);
   return cands;
