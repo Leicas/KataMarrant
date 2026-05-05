@@ -297,6 +297,16 @@ main {
   object-fit: contain;
   background: transparent;
 }
+/* Line-drawing SVGs (e.g. the Judcosta osaekomi-waza set) have black
+   strokes on a transparent canvas — invisible against the dark theme.
+   Give them a light "paper" backdrop so the lines read. Photos / JPGs
+   keep their own background, so this only kicks in for .svg sources. */
+.quiz-image[src$=".svg"],
+.tech-thumb[src$=".svg"] {
+  background: #f4ecd8;
+  border-radius: 8px;
+  padding: 4px;
+}
 .quiz-image-wrap.compact .quiz-image { max-height: 180px; }
 @media (max-width: 599px) {
   /* Phone portrait keeps the original taller image — there's a single
