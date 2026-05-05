@@ -1,3 +1,9 @@
+## [1.5.1](https://github.com/Leicas/KataMarrant/compare/v1.5.0...v1.5.1) (2026-05-05)
+
+### Bug Fixes
+
+* **android:** regenerate icons in CI so AAB ships the cat, not the Tauri default ([60b641e](https://github.com/Leicas/KataMarrant/commit/60b641e1c983b9d08c2356eb2aca481a6dd5a780))
+
 ## [1.5.0](https://github.com/Leicas/KataMarrant/compare/v1.4.1...v1.5.0) (2026-05-04)
 
 ### Features
