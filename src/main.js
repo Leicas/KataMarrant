@@ -888,12 +888,6 @@ function applyTabLabels() {
   }
 }
 
-function localizedName(tech) {
-  // Returns the localized readable label. Romaji is canonical (international),
-  // French / English translation is shown as a subtitle elsewhere.
-  return tech.name;
-}
-
 // Localized translation of the technique's name (literal meaning).
 function localizedTranslation(tech) {
   return store.lang === "fr" ? tech.name_fr : tech.name_en;
@@ -3703,8 +3697,7 @@ async function boot() {
   catch (e) { console.error("fetchGamificationState", e); }
 
   try {
-    await listen("show_quiz_prompt", async (event) => {
-      console.log("show_quiz_prompt", event.payload);
+    await listen("show_quiz_prompt", async (_event) => {
       if (store.rapid && store.rapid.current < store.rapid.total) return;
       startSingleQuiz();
     });

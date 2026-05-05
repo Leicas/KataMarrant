@@ -711,36 +711,6 @@ pub fn get_daily(conn: &Connection, day: &str) -> AppResult<DailyProgressRow> {
     }
 }
 
-#[allow(dead_code)]
-pub fn get_recent_days(conn: &Connection, n: i64) -> AppResult<Vec<DailyProgressRow>> {
-    let mut stmt = conn.prepare(
-        "SELECT day, questions, correct, goal_met, xp_earned
-         FROM daily_progress ORDER BY day DESC LIMIT ?1",
-    )?;
-    let rows = stmt
-        .query_map(params![n], |r| {
-            Ok(DailyProgressRow {
-                day: r.get(0)?,
-                questions: r.get(1)?,
-                correct: r.get(2)?,
-                goal_met: r.get(3)?,
-                xp_earned: r.get(4)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
-}
-
-#[allow(dead_code)]
-pub fn count_unlocked(conn: &Connection) -> AppResult<i64> {
-    let n: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM achievements_unlocked",
-        [],
-        |r| r.get(0),
-    )?;
-    Ok(n)
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct UnlockedRow {
     pub code: String,

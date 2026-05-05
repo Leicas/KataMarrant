@@ -27,9 +27,6 @@ const STORE_FILE: &str = "settings.json";
 const KEY_SYNC_JWT: &str = "sync.session_jwt";
 const KEY_SYNC_EMAIL: &str = "sync.email";
 const KEY_SYNC_USER: &str = "sync.user_id";
-const KEY_SYNC_CLIENT: &str = "sync.client_id";
-const KEY_SYNC_SERVER: &str = "sync.server_url";
-const KEY_SYNC_AUTO: &str = "sync.auto_sync";
 
 const HTTP_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -1081,16 +1078,4 @@ fn read_auto_sync_default() -> bool {
     // key `sync.auto_sync`. We don't depend on that here — `lib.rs` reads
     // the same key when scheduling the periodic loop.
     true
-}
-
-#[allow(dead_code)]
-pub fn store_keys() -> &'static [&'static str] {
-    &[
-        KEY_SYNC_JWT,
-        KEY_SYNC_EMAIL,
-        KEY_SYNC_USER,
-        KEY_SYNC_CLIENT,
-        KEY_SYNC_SERVER,
-        KEY_SYNC_AUTO,
-    ]
 }
