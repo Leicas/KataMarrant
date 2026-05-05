@@ -592,6 +592,50 @@ pub fn sync_logout(
     Ok(())
 }
 
+/// `DELETE /account` — irreversibly removes the sync account on the server
+/// (email, session tokens, synced rows). Local quiz history is left
+/// intact. Returns `SyncResultDto::ok` on a 200/204 response or a
+/// 401/404 (treated as "already gone"); a real network/server failure
+/// returns `SyncResultDto::err` so the UI can surface it. Either way,
+/// the local session is cleared so the user lands back at the
+/// signed-out screen.
+#[tauri::command]
+pub async fn sync_delete_account(
+    state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<SyncResultDto> {
+    let (jwt, server_url) = {
+        let conn = state.db.lock().unwrap();
+        let s = read_sync_state(&conn)?;
+        (s.session_jwt.clone(), s.server_url.clone())
+    };
+
+    let result = if let Some(token) = jwt {
+        let url = format!("{}/account", server_url.trim_end_matches('/'));
+        match http_client().delete(&url).bearer_auth(&token).send().await {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() || status.as_u16() == 401 || status.as_u16() == 404 {
+                    SyncResultDto::ok(0, 0, 0)
+                } else {
+                    SyncResultDto::err(format!("http: {status}"))
+                }
+            }
+            Err(e) => SyncResultDto::err(format!("network: {e}")),
+        }
+    } else {
+        SyncResultDto::ok(0, 0, 0)
+    };
+
+    {
+        let conn = state.db.lock().unwrap();
+        clear_session(&conn)?;
+    }
+    store_clear(&app, &[KEY_SYNC_JWT, KEY_SYNC_USER, KEY_SYNC_EMAIL]);
+
+    Ok(result)
+}
+
 /// Reset both sync cursors to 0 AND restamp every locally-mutable row's
 /// `updated_at` to now, so the next push ships everything and the next
 /// pull receives everything the server holds. Recovery hatch when local

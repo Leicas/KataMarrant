@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KataMarrant — Privacy Policy / Politique de confidentialité</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --fg: #1f1b16;
+    --muted: #5a5246;
+    --accent: #9a1c1c;
+    --accent-soft: #c79a3a;
+    --card: #fffaf1;
+    --border: #e3d9c6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15110d;
+      --fg: #f0e7d6;
+      --muted: #a39988;
+      --accent: #e0524a;
+      --accent-soft: #d6ab46;
+      --card: #1f1a14;
+      --border: #36302a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 2rem 1rem 4rem;
+  }
+  main { max-width: 760px; margin: 0 auto; }
+  header {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  header img { width: 48px; height: 48px; border-radius: 8px; }
+  h1 { font-size: 1.6rem; margin: 0; color: var(--accent); }
+  .lang-switch {
+    margin: 1rem 0 2rem; display: inline-flex; gap: 0.5rem;
+    background: var(--card); padding: 0.25rem; border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+  .lang-switch a {
+    padding: 0.35rem 0.9rem; border-radius: 999px;
+    text-decoration: none; color: var(--muted); font-weight: 600;
+  }
+  .lang-switch a.active { background: var(--accent); color: #fff; }
+  section { display: none; }
+  section.active { display: block; }
+  h2 {
+    color: var(--accent); margin-top: 2rem; font-size: 1.15rem;
+    border-bottom: 1px solid var(--border); padding-bottom: 0.3rem;
+  }
+  p, li { color: var(--fg); }
+  .muted { color: var(--muted); font-size: 0.92rem; }
+  ul { padding-left: 1.25rem; }
+  code {
+    background: var(--card); padding: 0.05rem 0.35rem;
+    border-radius: 4px; border: 1px solid var(--border);
+    font-size: 0.92em;
+  }
+  a { color: var(--accent); }
+  footer {
+    margin-top: 3rem; padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="logo.png" alt="KataMarrant logo">
+    <h1>KataMarrant</h1>
+  </header>
+
+  <div class="lang-switch" role="tablist">
+    <a href="#en" id="tab-en" class="active">English</a>
+    <a href="#fr" id="tab-fr">Français</a>
+  </div>
+
+  <section id="en" class="active">
+    <h2>Privacy Policy</h2>
+    <p class="muted">Last updated: 2026-05-04</p>
+
+    <p>
+      KataMarrant is a free, open-source application for learning the 40
+      <em>Gokyo no Waza</em> judo techniques. We are committed to keeping the
+      app simple, offline-first, and transparent about any data it touches.
+    </p>
+
+    <h2>1. What data the app stores on your device</h2>
+    <ul>
+      <li>Per-technique quiz statistics (correct/wrong counts, last shown timestamp).</li>
+      <li>A quiz log of every answer you give, with its timestamp.</li>
+      <li>UI preferences (language, distractor mode, group filter, hint toggle, schedule).</li>
+    </ul>
+    <p>
+      All of this is kept locally on your device in a SQLite database and the
+      app's local settings store. None of it leaves your device unless you
+      explicitly enable cross-device sync (see below).
+    </p>
+
+    <h2>2. Optional cross-device sync</h2>
+    <p>
+      KataMarrant offers an <strong>optional</strong> sync feature, disabled by
+      default. All communication with our sync server at
+      <code>https://katamarrant.weill-duflos.fr</code> is encrypted in transit
+      using HTTPS (TLS). If you choose to create a sync account, the app will
+      send the following to the server:
+    </p>
+    <ul>
+      <li>Your email address (used as your account identifier and to deliver the magic-link sign-in code).</li>
+      <li>A short-lived session token issued by the server after you confirm the magic-link code (no password is ever used or stored — KataMarrant does not have password-based accounts).</li>
+      <li>Your local quiz statistics and quiz log, so they can be merged across your devices.</li>
+    </ul>
+    <p>
+      The sync server is operated personally by the app's author. Data is
+      stored only to provide the sync feature. It is not sold, shared with
+      advertisers, or used for profiling. You can delete your sync account
+      and all associated data at any time — see
+      <a href="delete-account.html">Account &amp; data deletion</a>.
+    </p>
+
+    <h2>3. What we do not collect</h2>
+    <ul>
+      <li>No analytics, telemetry, or usage tracking.</li>
+      <li>No advertising identifiers, no ads, no third-party ad SDKs.</li>
+      <li>No crash reporting services.</li>
+      <li>No location data, contacts, photos, microphone, or camera access.</li>
+    </ul>
+
+    <h2>4. Permissions</h2>
+    <ul>
+      <li><strong>Notifications</strong> — used only to remind you to practice on the schedule you configured. All notifications are local; there is no push server.</li>
+      <li><strong>Internet</strong> — used only if you enable sync, and only to talk to the sync server above.</li>
+    </ul>
+
+    <h2>5. Children</h2>
+    <p>
+      KataMarrant is not directed at children under 13. We do not knowingly
+      collect personal information from children under 13. If you believe a
+      child has provided us information, please contact us and we will delete it.
+    </p>
+
+    <h2>6. Your rights (GDPR)</h2>
+    <p>
+      If you use the optional sync feature, you have the right to access,
+      correct, export, and delete your personal data. Most of these actions
+      are available directly in the app's Settings → Sync screen. For any
+      other request, contact us at the address below.
+    </p>
+
+    <h2>7. Data retention</h2>
+    <ul>
+      <li><strong>On your device:</strong> until you uninstall the app or clear its data.</li>
+      <li><strong>On the sync server:</strong> until you delete your sync account.</li>
+    </ul>
+
+    <h2>8. Changes to this policy</h2>
+    <p>
+      If we change this policy we will update the "Last updated" date above
+      and, for material changes, surface a notice in the app.
+    </p>
+
+    <h2>9. Contact</h2>
+    <p>
+      Questions or data requests:
+      <a href="mailto:contact@katamarrant.weill-duflos.fr">contact@katamarrant.weill-duflos.fr</a>.
+    </p>
+  </section>
+
+  <section id="fr">
+    <h2>Politique de confidentialité</h2>
+    <p class="muted">Dernière mise à jour : 04/05/2026</p>
+
+    <p>
+      KataMarrant est une application gratuite et open-source pour apprendre
+      les 40 techniques du <em>Gokyo no Waza</em> (judo). Nous tenons à ce
+      qu'elle reste simple, fonctionnelle hors-ligne, et transparente sur les
+      données qu'elle manipule.
+    </p>
+
+    <h2>1. Données stockées sur votre appareil</h2>
+    <ul>
+      <li>Statistiques de quiz par technique (réussites, erreurs, date de dernier affichage).</li>
+      <li>Journal de chacune de vos réponses avec son horodatage.</li>
+      <li>Préférences de l'interface (langue, mode des distracteurs, filtre de groupe, indice, planification).</li>
+    </ul>
+    <p>
+      Tout cela reste localement sur votre appareil, dans une base SQLite et
+      le stockage des paramètres de l'application. Aucune de ces données ne
+      quitte votre appareil sauf si vous activez explicitement la
+      synchronisation entre appareils (voir ci-dessous).
+    </p>
+
+    <h2>2. Synchronisation entre appareils (optionnelle)</h2>
+    <p>
+      KataMarrant propose une synchronisation <strong>optionnelle</strong>,
+      désactivée par défaut. Toutes les communications avec notre serveur
+      <code>https://katamarrant.weill-duflos.fr</code> sont chiffrées en
+      transit via HTTPS (TLS). Si vous créez un compte de synchronisation,
+      l'application transmettra :
+    </p>
+    <ul>
+      <li>Votre adresse e-mail (identifiant du compte, et destinataire du code de connexion par lien magique).</li>
+      <li>Un jeton de session à durée limitée émis par le serveur après validation du code (aucun mot de passe n'est utilisé ni stocké — KataMarrant n'a pas de comptes avec mot de passe).</li>
+      <li>Vos statistiques et votre journal de quiz, afin de les fusionner entre vos appareils.</li>
+    </ul>
+    <p>
+      Le serveur de synchronisation est exploité personnellement par l'auteur
+      de l'application. Les données ne sont conservées que pour fournir la
+      synchronisation. Elles ne sont jamais vendues, partagées avec des
+      annonceurs, ni utilisées à des fins de profilage. Vous pouvez supprimer
+      votre compte et toutes les données associées à tout moment — voir
+      <a href="delete-account.html">Suppression de compte et de données</a>.
+    </p>
+
+    <h2>3. Ce que nous ne collectons pas</h2>
+    <ul>
+      <li>Aucune analyse, télémétrie ou suivi d'utilisation.</li>
+      <li>Aucun identifiant publicitaire, aucune publicité, aucun SDK publicitaire tiers.</li>
+      <li>Aucun service de remontée de plantages.</li>
+      <li>Aucun accès à la localisation, aux contacts, aux photos, au micro ou à la caméra.</li>
+    </ul>
+
+    <h2>4. Autorisations</h2>
+    <ul>
+      <li><strong>Notifications</strong> — uniquement pour vous rappeler de pratiquer selon la planification que vous avez choisie. Les notifications sont locales ; il n'y a pas de serveur push.</li>
+      <li><strong>Internet</strong> — uniquement si vous activez la synchronisation, et uniquement pour communiquer avec le serveur ci-dessus.</li>
+    </ul>
+
+    <h2>5. Enfants</h2>
+    <p>
+      KataMarrant ne s'adresse pas aux enfants de moins de 13 ans. Nous ne
+      collectons pas sciemment de données personnelles d'enfants de moins de
+      13 ans. Si vous pensez qu'un enfant nous a transmis des informations,
+      contactez-nous et nous les supprimerons.
+    </p>
+
+    <h2>6. Vos droits (RGPD)</h2>
+    <p>
+      Si vous utilisez la synchronisation, vous avez le droit d'accéder à vos
+      données personnelles, de les corriger, de les exporter et de les
+      supprimer. La plupart de ces actions sont accessibles directement dans
+      Paramètres → Synchronisation de l'application. Pour toute autre demande,
+      contactez-nous à l'adresse ci-dessous.
+    </p>
+
+    <h2>7. Conservation des données</h2>
+    <ul>
+      <li><strong>Sur votre appareil :</strong> jusqu'à la désinstallation de l'application ou l'effacement de ses données.</li>
+      <li><strong>Sur le serveur de synchronisation :</strong> jusqu'à la suppression de votre compte.</li>
+    </ul>
+
+    <h2>8. Modifications de cette politique</h2>
+    <p>
+      Si nous modifions cette politique, la date de « Dernière mise à jour »
+      ci-dessus sera actualisée, et pour les changements significatifs, un
+      message apparaîtra dans l'application.
+    </p>
+
+    <h2>9. Contact</h2>
+    <p>
+      Questions ou demandes liées aux données :
+      <a href="mailto:contact@katamarrant.weill-duflos.fr">contact@katamarrant.weill-duflos.fr</a>.
+    </p>
+  </section>
+
+  <footer>
+    KataMarrant is open source —
+    <a href="https://github.com/Leicas/KataMarrant">github.com/Leicas/KataMarrant</a>.
+  </footer>
+</main>
+
+<script>
+  (function () {
+    var tabs = { en: document.getElementById('tab-en'), fr: document.getElementById('tab-fr') };
+    var sections = { en: document.getElementById('en'), fr: document.getElementById('fr') };
+
+    function activate(lang) {
+      if (!tabs[lang]) lang = 'en';
+      Object.keys(tabs).forEach(function (k) {
+        tabs[k].classList.toggle('active', k === lang);
+        sections[k].classList.toggle('active', k === lang);
+      });
+      document.documentElement.setAttribute('lang', lang);
+    }
+
+    function fromHash() {
+      var h = (location.hash || '').replace('#', '');
+      return h === 'fr' || h === 'en' ? h : null;
+    }
+
+    var initial = fromHash();
+    if (!initial) {
+      var nav = (navigator.language || 'en').toLowerCase();
+      initial = nav.indexOf('fr') === 0 ? 'fr' : 'en';
+    }
+    activate(initial);
+
+    window.addEventListener('hashchange', function () {
+      var h = fromHash();
+      if (h) activate(h);
+    });
+  })();
+</script>
+</body>
+</html>

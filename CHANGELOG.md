@@ -1,3 +1,21 @@
+## [1.5.1](https://github.com/Leicas/KataMarrant/compare/v1.5.0...v1.5.1) (2026-05-05)
+
+### Bug Fixes
+
+* **android:** regenerate icons in CI so AAB ships the cat, not the Tauri default ([60b641e](https://github.com/Leicas/KataMarrant/commit/60b641e1c983b9d08c2356eb2aca481a6dd5a780))
+
+## [1.5.0](https://github.com/Leicas/KataMarrant/compare/v1.4.1...v1.5.0) (2026-05-04)
+
+### Features
+
+* **sync:** add Delete sync account flow ([87b76bb](https://github.com/Leicas/KataMarrant/commit/87b76bb310c182109711210e57c97595d852882f))
+
+## [1.4.1](https://github.com/Leicas/KataMarrant/compare/v1.4.0...v1.4.1) (2026-05-04)
+
+### Bug Fixes
+
+* **android:** sign AAB with jarsigner before upload ([a4691e7](https://github.com/Leicas/KataMarrant/commit/a4691e7e4ac0405ee89206ed5d1e0897b165cc76))
+
 ## [1.4.0](https://github.com/Leicas/KataMarrant/compare/v1.3.1...v1.4.0) (2026-05-04)
 
 ### Features
