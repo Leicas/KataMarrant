@@ -1090,6 +1090,31 @@ main {
   .home-actions { grid-template-columns: 1fr 1fr; }
 }
 
+/* ----- Family quick-select (Gokyo / Osaekomi / Both) ----- */
+.family-select {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+.family-btn {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: var(--rad-2);
+  background: var(--bg-2, #2a2a2a);
+  border: 1px solid var(--border-1, #333);
+  color: var(--fg-muted, #999);
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.family-btn:hover { color: var(--fg, #eee); border-color: var(--brand, #c4253b); }
+.family-btn.active {
+  background: var(--brand, #c4253b);
+  color: #fff;
+  border-color: var(--brand, #c4253b);
+}
+
 /* ----- Today summary strip — 4 horizontal stat cells ----- */
 .today-strip { padding: var(--sp-3) var(--sp-4); }
 .today-strip h2 {

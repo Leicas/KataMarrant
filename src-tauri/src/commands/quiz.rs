@@ -81,10 +81,13 @@ pub fn get_technique(slug: String) -> AppResult<TechniqueDto> {
 /// - "any" → any other technique
 ///
 /// `group_filter`: when Some(n), only pick the answer from group n.
+/// `groups_filter`: when Some(vec), only pick from those groups (e.g. [1,2,3,4,5] for "Gokyo only").
+/// If both are set, `groups_filter` wins (it is the more general form).
 #[tauri::command]
 pub fn next_question(
     distractor_mode: Option<String>,
     group_filter: Option<u8>,
+    groups_filter: Option<Vec<u8>>,
     state: tauri::State<'_, AppState>,
 ) -> AppResult<QuizQuestion> {
     let mode = distractor_mode.as_deref().unwrap_or("same-group");
@@ -92,7 +95,11 @@ pub fn next_question(
     // Build the candidate pool (filtered by group if requested).
     let pool: Vec<&'static Technique> = TECHNIQUES
         .iter()
-        .filter(|t| group_filter.map_or(true, |g| t.group == g))
+        .filter(|t| match (&groups_filter, group_filter) {
+            (Some(gs), _) => gs.contains(&t.group),
+            (None, Some(g)) => t.group == g,
+            (None, None) => true,
+        })
         .collect();
     if pool.is_empty() {
         return Err(AppError::General("empty pool".into()));
