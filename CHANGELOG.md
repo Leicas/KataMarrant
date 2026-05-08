@@ -1,3 +1,9 @@
+## [1.5.2](https://github.com/Leicas/KataMarrant/compare/v1.5.1...v1.5.2) (2026-05-08)
+
+### Bug Fixes
+
+* **android:** use tauri-plugin-notification alarms instead of broken WorkManager scheduler ([c8aed76](https://github.com/Leicas/KataMarrant/commit/c8aed76f35ca6d4ae5c16adc7b1241aa211d3112))
+
 ## [1.5.1](https://github.com/Leicas/KataMarrant/compare/v1.5.0...v1.5.1) (2026-05-05)
 
 ### Bug Fixes
