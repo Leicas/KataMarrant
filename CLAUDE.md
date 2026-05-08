@@ -49,8 +49,8 @@ There are no automated tests.
 | `error.rs` | `AppError` / `AppResult<T>` (serializes to JSON) |
 | `data.rs` | Static `TECHNIQUES: &[Technique]` — 40 Gokyo entries (slug, romaji, kanji, `name_fr`, group, category, judo_how/wiki/image URLs) |
 | `db.rs` | SQLite stats: `technique_stats`, `quiz_log`, helpers |
-| `scheduler.rs` | `ScheduleConfig`, `next_fire_after`, desktop loop, Android (`schedule_next`) + iOS (`schedule_next_ios`) handlers |
-| `notification.rs` | Mobile notification channel (Android) + show helpers (Android/iOS) |
+| `scheduler.rs` | `ScheduleConfig`, `next_fire_after`, desktop loop, mobile (`schedule_next_mobile`) handler shared by Android + iOS |
+| `notification.rs` | Mobile notification channel (Android) + permission request + slot-id helper |
 | `commands/quiz.rs` | `list_techniques`, `next_question`, `answer_question` |
 | `commands/stats.rs` | `get_overall_stats`, `get_all_technique_stats` |
 | `commands/scheduler.rs` | `set_quiz_schedule`, `get_quiz_schedule`, `trigger_quiz_now` |
@@ -98,17 +98,28 @@ pure function `next_fire_after(...)` computes the next slot and is shared by
 all platforms.
 
 - **Desktop**: tokio loop tick every 30s; compares `next_fire_after` to `Local::now()`
-  and emits `show_quiz_prompt` when due.
-- **Android**: `tauri-plugin-schedule-task` (WorkManager) — re-armed via
-  `scheduler::schedule_next` after each fire. Plugin is **Android-only**: the
-  upstream crate ships no iOS impl.
-- **iOS**: `tauri-plugin-notification` schedules pending local notifications
-  upfront via `scheduler::schedule_next_ios` (capped at 32 slots over 30 days
-  to stay well under iOS's 64-pending-notification cap). `RunEvent::Resumed`
-  in `lib.rs` re-enqueues on each foreground so config edits propagate.
-  Caveat: `DailyMinCount` on iOS will always fire the OS-level notification
-  regardless of today's count (the count check only runs while the app is
-  alive); the next foreground tick re-evaluates.
+  and emits `show_quiz_prompt` when due. The same loop runs on mobile so the
+  in-app event fires while the app is foregrounded — but it deliberately does
+  NOT raise OS notifications there (the mobile path below owns them, and
+  doing both would double-notify).
+- **Mobile (Android + iOS)**: `tauri-plugin-notification` pre-enqueues pending
+  local notifications via `scheduler::schedule_next_mobile` (capped at 32
+  slots over 30 days, well under iOS's 64-pending-per-app limit). On Android
+  this lands as `setExactAndAllowWhileIdle` alarms delivered by the plugin's
+  `TimedNotificationPublisher` BroadcastReceiver, so the notification fires
+  whether or not our app process is alive. `RunEvent::Resumed` in `lib.rs`
+  re-enqueues on each foreground so config edits propagate and the rolling
+  horizon never drains. Caveat: `DailyMinCount` always fires the OS-level
+  notification at the configured time regardless of today's count — the
+  count check would require running app-side code at fire time, which
+  neither platform reliably allows when the app is killed; the next
+  foreground tick re-evaluates and prunes future slots accordingly.
+
+  > Background: an earlier Android path used `tauri-plugin-schedule-task`
+  > (WorkManager → `startActivity(MainActivity)` → Rust handler). It silently
+  > failed on Android 10+ because background activity launches are blocked,
+  > so the worker could never wake the app to fire the notification. The
+  > current notification-plugin path bypasses the app process entirely.
 
 Migration: an old `quiz_interval_minutes` u64 key (≤ 0.2.0) is auto-translated
 to `EveryMinutes { minutes, quiet_hours: None }` (or `Disabled` for 0) on
@@ -122,14 +133,15 @@ first launch and the legacy key is deleted.
   automatic free signing. Add `developmentTeam` to `tauri.conf.json` once
   signing is set up.
 - **No App Store / TestFlight builds** until the cert is in place.
-- iOS uses `tauri-plugin-notification` for scheduling, NOT
-  `tauri-plugin-schedule-task` (which has no iOS impl).
+- iOS shares the Android mobile scheduling path via `tauri-plugin-notification`
+  (see `scheduler::schedule_next_mobile`).
 - **Bootstrapping a Mac**: run `npx tauri ios init` once on a Mac with Xcode
   installed to populate `src-tauri/gen/ios/`. That step is intentionally not
   automated here because it requires macOS + Xcode.
 - Capability `capabilities/ios.json` declares `notification:default`.
-  `capabilities/mobile.json` is now **Android-only** (drops the
-  `schedule-task:default` permission from iOS where the plugin is absent).
+  `capabilities/mobile.json` is empty (notifications are covered by the
+  default capability); kept as a placeholder for future Android/iOS-only
+  permissions.
 
 ### Sync server (separate, private repo)
 

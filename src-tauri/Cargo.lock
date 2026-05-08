@@ -683,15 +683,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "croner"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c344b0690c1ad1c7176fe18eb173e0c927008fdaaa256e40dfd43ddd149c0843"
-dependencies = [
- "chrono",
-]
-
-[[package]]
 name = "crossbeam-channel"
 version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1008,15 +999,6 @@ name = "endi"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66b7e2430c6dff6a955451e2cfc438f09cea1965a9d6f87f7e3b90decc014099"
-
-[[package]]
-name = "english-to-cron"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c3d16f6dc9dc43a9a2fd5bce09b6cf8df250dcf77cffdaa66be21c527e2d05c"
-dependencies = [
- "regex",
-]
 
 [[package]]
 name = "enumflags2"
@@ -2182,7 +2164,7 @@ dependencies = [
 
 [[package]]
 name = "kata-marrant"
-version = "1.4.1"
+version = "1.5.1"
 dependencies = [
  "chrono",
  "log",
@@ -2197,7 +2179,6 @@ dependencies = [
  "tauri-plugin-notification",
  "tauri-plugin-opener",
  "tauri-plugin-process",
- "tauri-plugin-schedule-task",
  "tauri-plugin-store",
  "tauri-plugin-updater",
  "thiserror 2.0.18",
@@ -2523,17 +2504,6 @@ name = "num-conv"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6673768db2d862beb9b39a78fdcb1a69439615d5794a1be50caa9bc92c81967"
-
-[[package]]
-name = "num-derive"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
 
 [[package]]
 name = "num-traits"
@@ -4654,23 +4624,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-schedule-task"
-version = "0.1.0"
-source = "git+https://github.com/charlesschaefer/tauri-plugin-schedule-task?branch=main#650bdfdc59618ecd3fdfa417360524a789435772"
-dependencies = [
- "chrono",
- "once_cell",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.18",
- "tokio",
- "tokio-cron-scheduler",
- "uuid",
-]
-
-[[package]]
 name = "tauri-plugin-store"
 version = "2.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4976,22 +4929,6 @@ dependencies = [
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "tokio-cron-scheduler"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c71ce8f810abc9fabebccc30302a952f9e89c6cf246fafaf170fef164063141"
-dependencies = [
- "chrono",
- "croner",
- "english-to-cron",
- "num-derive",
- "num-traits",
- "tokio",
- "tracing",
- "uuid",
 ]
 
 [[package]]

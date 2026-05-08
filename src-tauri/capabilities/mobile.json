@@ -1,10 +1,8 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "mobile",
-  "description": "Android-only permissions for the WorkManager-backed scheduler. iOS uses tauri-plugin-notification (covered by default capability) instead — see ios.json.",
-  "platforms": ["android"],
+  "description": "Mobile-only capability. Currently empty: notifications are covered by the default capability's notification:default permission. Kept as a placeholder for future Android/iOS-only entries.",
+  "platforms": ["android", "iOS"],
   "windows": ["main"],
-  "permissions": [
-    "schedule-task:default"
-  ]
+  "permissions": []
 }

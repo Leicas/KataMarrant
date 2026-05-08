@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "ios",
-  "description": "iOS-only permissions. iOS scheduling uses tauri-plugin-notification rather than tauri-plugin-schedule-task (which has no iOS impl).",
+  "description": "iOS-only permissions. notification:default is also in default.json (which is platform-agnostic); kept here as an explicit declaration for the iOS capability slot.",
   "platforms": ["iOS"],
   "windows": ["main"],
   "permissions": [

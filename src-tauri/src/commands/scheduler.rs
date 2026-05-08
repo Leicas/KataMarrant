@@ -32,23 +32,18 @@ pub async fn set_quiz_schedule(
 
     log::info!("Quiz schedule updated: {:?}", config);
 
-    // Re-arm platform-specific path. Desktop reads the new config on its
-    // next tick — no explicit re-arm needed.
-    #[cfg(target_os = "android")]
+    // Mobile: cancel + re-enqueue the OS-level pending notification batch
+    // so the schedule edit propagates immediately. Desktop reads the new
+    // config on its next tick of `run_scheduler_loop` — no explicit re-arm
+    // needed.
+    #[cfg(mobile)]
     {
         let h = app_handle.clone();
         tauri::async_runtime::spawn(async move {
-            scheduler::schedule_next(&h).await;
+            scheduler::schedule_next_mobile(&h).await;
         });
     }
-    #[cfg(target_os = "ios")]
-    {
-        let h = app_handle.clone();
-        tauri::async_runtime::spawn(async move {
-            scheduler::schedule_next_ios(&h).await;
-        });
-    }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(not(mobile))]
     {
         let _ = &app_handle;
         let _ = &scheduler::run_scheduler_loop; // suppress unused-import lint on desktop

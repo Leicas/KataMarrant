@@ -1,20 +1,21 @@
 //! Quiz scheduler: emits a "show_quiz_prompt" event on the configured cadence.
 //!
-//! Three execution paths share one `ScheduleConfig`:
+//! Two execution paths share one `ScheduleConfig`:
 //!
 //! - **Desktop**: a tokio loop tick every 30s that re-evaluates whether the
 //!   next fire time has been reached. Cheap because the loop just compares
-//!   timestamps.
-//! - **Android**: `tauri-plugin-schedule-task` (WorkManager) — re-arms a
-//!   single Duration-based task on each fire. iOS does NOT use this plugin
-//!   because the upstream crate ships only Kotlin.
-//! - **iOS**: `tauri-plugin-notification` schedules N pending local
-//!   notifications up front (capped at 64 to stay under iOS's per-app
-//!   limit). When the app is foregrounded (`RunEvent::Resumed`) we cancel-
-//!   then-re-enqueue so the iOS notification queue tracks any config edits.
+//!   timestamps. Also runs on mobile while the app is foregrounded so the
+//!   in-app `show_quiz_prompt` event still fires for live UX, but it does
+//!   NOT raise OS notifications there — the mobile path below owns those.
+//! - **Mobile (Android + iOS)**: `tauri-plugin-notification` pre-enqueues a
+//!   batch of pending local notifications (capped at 32 to stay well under
+//!   iOS's 64-pending-per-app limit). On Android the plugin lands these as
+//!   `setExactAndAllowWhileIdle` alarms delivered by a BroadcastReceiver, so
+//!   the notification fires whether or not our app process is alive. When
+//!   the app is foregrounded (`RunEvent::Resumed`) we cancel-then-re-enqueue
+//!   so the queue tracks any config edits and the rolling horizon never
+//!   drains.
 
-#[cfg(target_os = "android")]
-use std::collections::HashMap;
 use chrono::{Datelike, Duration as ChronoDuration, Local, TimeZone, Timelike};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
@@ -143,12 +144,9 @@ fn check_mask(m: &WeekdayMask) -> Result<(), String> {
 #[derive(Default)]
 pub struct SchedulerState {
     pub config: ScheduleConfig,
-    /// Unix seconds — used by the desktop loop and the iOS resume re-enqueue
-    /// to avoid double-firing across config-change races.
+    /// Unix seconds — used by the desktop loop and the mobile resume
+    /// re-enqueue to avoid double-firing across config-change races.
     pub last_fired_at: i64,
-    /// Task id from tauri-plugin-schedule-task on Android.
-    #[allow(dead_code)] // read by the cfg(target_os="android") schedule_next path
-    pub scheduled_task_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -338,8 +336,11 @@ pub async fn run_scheduler_loop(app: AppHandle) {
         let payload = QuizPromptPayload { source: "interval".into() };
         let _ = app.emit("show_quiz_prompt", &payload);
 
-        #[cfg(mobile)]
-        crate::notification::show_quiz_prompt_notification(&app);
+        // On mobile, the OS-level pre-enqueued alarm (see schedule_next_mobile)
+        // fires the user-facing notification — we do NOT also fire one from
+        // here because that would double-notify when the app happens to be
+        // foregrounded at the slot. Desktop has no OS alarm path, so the
+        // foreground emission above is the only signal.
 
         let state = app.state::<AppState>();
         let mut s = state.scheduler.lock().unwrap();
@@ -354,133 +355,42 @@ fn count_today(app: &AppHandle) -> u32 {
 }
 
 // ---------------------------------------------------------------------------
-// Android scheduling via tauri-plugin-schedule-task (WorkManager).
-// Gated to Android only — the upstream plugin ships no iOS impl.
-// ---------------------------------------------------------------------------
-
-#[cfg(target_os = "android")]
-pub struct ScheduledTaskRouter;
-
-#[cfg(target_os = "android")]
-impl tauri_plugin_schedule_task::ScheduledTaskHandler<tauri::Wry> for ScheduledTaskRouter {
-    fn handle_scheduled_task(
-        &self,
-        task_name: &str,
-        _params: HashMap<String, String>,
-        app: &AppHandle,
-    ) -> tauri_plugin_schedule_task::Result<()> {
-        log::info!("[scheduler] handle_scheduled_task: {task_name}");
-        if task_name == "quiz_prompt" {
-            let config = {
-                let state = app.state::<AppState>();
-                let s = state.scheduler.lock().unwrap();
-                s.config.clone()
-            };
-
-            // For DailyMinCount, skip emission if today's count is already
-            // satisfied — but always re-arm so future days still fire.
-            let should_emit = match &config {
-                ScheduleConfig::DailyMinCount { min_count, .. } => {
-                    count_today(app) < *min_count
-                }
-                _ => true,
-            };
-
-            if should_emit {
-                let payload = QuizPromptPayload { source: "scheduled".into() };
-                let _ = app.emit("show_quiz_prompt", &payload);
-                crate::notification::show_quiz_prompt_notification(app);
-            } else {
-                log::info!("[scheduler] android: daily_min_count satisfied, skipping notification");
-            }
-
-            // Re-arm next.
-            let app_clone = app.clone();
-            tauri::async_runtime::spawn(async move {
-                schedule_next(&app_clone).await;
-            });
-        }
-        Ok(())
-    }
-}
-
-#[cfg(target_os = "android")]
-pub async fn schedule_next(app: &AppHandle) {
-    use tauri_plugin_schedule_task::ScheduleTaskExt;
-
-    let state = app.state::<AppState>();
-    let (config, old_ids) = {
-        let s = state.scheduler.lock().unwrap();
-        (s.config.clone(), s.scheduled_task_ids.clone())
-    };
-
-    // Cancel anything already armed.
-    for tid in old_ids {
-        let req = tauri_plugin_schedule_task::CancelTaskRequest { task_id: tid.clone() };
-        if let Err(e) = app.schedule_task().cancel_task(req) {
-            log::error!("[scheduler] cancel previous {tid} failed: {e}");
-        }
-    }
-    {
-        let mut s = state.scheduler.lock().unwrap();
-        s.scheduled_task_ids.clear();
-    }
-
-    if matches!(config, ScheduleConfig::Disabled) {
-        return;
-    }
-
-    let now = Local::now();
-    let count_provider = || count_today(app);
-    let Some(next) = next_fire_after(&config, now, count_provider) else {
-        return;
-    };
-
-    let secs = (next - now).num_seconds().max(60) as u64;
-    let req = tauri_plugin_schedule_task::ScheduleTaskRequest {
-        task_name: "quiz_prompt".to_string(),
-        schedule_time: tauri_plugin_schedule_task::ScheduleTime::Duration(secs),
-        parameters: None,
-    };
-
-    match app.schedule_task().schedule_task(req).await {
-        Ok(resp) if resp.success => {
-            log::info!(
-                "[scheduler] android: scheduled in {}s (id={}, target={next})",
-                secs, resp.task_id
-            );
-            let mut s = state.scheduler.lock().unwrap();
-            s.scheduled_task_ids.push(resp.task_id);
-        }
-        Ok(resp) => {
-            log::error!(
-                "[scheduler] android schedule failed: {}",
-                resp.message.unwrap_or_default()
-            );
-        }
-        Err(e) => log::error!("[scheduler] android schedule error: {e}"),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// iOS scheduling via tauri-plugin-notification. Schedules a batch of pending
-// local notifications upfront because iOS doesn't run app-side handler code
-// in the background.
+// Mobile scheduling via tauri-plugin-notification.
 //
-// Caveats (documented to the user, not fixed here):
-//   - DailyMinCount on iOS will always fire the notification regardless of
-//     today's count — the handler that would consult the DB only runs when
-//     the user opens the app. The next foreground tick re-enqueues the
-//     remaining slots and re-evaluates.
-//   - iOS caps pending notifications at 64 per app; we stay well under.
+// Pre-enqueues a batch of pending local notifications via the OS-level alarm
+// path. On Android this lands as `setExactAndAllowWhileIdle` (or
+// `setAndAllowWhileIdle` if exact-alarm permission isn't granted) and is
+// delivered by `app.tauri.notification.TimedNotificationPublisher` — a
+// BroadcastReceiver that fires regardless of whether our app process is
+// alive. On iOS the pending notifications sit in UNUserNotificationCenter.
+//
+// We use this on Android *and* iOS because the previous Android path
+// (tauri-plugin-schedule-task / WorkManager → startActivity → Rust handler)
+// silently failed: Android 10+ blocks background activity launches, so the
+// worker could never wake the app to call `show_quiz_prompt_notification`.
+// The notification-plugin path bypasses the app entirely — the OS displays
+// the notification directly when the alarm fires.
+//
+// Caveats:
+//   - DailyMinCount fires the OS notification at the configured time
+//     regardless of today's count: the count check would require running
+//     app-side code at fire time, which neither platform reliably allows
+//     when the app is killed. The next foreground tick (or app launch)
+//     re-enqueues the remaining slots and re-evaluates.
+//   - iOS caps pending notifications at 64 per app; we stay well under
+//     (max_pending=32) so this leaves headroom for any other notifications.
+//   - `allow_while_idle: true` is critical on Android — without it the
+//     alarm uses RTC (no wakeup) and won't fire while the device is in
+//     Doze / dozing screen-off state, which is exactly when the user
+//     needs the reminder.
 // ---------------------------------------------------------------------------
 
-#[cfg(target_os = "ios")]
-pub async fn schedule_next_ios(app: &AppHandle) {
+#[cfg(mobile)]
+pub async fn schedule_next_mobile(app: &AppHandle) {
     use tauri_plugin_notification::{NotificationExt, Schedule};
-    // Absolute path: line 21 brings `tokio::time` into scope as `time`,
-    // which would otherwise shadow the `time` crate and resolve to
-    // `tokio::time::OffsetDateTime` (doesn't exist).
+    // Absolute path: `tokio::time` is brought into scope as `time` at the
+    // top of this file, which would otherwise shadow the `time` crate and
+    // make `time::OffsetDateTime` unresolvable.
     use ::time::OffsetDateTime;
 
     let state = app.state::<AppState>();
@@ -491,7 +401,7 @@ pub async fn schedule_next_ios(app: &AppHandle) {
 
     // Cancel any previously enqueued notifications. Best-effort.
     if let Err(e) = app.notification().cancel_all() {
-        log::warn!("[scheduler] ios cancel_all failed: {e}");
+        log::warn!("[scheduler] mobile cancel_all failed: {e}");
     }
 
     if matches!(config, ScheduleConfig::Disabled) {
@@ -502,7 +412,7 @@ pub async fn schedule_next_ios(app: &AppHandle) {
     let horizon = now + ChronoDuration::days(30);
     let mut anchor = now;
     let mut count = 0;
-    let max_pending: usize = 32; // half of iOS's 64-cap, plenty of runway.
+    let max_pending: usize = 32;
 
     while count < max_pending {
         let Some(next) =
@@ -516,24 +426,31 @@ pub async fn schedule_next_ios(app: &AppHandle) {
 
         let unix = next.timestamp();
         let Ok(date) = OffsetDateTime::from_unix_timestamp(unix) else {
-            log::warn!("[scheduler] ios: bad timestamp {unix}");
+            log::warn!("[scheduler] mobile: bad timestamp {unix}");
             break;
         };
 
-        let id = crate::notification::ios_notification_id(count as i32);
-        let res = app
+        let id = crate::notification::mobile_notification_id(count as i32);
+        let builder = app
             .notification()
             .builder()
             .id(id)
             .title("KataMarrant")
             .body("Quiz time! Tap to identify a technique.")
             .extra("type", "quiz_prompt")
-            .sound("default")
-            .schedule(Schedule::At { date, repeating: false, allow_while_idle: false })
+            .sound("default");
+
+        // Android needs an explicit channel id; iOS ignores it (no channels).
+        // cfg-shadowing avoids an `unused_mut` warning on the iOS build.
+        #[cfg(target_os = "android")]
+        let builder = builder.channel_id(crate::notification::QUIZ_CHANNEL);
+
+        let res = builder
+            .schedule(Schedule::At { date, repeating: false, allow_while_idle: true })
             .show();
 
         if let Err(e) = res {
-            log::error!("[scheduler] ios schedule({next}) failed: {e}");
+            log::error!("[scheduler] mobile schedule({next}) failed: {e}");
             break;
         }
 
@@ -541,5 +458,5 @@ pub async fn schedule_next_ios(app: &AppHandle) {
         count += 1;
     }
 
-    log::info!("[scheduler] ios: enqueued {count} notifications");
+    log::info!("[scheduler] mobile: enqueued {count} notifications");
 }

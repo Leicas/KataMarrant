@@ -102,18 +102,7 @@ fn migrate_legacy_interval<R: tauri::Runtime>(store: &Store<R>) -> ScheduleConfi
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default();
-
-    // schedule-task is Android-only — its desktop init panics with
-    // "Cannot start a runtime from within a runtime", and the upstream
-    // plugin ships no iOS implementation. iOS uses tauri-plugin-notification
-    // for scheduling instead (see scheduler::schedule_next_ios).
-    #[cfg(target_os = "android")]
-    let builder = builder.plugin(tauri_plugin_schedule_task::init_with_handler(
-        scheduler::ScheduledTaskRouter,
-    ));
-
-    let builder = builder
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
@@ -149,7 +138,6 @@ pub fn run() {
                 scheduler: Mutex::new(SchedulerState {
                     config,
                     last_fired_at: 0,
-                    scheduled_task_ids: Vec::new(),
                 }),
                 recent_shown: Mutex::new(std::collections::VecDeque::with_capacity(
                     state::RECENT_SHOWN_CAP,
@@ -191,22 +179,20 @@ pub fn run() {
                 });
             }
 
-            // Android: arm the WorkManager-backed schedule.
-            #[cfg(target_os = "android")]
+            // Mobile: pre-enqueue pending OS-level notifications via
+            // tauri-plugin-notification. On Android this lands as
+            // `setExactAndAllowWhileIdle` and is delivered by the plugin's
+            // BroadcastReceiver — fires whether or not our app is running.
+            // On iOS this populates UNUserNotificationCenter's pending queue.
+            // We replaced the previous Android WorkManager path because that
+            // plugin's worker tried to relaunch MainActivity to deliver the
+            // event, which Android 10+ blocks (background activity launch
+            // restriction), so the notification never fired.
+            #[cfg(mobile)]
             {
                 let h = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    scheduler::schedule_next(&h).await;
-                });
-            }
-
-            // iOS: pre-enqueue pending local notifications via
-            // tauri-plugin-notification (no app-side handler required).
-            #[cfg(target_os = "ios")]
-            {
-                let h = app.handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    scheduler::schedule_next_ios(&h).await;
+                    scheduler::schedule_next_mobile(&h).await;
                 });
             }
 
@@ -248,17 +234,18 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    // RunEvent loop — used for the iOS "re-enqueue on resume" path.
-    // tauri-plugin-notification's iOS scheduler queues fire times as
-    // pending OS-level notifications, but the app-side count check for
-    // DailyMinCount can only run while the app is alive. Resuming gives us
-    // a chance to refresh the queue against the latest config + DB state.
+    // RunEvent loop — re-enqueue the OS-level notification batch whenever
+    // the app comes to the foreground on either mobile platform.
+    // `schedule_next_mobile` cancel_alls and re-enqueues from `now`, which
+    // (a) lets a fresh schedule edit propagate without waiting for the
+    // current pending alarm to fire, and (b) refreshes the rolling
+    // 32-slot horizon so the queue never drains.
     app.run(|_app_handle, event| {
-        #[cfg(target_os = "ios")]
+        #[cfg(mobile)]
         if let tauri::RunEvent::Resumed = event {
             let h = _app_handle.clone();
             tauri::async_runtime::spawn(async move {
-                scheduler::schedule_next_ios(&h).await;
+                scheduler::schedule_next_mobile(&h).await;
             });
         }
         let _ = &event;

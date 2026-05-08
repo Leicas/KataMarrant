@@ -30,24 +30,13 @@ thiserror = "2"
 log = "0.4"
 rand = "0.8"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
-# Top-level so `time::OffsetDateTime` is nameable from
-# scheduler::schedule_next_ios (iOS path passes it to
-# tauri-plugin-notification's `Schedule::At { date }`). When this dep
-# was target-scoped to cfg(target_os = "ios") the symbol was still
-# missing on the macos-latest CI runner — Cargo's resolver is reliable
-# only when the crate is in the top-level dep graph. The `time` crate
-# is already in the lockfile transitively via tauri-plugin-notification,
-# so this adds nothing to non-iOS binary size beyond a single name.
+# Top-level (rather than target-scoped to mobile) so `time::OffsetDateTime`
+# is nameable from `scheduler::schedule_next_mobile` on the macos-latest CI
+# runner: when this dep was target-scoped to `cfg(target_os = "ios")` the
+# symbol resolution was unreliable. The crate is already in the lockfile
+# transitively via tauri-plugin-notification, so adding it at the top level
+# costs only a single visible name on non-mobile binaries.
 time = { version = "0.3", features = ["std"] }
-
-# Android-only: the WorkManager-backed background scheduler. Skipped on
-# desktop because the plugin's desktop init calls block_on from inside the
-# tokio runtime and panics with "Cannot start a runtime from within a
-# runtime". Skipped on iOS because the upstream plugin ships no iOS impl
-# (Kotlin only) — iOS uses tauri-plugin-notification's native scheduling
-# instead, see scheduler::schedule_next_ios.
-[target.'cfg(target_os = "android")'.dependencies]
-tauri-plugin-schedule-task = { git = "https://github.com/charlesschaefer/tauri-plugin-schedule-task", branch = "main" }
 
 # Auto-updater: desktop-only. Tauri's updater plugin has no Android/iOS
 # implementation — mobile updates ship through Play Store / App Store /
