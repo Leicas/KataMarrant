@@ -1,0 +1,73 @@
+name: Rust tests + coverage
+
+on:
+  pull_request:
+    branches: [main, beta]
+  push:
+    branches: [main, beta]
+
+concurrency:
+  group: test-rust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: cargo test + llvm-cov
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          # Coverage builds use a separate profile so cache key is distinct
+          # from the lint job's cache to avoid evicting it.
+          shared-key: rust-coverage
+
+      # Tauri's compile graph pulls in webkit/gtk on Linux for the desktop
+      # build. cargo test --lib for the app_lib crate still needs them
+      # because the lib target is part of the Tauri-y workspace. Mirror the
+      # ci.yml dep list verbatim.
+      - name: Install Linux build deps for Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      # Pinned to v2 — the action is small and unlikely to break, but pin
+      # at the major to dodge surprise yanks.
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Generate coverage (lcov)
+        working-directory: src-tauri
+        # `--workspace` covers the single `kata-marrant` lib crate today;
+        # keeping the flag means new sub-crates are picked up automatically.
+        # `--lib` skips Tauri-runtime integration targets that need a webview.
+        run: cargo llvm-cov --workspace --lib --lcov --output-path lcov.info
+
+      - name: Show coverage summary
+        working-directory: src-tauri
+        run: cargo llvm-cov report --summary-only
+
+      # Anonymous Codecov uploads work for public repos — no token required.
+      # `fail_ci_if_error: false` means a Codecov outage doesn't block PRs.
+      # We don't gate on a coverage threshold yet; this PR establishes the
+      # baseline so the next PR can ratchet from a known starting point.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: src-tauri/lcov.info
+          flags: rust
+          fail_ci_if_error: false

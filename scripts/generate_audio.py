@@ -128,6 +128,14 @@ _READINGS: dict[str, str] = {
     "ura-nage":               "うらなげ",
     "sumi-otoshi":            "すみおとし",
     "yoko-gake":              "よこがけ",
+    # ----- Osaekomi-waza (group 6) — pinning techniques -----
+    "kesa-gatame":              "けさがため",
+    "kuzure-kesa-gatame":       "くずれけさがため",
+    "kata-gatame":              "かたがため",
+    "kami-shiho-gatame":        "かみしほうがため",
+    "kuzure-kami-shiho-gatame": "くずれかみしほうがため",
+    "yoko-shiho-gatame":        "よこしほうがため",
+    "tate-shiho-gatame":        "たてしほうがため",
 }
 
 

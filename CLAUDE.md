@@ -26,9 +26,16 @@ Rust-only (in `src-tauri/`):
 ```bash
 cargo check                  # fast type-check
 cargo clippy --all-targets   # lint
+cargo test --lib             # unit tests (scheduler math + quiz weighting + gamification)
+cargo llvm-cov --lib --summary-only   # local coverage report (needs `cargo install cargo-llvm-cov` once)
 ```
 
-There are no automated tests.
+The Rust unit tests cover the pure functions: `scheduler::next_fire_after`
+(all `ScheduleConfig` variants + quiet-hours), `commands::quiz::compute_weights`
++ the recent-shown cooldown deque, and `commands::gamification` XP curves.
+Tauri-runtime, SQLite, and platform-specific scheduler/notification code are
+NOT exercised — those need integration harnesses we don't have yet. CI runs
+`cargo test` + `cargo llvm-cov` and uploads to Codecov on every push/PR.
 
 ## Architecture
 

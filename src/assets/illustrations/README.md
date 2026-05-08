@@ -8,6 +8,7 @@ dropping a file with the matching slug. The frontend tries these in order:
 ```
 assets/illustrations/<slug>.gif
 assets/illustrations/<slug>.webp
+assets/illustrations/<slug>.svg
 assets/illustrations/<slug>.png
 assets/illustrations/<slug>.jpg
 <remote image_url from data.rs>     ← if you set it

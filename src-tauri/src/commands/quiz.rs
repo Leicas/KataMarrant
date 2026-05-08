@@ -81,10 +81,13 @@ pub fn get_technique(slug: String) -> AppResult<TechniqueDto> {
 /// - "any" → any other technique
 ///
 /// `group_filter`: when Some(n), only pick the answer from group n.
+/// `groups_filter`: when Some(vec), only pick from those groups (e.g. [1,2,3,4,5] for "Gokyo only").
+/// If both are set, `groups_filter` wins (it is the more general form).
 #[tauri::command]
 pub fn next_question(
     distractor_mode: Option<String>,
     group_filter: Option<u8>,
+    groups_filter: Option<Vec<u8>>,
     state: tauri::State<'_, AppState>,
 ) -> AppResult<QuizQuestion> {
     let mode = distractor_mode.as_deref().unwrap_or("same-group");
@@ -92,7 +95,11 @@ pub fn next_question(
     // Build the candidate pool (filtered by group if requested).
     let pool: Vec<&'static Technique> = TECHNIQUES
         .iter()
-        .filter(|t| group_filter.map_or(true, |g| t.group == g))
+        .filter(|t| match (&groups_filter, group_filter) {
+            (Some(gs), _) => gs.contains(&t.group),
+            (None, Some(g)) => t.group == g,
+            (None, None) => true,
+        })
         .collect();
     if pool.is_empty() {
         return Err(AppError::General("empty pool".into()));
@@ -206,7 +213,8 @@ fn weighted_pick<R: Rng>(weights: &[f64], rng: &mut R) -> usize {
 /// Then a "no-repeat" pass:
 ///
 /// - any slug present in `recents` has its weight multiplied by
-///   `RECENT_COOLDOWN_FACTOR` (95% suppression).
+///   `RECENT_COOLDOWN_FACTOR` (currently 0.0 — hard ban; see the constant's
+///   doc-comment for why we landed there instead of 0.05).
 /// - escape hatch: if EVERY candidate is in `recents` (e.g. the user is
 ///   filtering on a tiny group whose entire size fits in the deque), the
 ///   slug shown LONGEST ago — front of `recents` — gets its full
@@ -360,5 +368,124 @@ mod tests {
         // failed slug landed in the new band, well below the old one.
         assert!(weights[0] < 8.0, "recent-fail bonus appears too high: {weights:?}");
         assert!(weights[0] > 6.5, "recent-fail bonus appears too low: {weights:?}");
+    }
+
+    #[test]
+    fn baseline_weight_with_no_stats_or_recents() {
+        // Pool of 1, no stats, no recents, last_shown=0, now=0.
+        // Expected: 1 (base) + 6*0.5 (Laplace) + 0 (recency) + 1.5 (unseen)
+        //         + 0 (mistake) + 0 (recent_fail) = 5.5
+        let pool = pool_first(1);
+        let weights = compute_weights(&pool, &[], &[], 0);
+        assert_eq!(weights.len(), 1);
+        assert!((weights[0] - 5.5).abs() < 1e-9, "baseline drift: {:?}", weights);
+    }
+
+    #[test]
+    fn well_known_correct_slug_has_lower_weight_than_unseen() {
+        // Slug 0: 100 correct, 0 wrong, last_correct=Some(true), recent.
+        //   smoothed_miss = 1/102 ≈ 0.0098; recency=0; unseen=0; mistake=0;
+        //   recent_fail=0 → ~1.06.
+        // Slug 1: unseen → 5.5 baseline (see prior test).
+        let pool = pool_first(2);
+        let stats = vec![TechniqueStat {
+            slug: pool[0].slug.to_string(),
+            correct_count: 100,
+            wrong_count: 0,
+            last_shown_at: 1_000,
+            last_correct: Some(true),
+        }];
+        let weights = compute_weights(&pool, &stats, &[], 1_000);
+        assert!(weights[0] < weights[1], "{:?}", weights);
+        assert!(weights[0] < 1.5, "perfect slug should be ~1: {:?}", weights);
+    }
+
+    #[test]
+    fn recency_bonus_grows_with_age() {
+        // Same slug stats but compare two `now` values that differ by 14 days:
+        // recency_bonus is age_days/7 capped at 2 → 14d → +2 hit cap.
+        let pool = pool_first(1);
+        let stats = vec![TechniqueStat {
+            slug: pool[0].slug.to_string(),
+            correct_count: 1,
+            wrong_count: 0,
+            last_shown_at: 0,
+            last_correct: Some(true),
+        }];
+        let fresh = compute_weights(&pool, &stats, &[], 0);
+        let stale = compute_weights(&pool, &stats, &[], 14 * 86_400);
+        assert!(stale[0] > fresh[0], "stale should outweigh fresh: {fresh:?} vs {stale:?}");
+        // Cap kicks in at ~14 days; pushing further shouldn't keep growing.
+        let further = compute_weights(&pool, &stats, &[], 30 * 86_400);
+        assert!((further[0] - stale[0]).abs() < 1e-9, "recency cap broke: {further:?} vs {stale:?}");
+    }
+
+    #[test]
+    fn mistake_bonus_caps_at_three() {
+        // 100 wrongs would be +40 if uncapped; the cap is +3.
+        let pool = pool_first(1);
+        let stats = vec![TechniqueStat {
+            slug: pool[0].slug.to_string(),
+            correct_count: 0,
+            wrong_count: 100,
+            last_shown_at: 0,
+            last_correct: Some(true),
+        }];
+        let weights = compute_weights(&pool, &stats, &[], 0);
+        // 1 + 6*(101/102) + 0 + 0 + 3 (capped) + 0 ≈ 1 + 5.94 + 3 = 9.94
+        // Without the cap this would be ~46.94 — assert we're nowhere near.
+        assert!(weights[0] < 12.0, "mistake bonus didn't cap: {weights:?}");
+        assert!(weights[0] > 8.5, "mistake bonus too low: {weights:?}");
+    }
+
+    #[test]
+    fn weighted_pick_uses_full_distribution() {
+        // Deterministic RNG with a tiny pool and skewed weights — the test
+        // is statistical but the seed makes it reproducible.
+        use rand::SeedableRng;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+        let weights = [1.0, 9.0]; // slug 1 should win ~90% of trials.
+        let mut hits = [0usize; 2];
+        for _ in 0..1_000 {
+            hits[weighted_pick(&weights, &mut rng)] += 1;
+        }
+        // Loose bounds — well outside any plausible variance for 1k draws.
+        assert!(hits[1] > 800, "weight-9 outcome under-represented: {hits:?}");
+        assert!(hits[0] > 20, "weight-1 outcome never picked: {hits:?}");
+    }
+
+    #[test]
+    fn weighted_pick_handles_all_zero_weights() {
+        // total <= 0 path returns a uniform random index. Just check it
+        // doesn't panic and returns a valid index.
+        use rand::SeedableRng;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(7);
+        let weights = [0.0, 0.0, 0.0];
+        for _ in 0..100 {
+            let idx = weighted_pick(&weights, &mut rng);
+            assert!(idx < weights.len());
+        }
+    }
+
+    /// Mirrors the deque eviction loop inside `next_question`. We keep
+    /// `RECENT_SHOWN_CAP` covered here because the cap is the contract that
+    /// `compute_weights`'s "all on cooldown" escape hatch relies on.
+    #[test]
+    fn recent_shown_deque_evicts_fifo_at_cap() {
+        use std::collections::VecDeque;
+        let mut q: VecDeque<String> = VecDeque::with_capacity(RECENT_SHOWN_CAP);
+        for i in 0..(RECENT_SHOWN_CAP + 5) {
+            q.push_back(format!("slug-{i}"));
+            while q.len() > RECENT_SHOWN_CAP {
+                q.pop_front();
+            }
+        }
+        assert_eq!(q.len(), RECENT_SHOWN_CAP);
+        // The first five entries should have been evicted.
+        assert_eq!(q.front().unwrap(), &format!("slug-{}", 5));
+        assert_eq!(
+            q.back().unwrap(),
+            &format!("slug-{}", RECENT_SHOWN_CAP + 4)
+        );
     }
 }

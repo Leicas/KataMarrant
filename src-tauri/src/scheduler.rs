@@ -460,3 +460,321 @@ pub async fn schedule_next_mobile(app: &AppHandle) {
 
     log::info!("[scheduler] mobile: enqueued {count} notifications");
 }
+
+// ---------------------------------------------------------------------------
+// Unit tests for the pure scheduling math. Everything below covers
+// `next_fire_after` (and its helpers) — the function shared by every
+// platform's "when is the next prompt due?" path. No Tauri runtime required.
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Datelike, Local, TimeZone};
+
+    /// Build a deterministic Local timestamp for tests. We feed all branches
+    /// of `next_fire_after` through this so the assertions are tied to a
+    /// known wall clock, not the host runner's clock.
+    fn dt(y: i32, m: u32, d: u32, h: u32, mi: u32) -> chrono::DateTime<Local> {
+        Local
+            .with_ymd_and_hms(y, m, d, h, mi, 0)
+            .single()
+            .expect("valid timestamp")
+    }
+
+    fn never_fired() -> u32 { 0 }
+
+    // ----- Validation -------------------------------------------------------
+
+    #[test]
+    fn validate_disabled_is_ok() {
+        assert!(ScheduleConfig::Disabled.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_bad_time() {
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 25, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+        };
+        assert!(cfg.validate().is_err());
+    }
+
+    #[test]
+    fn validate_rejects_zero_weekdays() {
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 9, minute: 0 },
+            weekdays: WeekdayMask(0),
+        };
+        assert!(cfg.validate().is_err());
+    }
+
+    #[test]
+    fn validate_rejects_zero_minutes() {
+        let cfg = ScheduleConfig::EveryMinutes { minutes: 0, quiet_hours: None };
+        assert!(cfg.validate().is_err());
+    }
+
+    #[test]
+    fn validate_rejects_minutes_over_one_day() {
+        let cfg = ScheduleConfig::EveryMinutes { minutes: 24 * 60 + 1, quiet_hours: None };
+        assert!(cfg.validate().is_err());
+    }
+
+    #[test]
+    fn validate_rejects_min_count_out_of_range() {
+        let bad_low = ScheduleConfig::DailyMinCount {
+            time: TimeOfDay { hour: 7, minute: 0 },
+            min_count: 0,
+            weekdays: WeekdayMask::ALL,
+        };
+        let bad_high = ScheduleConfig::DailyMinCount {
+            time: TimeOfDay { hour: 7, minute: 0 },
+            min_count: 201,
+            weekdays: WeekdayMask::ALL,
+        };
+        assert!(bad_low.validate().is_err());
+        assert!(bad_high.validate().is_err());
+    }
+
+    // ----- WeekdayMask ------------------------------------------------------
+
+    #[test]
+    fn weekday_mask_all_includes_every_day() {
+        let mask = WeekdayMask::ALL;
+        assert!(mask.includes(chrono::Weekday::Mon));
+        assert!(mask.includes(chrono::Weekday::Tue));
+        assert!(mask.includes(chrono::Weekday::Wed));
+        assert!(mask.includes(chrono::Weekday::Thu));
+        assert!(mask.includes(chrono::Weekday::Fri));
+        assert!(mask.includes(chrono::Weekday::Sat));
+        assert!(mask.includes(chrono::Weekday::Sun));
+    }
+
+    #[test]
+    fn weekday_mask_weekdays_only() {
+        // Mon-Fri = bits 0..=4 set.
+        let mask = WeekdayMask(0b0001_1111);
+        assert!(mask.includes(chrono::Weekday::Mon));
+        assert!(mask.includes(chrono::Weekday::Fri));
+        assert!(!mask.includes(chrono::Weekday::Sat));
+        assert!(!mask.includes(chrono::Weekday::Sun));
+    }
+
+    // ----- Disabled / EveryMinutes -----------------------------------------
+
+    #[test]
+    fn disabled_returns_none() {
+        let after = dt(2026, 1, 5, 12, 0);
+        assert!(next_fire_after(&ScheduleConfig::Disabled, after, never_fired).is_none());
+    }
+
+    #[test]
+    fn every_minutes_advances_by_minutes() {
+        let after = dt(2026, 1, 5, 12, 0);
+        let cfg = ScheduleConfig::EveryMinutes { minutes: 30, quiet_hours: None };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 12, 30));
+    }
+
+    #[test]
+    fn every_minutes_skips_into_quiet_window() {
+        // 22:00 quiet → 07:00. After=21:50 + 30min = 22:20 → skips to 07:00.
+        let after = dt(2026, 1, 5, 21, 50);
+        let cfg = ScheduleConfig::EveryMinutes {
+            minutes: 30,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 22, minute: 0 },
+                end: TimeOfDay { hour: 7, minute: 0 },
+            }),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        // Quiet crosses midnight, so end-of-quiet is 07:00 the next day.
+        assert_eq!(next, dt(2026, 1, 6, 7, 0));
+    }
+
+    #[test]
+    fn every_minutes_no_quiet_hours_passes_through() {
+        let after = dt(2026, 1, 5, 1, 0);
+        let cfg = ScheduleConfig::EveryMinutes {
+            minutes: 60,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 22, minute: 0 },
+                end: TimeOfDay { hour: 7, minute: 0 },
+            }),
+        };
+        // Candidate 02:00 lands inside quiet → push to 07:00 same day.
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 7, 0));
+    }
+
+    #[test]
+    fn every_minutes_outside_quiet_passes_through() {
+        let after = dt(2026, 1, 5, 12, 0);
+        let cfg = ScheduleConfig::EveryMinutes {
+            minutes: 30,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 22, minute: 0 },
+                end: TimeOfDay { hour: 7, minute: 0 },
+            }),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 12, 30));
+    }
+
+    // ----- Daily -----------------------------------------------------------
+
+    #[test]
+    fn daily_picks_today_when_after_is_before_slot() {
+        // 2026-01-05 is a Monday. Slot is 19:00 daily. After=10:00 → today 19:00.
+        let after = dt(2026, 1, 5, 10, 0);
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 19, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 19, 0));
+    }
+
+    #[test]
+    fn daily_picks_tomorrow_when_after_is_past_slot() {
+        let after = dt(2026, 1, 5, 20, 0);
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 19, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 6, 19, 0));
+    }
+
+    #[test]
+    fn daily_skips_disabled_weekdays() {
+        // 2026-01-05 = Mon. Mask is Sat+Sun only (bits 5 and 6).
+        let after = dt(2026, 1, 5, 8, 0);
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 9, minute: 0 },
+            weekdays: WeekdayMask(0b0110_0000),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        // First valid is Saturday 2026-01-10.
+        assert_eq!(next, dt(2026, 1, 10, 9, 0));
+        assert_eq!(next.weekday(), chrono::Weekday::Sat);
+    }
+
+    // ----- TwiceDaily -------------------------------------------------------
+
+    #[test]
+    fn twice_daily_picks_earlier_slot() {
+        // Both 09:00 and 19:00; after=08:00 → 09:00 today.
+        let after = dt(2026, 1, 5, 8, 0);
+        let cfg = ScheduleConfig::TwiceDaily {
+            time_a: TimeOfDay { hour: 9, minute: 0 },
+            time_b: TimeOfDay { hour: 19, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 9, 0));
+    }
+
+    #[test]
+    fn twice_daily_picks_later_slot_after_first() {
+        // After=10:00 has passed 09:00; should pick 19:00 today.
+        let after = dt(2026, 1, 5, 10, 0);
+        let cfg = ScheduleConfig::TwiceDaily {
+            time_a: TimeOfDay { hour: 9, minute: 0 },
+            time_b: TimeOfDay { hour: 19, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 19, 0));
+    }
+
+    #[test]
+    fn twice_daily_rolls_to_tomorrow_after_both() {
+        let after = dt(2026, 1, 5, 20, 0);
+        let cfg = ScheduleConfig::TwiceDaily {
+            time_a: TimeOfDay { hour: 9, minute: 0 },
+            time_b: TimeOfDay { hour: 19, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        // First slot tomorrow is the earlier of the two, 09:00.
+        assert_eq!(next, dt(2026, 1, 6, 9, 0));
+    }
+
+    // ----- DailyMinCount ---------------------------------------------------
+
+    #[test]
+    fn daily_min_count_uses_daily_slot_independent_of_count() {
+        // The architect's plan: `next_fire_after` does NOT consult the count
+        // provider for DailyMinCount — that gating happens at fire time.
+        let after = dt(2026, 1, 5, 10, 0);
+        let cfg = ScheduleConfig::DailyMinCount {
+            time: TimeOfDay { hour: 19, minute: 0 },
+            min_count: 5,
+            weekdays: WeekdayMask::ALL,
+        };
+        // Even with a "huge" today_count, we still get back the next slot.
+        let next = next_fire_after(&cfg, after, || 999).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 19, 0));
+    }
+
+    // ----- is_in_quiet -----------------------------------------------------
+
+    #[test]
+    fn is_in_quiet_handles_simple_window() {
+        let qh = QuietHours {
+            start: TimeOfDay { hour: 22, minute: 0 },
+            end: TimeOfDay { hour: 23, minute: 0 },
+        };
+        assert!(is_in_quiet(dt(2026, 1, 5, 22, 30), &qh));
+        assert!(!is_in_quiet(dt(2026, 1, 5, 21, 30), &qh));
+        // Half-open: end exclusive.
+        assert!(!is_in_quiet(dt(2026, 1, 5, 23, 0), &qh));
+    }
+
+    #[test]
+    fn is_in_quiet_handles_midnight_crossing() {
+        let qh = QuietHours {
+            start: TimeOfDay { hour: 22, minute: 0 },
+            end: TimeOfDay { hour: 7, minute: 0 },
+        };
+        assert!(is_in_quiet(dt(2026, 1, 5, 22, 30), &qh));
+        assert!(is_in_quiet(dt(2026, 1, 5, 3, 0), &qh));
+        assert!(!is_in_quiet(dt(2026, 1, 5, 7, 0), &qh));
+        assert!(!is_in_quiet(dt(2026, 1, 5, 12, 0), &qh));
+    }
+
+    #[test]
+    fn is_in_quiet_returns_false_when_start_equals_end() {
+        let qh = QuietHours {
+            start: TimeOfDay { hour: 12, minute: 0 },
+            end: TimeOfDay { hour: 12, minute: 0 },
+        };
+        // Empty window: never quiet.
+        assert!(!is_in_quiet(dt(2026, 1, 5, 12, 0), &qh));
+        assert!(!is_in_quiet(dt(2026, 1, 5, 0, 0), &qh));
+    }
+
+    // ----- Round-trip serialization (used to persist to settings.json) -----
+
+    #[test]
+    fn schedule_config_serde_round_trip() {
+        let cfg = ScheduleConfig::EveryMinutes {
+            minutes: 60,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 22, minute: 0 },
+                end: TimeOfDay { hour: 7, minute: 0 },
+            }),
+        };
+        let json = serde_json::to_string(&cfg).expect("serialize");
+        let back: ScheduleConfig = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(cfg, back);
+    }
+
+    #[test]
+    fn schedule_config_default_is_disabled() {
+        let cfg = ScheduleConfig::default();
+        assert_eq!(cfg, ScheduleConfig::Disabled);
+    }
+}

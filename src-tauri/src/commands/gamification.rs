@@ -117,6 +117,13 @@ pub const ACHIEVEMENTS: &[AchievementDef] = &[
         description_fr: "Chaque prise répondue au moins une fois.",
     },
     AchievementDef {
+        code: "osaekomi_master",
+        name_en: "Osaekomi Master",
+        name_fr: "Maître du Osaekomi",
+        description_en: "All 7 osaekomi-waza pins answered correctly at least once.",
+        description_fr: "Les 7 immobilisations osaekomi-waza correctes au moins une fois.",
+    },
+    AchievementDef {
         code: "centenary",
         name_en: "Centenary",
         name_fr: "Centenaire",
@@ -385,13 +392,32 @@ pub fn record_answer_with_gamification(
         }
     }
 
-    // All forty.
+    // All forty. Note: TECHNIQUES.len() now includes the 7 Osaekomi pins
+    // in addition to the 40 throws, so the literal threshold is 47. The
+    // achievement code/name is preserved for back-compat with existing
+    // unlock rows; the description still reads "every technique answered
+    // at least once" which stays accurate.
     if !db::is_unlocked(&conn, "all_forty")? {
         let attempted = db::count_distinct_attempted(&conn)?;
         if attempted >= TECHNIQUES.len() as i64
             && db::unlock_achievement(&conn, "all_forty", None)?
         {
             unlocked.push(UnlockedAchievement::new("all_forty"));
+        }
+    }
+
+    // Osaekomi Master — every group-6 (osaekomi-waza) pin answered correctly
+    // at least once. Looser bar than the per-Gokyo-group mastery checks
+    // because the user just learned the syllabus exists.
+    if !db::is_unlocked(&conn, "osaekomi_master")? {
+        let slugs = group_slugs(6);
+        if !slugs.is_empty() {
+            let correct = db::count_correct_at_least_once_in(&conn, &slugs)?;
+            if correct >= slugs.len() as i64
+                && db::unlock_achievement(&conn, "osaekomi_master", None)?
+            {
+                unlocked.push(UnlockedAchievement::new("osaekomi_master"));
+            }
         }
     }
 
