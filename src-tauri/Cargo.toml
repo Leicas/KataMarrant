@@ -1,6 +1,6 @@
 [package]
 name = "kata-marrant"
-version = "1.6.0-beta.1"
+version = "1.6.0"
 description = "Judo kata & gokyo trainer"
 authors = ["Antoine"]
 license = ""

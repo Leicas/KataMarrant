@@ -1,3 +1,17 @@
+## [1.6.0](https://github.com/Leicas/KataMarrant/compare/v1.5.2...v1.6.0) (2026-05-08)
+
+### Features
+
+* **assets:** add CC-licensed illustrations for the 7 OSAEKOMI WAZA pins ([cf93dca](https://github.com/Leicas/KataMarrant/commit/cf93dca2645124b61d21f5c4b0234c51e6c5625a))
+* **audio:** add edge-tts clips for the 7 OSAEKOMI WAZA pins ([f82901b](https://github.com/Leicas/KataMarrant/commit/f82901bf1bfeb50ca6fc38accfb1e1c60b8b8f81))
+* **data:** add OSAEKOMI WAZA technique set + Osaekomi Master trophy ([8219859](https://github.com/Leicas/KataMarrant/commit/8219859f5918f08ae80c8c523c4688f3c62aec4f))
+* **data:** wire Kodokan official YouTube IDs for the 7 OSAEKOMI WAZA pins ([215c5ec](https://github.com/Leicas/KataMarrant/commit/215c5ecd407a17d07bdbec6affa31be5a8e8b3b2))
+* **home:** add Gokyo / Osaekomi / Both quick-select on home screen ([5af6e6e](https://github.com/Leicas/KataMarrant/commit/5af6e6e65a39f9cff8f18f9979f12c44723b6245))
+
+### Bug Fixes
+
+* **ui:** give SVG illustrations a paper backdrop so the black strokes read on dark theme ([4068e4a](https://github.com/Leicas/KataMarrant/commit/4068e4a88ab087860682c52f42e47e27c9d685af)), closes [#f4ecd8](https://github.com/Leicas/KataMarrant/issues/f4ecd8)
+
 ## [1.5.2](https://github.com/Leicas/KataMarrant/compare/v1.5.1...v1.5.2) (2026-05-08)
 
 ### Bug Fixes
