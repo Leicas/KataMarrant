@@ -1751,3 +1751,42 @@ main {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
+
+/* ----- Foreground "Quiz time" toast --------------------------------------
+   Bottom-anchored slide-up. Reuses the .micro-feedback timing/easing for
+   visual consistency with the XP/combo pill stack. Pointer-events:none so
+   the user can keep tapping the underlying UI; the toast is purely a
+   confirmation that the scheduled quiz fired. */
+.fg-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1450;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.fg-toast {
+  pointer-events: none;
+  padding: 10px 18px;
+  border-radius: var(--rad-pill);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  box-shadow: var(--shadow-2);
+  border: 1px solid var(--accent-edge);
+  animation: fgToastIn .22s cubic-bezier(.2, .8, .2, 1);
+}
+.fg-toast-out { animation: fgToastOut .22s ease-in forwards; }
+@keyframes fgToastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fgToastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(8px); }
+}

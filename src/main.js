@@ -1182,12 +1182,21 @@ function resolveGroupsFilter() {
   return null;
 }
 
-async function fetchNextQuestion() {
-  return invoke("next_question", {
+async function fetchNextQuestion(forcedSlug = null) {
+  // The backend `next_question` command currently doesn't accept a forced
+  // slug — it always picks via the weighted shuffler. We pass it as an
+  // extra arg for forward-compatibility (the Rust agent may add a
+  // `forced_slug: Option<String>` field). If it's ignored today, we still
+  // fall back to a regular pick and the user lands on the quiz tab, which
+  // is the contract requirement: "let it pick a question" if forcing is
+  // unsupported.
+  const args = {
     distractorMode: store.settings.distractor_mode,
     groupFilter: null,
     groupsFilter: resolveGroupsFilter(),
-  });
+  };
+  if (forcedSlug) args.forcedSlug = forcedSlug;
+  return invoke("next_question", args);
 }
 
 async function recordAnswer(slug, correct, mode, responseMs) {
@@ -3158,7 +3167,7 @@ async function renderSettings() {
 // Quiz session lifecycle
 // ---------------------------------------------------------------------------
 
-async function startSingleQuiz() {
+async function startSingleQuiz(forcedSlug = null) {
   navigate("quiz");
   store.quiz = {
     question: null,
@@ -3169,7 +3178,7 @@ async function startSingleQuiz() {
   };
   render();
   try {
-    store.quiz.question = await fetchNextQuestion();
+    store.quiz.question = await fetchNextQuestion(forcedSlug);
     store.quiz.shown_at = Date.now();
   } catch (e) {
     console.error(e);
@@ -3834,6 +3843,24 @@ function showNotifRationaleCard() {
   document.body.appendChild(wrap);
 }
 
+// Lightweight bottom-of-screen toast used to confirm a foreground scheduled
+// quiz fire ("Quiz time"). Auto-dismisses after ~2.5s. We keep it as its own
+// container instead of piggy-backing on .micro-feedback so the bottom-anchored
+// position doesn't fight with the top-right XP/combo pill stack.
+function showFgToast(text) {
+  let stack = document.querySelector(".fg-toasts");
+  if (!stack) {
+    stack = h("div", { class: "fg-toasts", "aria-live": "polite" });
+    document.body.appendChild(stack);
+  }
+  const toast = h("div", { class: "fg-toast" }, text);
+  stack.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("fg-toast-out");
+    setTimeout(() => toast.remove(), 220);
+  }, 2500);
+}
+
 // Open OS-level notification settings via tauri-plugin-opener. We don't have
 // a perfect deep-link target across platforms, so this is best-effort: on
 // Android we link to the app's notification settings page; on iOS / desktop
@@ -3944,9 +3971,32 @@ async function boot() {
   catch (e) { console.error("fetchGamificationState", e); }
 
   try {
-    await listen("show_quiz_prompt", async (_event) => {
+    await listen("show_quiz_prompt", async (event) => {
+      // Round 2 payload shape: { technique_slug?, source }. Tolerate a
+      // missing/legacy payload (no body) by falling back to a regular
+      // single-quiz start, which is what the old listener did.
+      const payload = (event && event.payload) || {};
+      const source = payload.source || "scheduled";
+      const slug   = payload.technique_slug || null;
+
+      // Don't interrupt a rapid burst mid-run. The user explicitly opted in
+      // to a 10-question session; barging in with a single-question quiz
+      // would silently scramble their progress.
       if (store.rapid && store.rapid.current < store.rapid.total) return;
-      startSingleQuiz();
+
+      // Foreground toast: only for naturally-firing scheduled prompts. Tap /
+      // action sources came from the user explicitly engaging the
+      // notification, so the toast would be redundant noise.
+      if (source === "scheduled") {
+        try { showFgToast(t("toast.quiz_time")); } catch (_) {}
+      }
+
+      // Always switch to the quiz tab before auto-starting — otherwise a
+      // notification tap while the user is in Settings would silently push a
+      // quiz into a hidden view. startSingleQuiz() calls navigate("quiz")
+      // first, so this is implicit.
+      try { startSingleQuiz(slug); }
+      catch (e) { console.error("startSingleQuiz from event failed", e); }
     });
   } catch (e) {
     console.error("listen show_quiz_prompt failed", e);
