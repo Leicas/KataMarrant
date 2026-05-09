@@ -2940,6 +2940,101 @@ function buildSyncSection() {
   return wrap;
 }
 
+// Builds the Notifications block of the Settings card: permission state row
+// + Enable/Open-OS-settings CTA + sound/vibration toggles. Pulls the latest
+// permission state from Rust on every render so it reflects OS-level changes
+// the user made outside the app.
+async function buildNotificationSection() {
+  const wrap = h("div", { class: "notif-pane" });
+
+  const state = await fetchNotificationPermissionState();
+  const stateLabel = (() => {
+    switch (state) {
+      case "granted": return t("settings.notif.state.granted");
+      case "denied":  return t("settings.notif.state.denied");
+      case "default": return t("settings.notif.state.default");
+      default:        return t("settings.notif.state.unknown");
+    }
+  })();
+
+  wrap.appendChild(h("label", { class: "notif-section-label" },
+    t("settings.notif.section")));
+
+  wrap.appendChild(h("div", { class: "notif-perm-row" },
+    h("span", { class: "muted" }, t("settings.notif.permission") + ": "),
+    h("span", { class: `notif-state notif-state-${state}` }, stateLabel),
+  ));
+
+  if (state === "default") {
+    wrap.appendChild(h("div", { class: "field" },
+      h("button", {
+        class: "btn primary full",
+        type: "button",
+        onclick: async () => {
+          await requestNotificationPermission();
+          markNotifRationaleShown();
+          render();
+        },
+      }, t("settings.notif.enable")),
+    ));
+  } else if (state === "denied") {
+    wrap.appendChild(h("div", { class: "field" },
+      h("div", { class: "muted", style: "margin-bottom:8px" },
+        t("settings.notif.denied_help")),
+      h("button", {
+        class: "btn full",
+        type: "button",
+        onclick: () => openOsNotificationSettings(),
+      }, t("settings.notif.open_os_settings")),
+    ));
+  } else if (state === "granted") {
+    wrap.appendChild(h("div", { class: "muted", style: "margin: 0 0 10px 0" },
+      t("settings.notif.granted_help")));
+  }
+
+  // Sound toggle
+  const soundSelect = h("select", {});
+  for (const [val, label] of [["1", t("settings.notif.toggle_on")],
+                              ["0", t("settings.notif.toggle_off")]]) {
+    const opt = h("option", { value: val }, label);
+    if ((val === "1") === store.settings.notifSoundEnabled) opt.selected = true;
+    soundSelect.appendChild(opt);
+  }
+  soundSelect.addEventListener("change", () => {
+    const on = soundSelect.value === "1";
+    store.settings.notifSoundEnabled = on;
+    try { localStorage.setItem(STORE_KEYS.notifSoundEnabled, on ? "1" : "0"); }
+    catch (_) {}
+  });
+  wrap.appendChild(h("div", { class: "field" },
+    h("label", {}, t("settings.notif.sound")),
+    soundSelect,
+  ));
+
+  // Vibration toggle
+  const vibSelect = h("select", {});
+  for (const [val, label] of [["1", t("settings.notif.toggle_on")],
+                              ["0", t("settings.notif.toggle_off")]]) {
+    const opt = h("option", { value: val }, label);
+    if ((val === "1") === store.settings.notifVibrationEnabled) opt.selected = true;
+    vibSelect.appendChild(opt);
+  }
+  vibSelect.addEventListener("change", () => {
+    const on = vibSelect.value === "1";
+    store.settings.notifVibrationEnabled = on;
+    try { localStorage.setItem(STORE_KEYS.notifVibrationEnabled, on ? "1" : "0"); }
+    catch (_) {}
+  });
+  wrap.appendChild(h("div", { class: "field" },
+    h("label", {}, t("settings.notif.vibration")),
+    vibSelect,
+    h("div", { class: "muted", style: "margin-top:6px" },
+      t("settings.notif.prefs_help")),
+  ));
+
+  return wrap;
+}
+
 async function renderSettings() {
   const root = el("#view-settings");
   root.innerHTML = "";
@@ -2966,6 +3061,9 @@ async function renderSettings() {
 
   // Schedule editor — multi-control: kind picker + conditional sub-fields.
   card.appendChild(buildScheduleEditor());
+
+  // Notification permission + sound/vibration prefs (Track: notif UX).
+  card.appendChild(await buildNotificationSection());
 
   // Sync (Track 4) — magic-link login + manual sync.
   card.appendChild(buildSyncSection());
