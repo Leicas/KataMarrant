@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Status-bar small icon for KataMarrant quiz reminders.
+
+    Android API 21+ strips color from notification small icons and re-tints
+    them with the system accent (or our `notification_color` meta-data). The
+    drawable below therefore uses only opaque white on a transparent
+    background — all anti-aliasing relies on path geometry, not gradients
+    or partial alpha.
+
+    Shape: a stylized "K" (KataMarrant) with a curved sweep behind it
+    suggesting the throwing-arc motion of a kata throw. Pure geometry — no
+    photo-realism, in line with Android's monochrome small-icon guidelines.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Outer throwing-arc: 3/4 ring centered on the icon, suggesting
+         the rotational sweep of a throw. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2.5 C17.247,2.5 21.5,6.753 21.5,12 C21.5,17.247 17.247,21.5 12,21.5 L12,19.5 C16.142,19.5 19.5,16.142 19.5,12 C19.5,7.858 16.142,4.5 12,4.5 L12,2.5 Z" />
+
+    <!-- Stylized "K": vertical stem + two diagonal bars meeting at the
+         midline. Coordinates kept on a 2-px grid for crisp rendering at
+         every density. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M6,4 L8,4 L8,20 L6,20 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M14.6,4 L16.8,4 L9.6,12 L8,10.5 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M8,13.5 L9.6,12 L16.8,20 L14.6,20 Z" />
+</vector>

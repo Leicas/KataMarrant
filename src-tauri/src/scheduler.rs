@@ -35,11 +35,19 @@ pub enum ScheduleConfig {
     Daily {
         time: TimeOfDay,
         weekdays: WeekdayMask,
+        /// Optional quiet-hours override. If a computed slot lands inside
+        /// the window, it is pushed forward to the first minute past the
+        /// window's end. `#[serde(default)]` keeps backward compat with
+        /// settings.json blobs that pre-date this field.
+        #[serde(default)]
+        quiet_hours: Option<QuietHours>,
     },
     TwiceDaily {
         time_a: TimeOfDay,
         time_b: TimeOfDay,
         weekdays: WeekdayMask,
+        #[serde(default)]
+        quiet_hours: Option<QuietHours>,
     },
     DailyMinCount {
         time: TimeOfDay,
@@ -88,14 +96,16 @@ impl ScheduleConfig {
     pub fn validate(&self) -> Result<(), String> {
         match self {
             ScheduleConfig::Disabled => Ok(()),
-            ScheduleConfig::Daily { time, weekdays } => {
+            ScheduleConfig::Daily { time, weekdays, quiet_hours } => {
                 check_time(time)?;
-                check_mask(weekdays)
+                check_mask(weekdays)?;
+                check_quiet(quiet_hours.as_ref())
             }
-            ScheduleConfig::TwiceDaily { time_a, time_b, weekdays } => {
+            ScheduleConfig::TwiceDaily { time_a, time_b, weekdays, quiet_hours } => {
                 check_time(time_a)?;
                 check_time(time_b)?;
-                check_mask(weekdays)
+                check_mask(weekdays)?;
+                check_quiet(quiet_hours.as_ref())
             }
             ScheduleConfig::DailyMinCount { time, min_count, weekdays } => {
                 check_time(time)?;
@@ -111,14 +121,18 @@ impl ScheduleConfig {
                 if *minutes == 0 || *minutes > 24 * 60 {
                     return Err(format!("minutes must be in 1..=1440, got {minutes}"));
                 }
-                if let Some(qh) = quiet_hours {
-                    check_time(&qh.start)?;
-                    check_time(&qh.end)?;
-                }
-                Ok(())
+                check_quiet(quiet_hours.as_ref())
             }
         }
     }
+}
+
+fn check_quiet(qh: Option<&QuietHours>) -> Result<(), String> {
+    if let Some(qh) = qh {
+        check_time(&qh.start)?;
+        check_time(&qh.end)?;
+    }
+    Ok(())
 }
 
 fn check_time(t: &TimeOfDay) -> Result<(), String> {
@@ -149,9 +163,24 @@ pub struct SchedulerState {
     pub last_fired_at: i64,
 }
 
+/// Payload emitted with the `show_quiz_prompt` event.
+///
+/// `source` is one of:
+/// - `"scheduled"` — the desktop tokio loop matched a configured slot.
+///   (Replaces the legacy `"interval"` value; same wire shape.)
+/// - `"manual"` — `trigger_quiz_now` IPC call from the UI.
+/// - `"notification_tap"` — user tapped a delivered notification body.
+/// - `"action"` — user tapped an action button on a delivered
+///   notification (Answer now / Snooze 1h / Skip today flow).
+///
+/// `technique_slug` is set when the source carried a pre-picked slug
+/// (notification taps include the slug we baked into the alarm at
+/// enqueue time); it is `None` for desktop-tick / manual paths so the
+/// frontend can fall back to live spaced-rep weighting.
 #[derive(Debug, Clone, Serialize)]
 pub struct QuizPromptPayload {
     pub source: String,
+    pub technique_slug: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -172,12 +201,16 @@ pub fn next_fire_after(
 ) -> Option<chrono::DateTime<Local>> {
     match config {
         ScheduleConfig::Disabled => None,
-        ScheduleConfig::Daily { time, weekdays } => {
+        ScheduleConfig::Daily { time, weekdays, quiet_hours } => {
             next_daily_slot(after, *time, *weekdays)
+                .map(|dt| advance_past_quiet(dt, quiet_hours.as_ref()))
         }
-        ScheduleConfig::TwiceDaily { time_a, time_b, weekdays } => {
-            let a = next_daily_slot(after, *time_a, *weekdays);
-            let b = next_daily_slot(after, *time_b, *weekdays);
+        ScheduleConfig::TwiceDaily { time_a, time_b, weekdays, quiet_hours } => {
+            let qh = quiet_hours.as_ref();
+            let a = next_daily_slot(after, *time_a, *weekdays)
+                .map(|dt| advance_past_quiet(dt, qh));
+            let b = next_daily_slot(after, *time_b, *weekdays)
+                .map(|dt| advance_past_quiet(dt, qh));
             match (a, b) {
                 (Some(x), Some(y)) => Some(x.min(y)),
                 (x, y) => x.or(y),
@@ -186,7 +219,11 @@ pub fn next_fire_after(
         ScheduleConfig::DailyMinCount { time, weekdays, .. } => {
             // The min-count check happens at fire time, not at scheduling
             // time — we always ask "when does the next slot land?" and let
-            // the handler decide whether to actually emit.
+            // the handler decide whether to actually emit. Quiet hours are
+            // intentionally omitted from this variant: a "smart daily"
+            // slot at a fixed time is the user's explicit choice — pushing
+            // it past quiet hours could surprise them by reminding hours
+            // late.
             next_daily_slot(after, *time, *weekdays)
         }
         ScheduleConfig::EveryMinutes { minutes, quiet_hours } => {
@@ -333,7 +370,10 @@ pub async fn run_scheduler_loop(app: AppHandle) {
         }
 
         log::info!("[scheduler] emitting show_quiz_prompt (next was {next})");
-        let payload = QuizPromptPayload { source: "interval".into() };
+        let payload = QuizPromptPayload {
+            source: "scheduled".into(),
+            technique_slug: None,
+        };
         let _ = app.emit("show_quiz_prompt", &payload);
 
         // On mobile, the OS-level pre-enqueued alarm (see schedule_next_mobile)
@@ -387,6 +427,18 @@ fn count_today(app: &AppHandle) -> u32 {
 
 #[cfg(mobile)]
 pub async fn schedule_next_mobile(app: &AppHandle) {
+    schedule_next_mobile_with_anchor(app, Local::now()).await;
+}
+
+/// `schedule_next_mobile` variant that lets the caller override the
+/// "anchor" — the timestamp the slot search starts strictly after. Used
+/// by the snooze action: the snooze button passes `now + 1h` so the next
+/// pending alarm sits an hour out, regardless of the configured cadence.
+#[cfg(mobile)]
+pub async fn schedule_next_mobile_with_anchor(
+    app: &AppHandle,
+    start_anchor: chrono::DateTime<Local>,
+) {
     use tauri_plugin_notification::{NotificationExt, Schedule};
     // Absolute path: `tokio::time` is brought into scope as `time` at the
     // top of this file, which would otherwise shadow the `time` crate and
@@ -408,9 +460,11 @@ pub async fn schedule_next_mobile(app: &AppHandle) {
         return;
     }
 
-    let now = Local::now();
-    let horizon = now + ChronoDuration::days(30);
-    let mut anchor = now;
+    let locale = read_ui_language(app);
+    let (title, body) = localized_quiz_strings(&locale);
+
+    let horizon = Local::now() + ChronoDuration::days(30);
+    let mut anchor = start_anchor;
     let mut count = 0;
     let max_pending: usize = 32;
 
@@ -430,15 +484,32 @@ pub async fn schedule_next_mobile(app: &AppHandle) {
             break;
         };
 
+        // Pre-pick a technique deterministically: cycle through the
+        // syllabus by mapping the slot's epoch seconds modulo the
+        // technique count. We bake this into the notification's extras so
+        // the frontend can deep-link straight to the picked technique
+        // without paying a round-trip to recompute spaced-rep weights at
+        // notification-tap time. We deliberately do NOT use the live
+        // weighting here because it depends on stats that haven't been
+        // collected yet for slots 32 alarms ahead.
+        let picked_slug = pick_slug_for_slot(unix);
+
         let id = crate::notification::mobile_notification_id(count as i32);
         let builder = app
             .notification()
             .builder()
             .id(id)
-            .title("KataMarrant")
-            .body("Quiz time! Tap to identify a technique.")
+            .title(title)
+            .body(body)
+            .group("kata-quiz")
+            .summary("Quiz reminder")
+            .action_type_id(crate::notification::QUIZ_ACTION_TYPE_ID)
+            // Custom sound asset placeholder. The file does not yet exist
+            // in `res/raw/`, so the OS falls back to the channel's default
+            // sound — exactly what we want during rollout.
+            .sound("dojo_bell")
             .extra("type", "quiz_prompt")
-            .sound("default");
+            .extra("technique_slug", picked_slug);
 
         // Android needs an explicit channel id; iOS ignores it (no channels).
         // cfg-shadowing avoids an `unused_mut` warning on the iOS build.
@@ -459,6 +530,64 @@ pub async fn schedule_next_mobile(app: &AppHandle) {
     }
 
     log::info!("[scheduler] mobile: enqueued {count} notifications");
+}
+
+/// Read `ui_language` from the tauri-plugin-store `settings.json`.
+/// Returns `"en"` if the key is missing, malformed, or the underlying
+/// store cannot be opened — never propagates an error since we'd rather
+/// fall back to English than block notification scheduling.
+#[cfg(mobile)]
+fn read_ui_language(app: &AppHandle) -> String {
+    use tauri_plugin_store::StoreExt;
+    match app.store("settings.json") {
+        Ok(store) => store
+            .get("ui_language")
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_else(|| "en".into()),
+        Err(e) => {
+            log::warn!("[scheduler] open store for ui_language failed: {e}");
+            "en".into()
+        }
+    }
+}
+
+/// Localized title/body for the OS notification. Two locales today
+/// (en, fr); anything else falls back to English. Returned as static
+/// `&'static str` so we don't allocate per slot on the schedule loop.
+#[cfg(mobile)]
+fn localized_quiz_strings(locale: &str) -> (&'static str, &'static str) {
+    match locale {
+        "fr" => (
+            "KataMarrant",
+            "Heure du quiz ! Touchez pour identifier une technique.",
+        ),
+        _ => (
+            "KataMarrant",
+            "Quiz time! Tap to identify a technique.",
+        ),
+    }
+}
+
+/// Deterministic round-robin pick of a technique slug for a given slot
+/// timestamp. Keyed on the slot's epoch seconds so the same slot always
+/// maps to the same slug across re-enqueues, but the index walks
+/// monotonically over the day (epoch divided by 60) so the user sees
+/// genuine variety rather than a single technique on repeat.
+#[cfg(mobile)]
+fn pick_slug_for_slot(unix_seconds: i64) -> &'static str {
+    let len = crate::data::TECHNIQUES.len() as i64;
+    if len == 0 {
+        // Defensive: should never happen — TECHNIQUES is a static const.
+        return "";
+    }
+    // Bucket by minute so two slots within the same minute don't collide
+    // on the same technique (each `set_quiz_schedule` re-enqueue restarts
+    // the search and the deterministic mapping naturally varies).
+    let bucket = unix_seconds / 60;
+    // Rust's `%` follows the dividend's sign; `rem_euclid` keeps the
+    // index in [0, len) for negative epoch values too (test harnesses).
+    let idx = bucket.rem_euclid(len) as usize;
+    crate::data::TECHNIQUES[idx].slug
 }
 
 // ---------------------------------------------------------------------------
@@ -496,6 +625,7 @@ mod tests {
         let cfg = ScheduleConfig::Daily {
             time: TimeOfDay { hour: 25, minute: 0 },
             weekdays: WeekdayMask::ALL,
+            quiet_hours: None,
         };
         assert!(cfg.validate().is_err());
     }
@@ -505,6 +635,7 @@ mod tests {
         let cfg = ScheduleConfig::Daily {
             time: TimeOfDay { hour: 9, minute: 0 },
             weekdays: WeekdayMask(0),
+            quiet_hours: None,
         };
         assert!(cfg.validate().is_err());
     }
@@ -631,6 +762,7 @@ mod tests {
         let cfg = ScheduleConfig::Daily {
             time: TimeOfDay { hour: 19, minute: 0 },
             weekdays: WeekdayMask::ALL,
+            quiet_hours: None,
         };
         let next = next_fire_after(&cfg, after, never_fired).expect("some");
         assert_eq!(next, dt(2026, 1, 5, 19, 0));
@@ -642,6 +774,7 @@ mod tests {
         let cfg = ScheduleConfig::Daily {
             time: TimeOfDay { hour: 19, minute: 0 },
             weekdays: WeekdayMask::ALL,
+            quiet_hours: None,
         };
         let next = next_fire_after(&cfg, after, never_fired).expect("some");
         assert_eq!(next, dt(2026, 1, 6, 19, 0));
@@ -654,11 +787,63 @@ mod tests {
         let cfg = ScheduleConfig::Daily {
             time: TimeOfDay { hour: 9, minute: 0 },
             weekdays: WeekdayMask(0b0110_0000),
+            quiet_hours: None,
         };
         let next = next_fire_after(&cfg, after, never_fired).expect("some");
         // First valid is Saturday 2026-01-10.
         assert_eq!(next, dt(2026, 1, 10, 9, 0));
         assert_eq!(next.weekday(), chrono::Weekday::Sat);
+    }
+
+    #[test]
+    fn daily_pushes_slot_past_quiet_window_same_day() {
+        // Slot is 06:30; quiet hours 06:00 → 08:00 (same-day window).
+        // Expect the slot to land at 08:00 same day.
+        let after = dt(2026, 1, 5, 0, 0);
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 6, minute: 30 },
+            weekdays: WeekdayMask::ALL,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 6, minute: 0 },
+                end: TimeOfDay { hour: 8, minute: 0 },
+            }),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 8, 0));
+    }
+
+    #[test]
+    fn daily_pushes_slot_past_quiet_window_crossing_midnight() {
+        // Slot is 23:00; quiet hours 22:00 → 07:00 (crosses midnight).
+        // Expect the slot to land at 07:00 the NEXT day.
+        let after = dt(2026, 1, 5, 12, 0);
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 23, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 22, minute: 0 },
+                end: TimeOfDay { hour: 7, minute: 0 },
+            }),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 6, 7, 0));
+    }
+
+    #[test]
+    fn daily_outside_quiet_passes_through() {
+        // Slot 12:00 with a 22:00→07:00 quiet window; the slot is firmly
+        // outside, no shift.
+        let after = dt(2026, 1, 5, 0, 0);
+        let cfg = ScheduleConfig::Daily {
+            time: TimeOfDay { hour: 12, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 22, minute: 0 },
+                end: TimeOfDay { hour: 7, minute: 0 },
+            }),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 12, 0));
     }
 
     // ----- TwiceDaily -------------------------------------------------------
@@ -671,6 +856,7 @@ mod tests {
             time_a: TimeOfDay { hour: 9, minute: 0 },
             time_b: TimeOfDay { hour: 19, minute: 0 },
             weekdays: WeekdayMask::ALL,
+            quiet_hours: None,
         };
         let next = next_fire_after(&cfg, after, never_fired).expect("some");
         assert_eq!(next, dt(2026, 1, 5, 9, 0));
@@ -684,6 +870,7 @@ mod tests {
             time_a: TimeOfDay { hour: 9, minute: 0 },
             time_b: TimeOfDay { hour: 19, minute: 0 },
             weekdays: WeekdayMask::ALL,
+            quiet_hours: None,
         };
         let next = next_fire_after(&cfg, after, never_fired).expect("some");
         assert_eq!(next, dt(2026, 1, 5, 19, 0));
@@ -696,10 +883,48 @@ mod tests {
             time_a: TimeOfDay { hour: 9, minute: 0 },
             time_b: TimeOfDay { hour: 19, minute: 0 },
             weekdays: WeekdayMask::ALL,
+            quiet_hours: None,
         };
         let next = next_fire_after(&cfg, after, never_fired).expect("some");
         // First slot tomorrow is the earlier of the two, 09:00.
         assert_eq!(next, dt(2026, 1, 6, 9, 0));
+    }
+
+    #[test]
+    fn twice_daily_pushes_morning_slot_past_quiet() {
+        // Quiet 22:00 → 07:00. Morning slot 06:30 lands inside quiet →
+        // shifted to 07:00. Evening slot 19:00 untouched. Earlier of the
+        // two (07:00) wins.
+        let after = dt(2026, 1, 5, 0, 0);
+        let cfg = ScheduleConfig::TwiceDaily {
+            time_a: TimeOfDay { hour: 6, minute: 30 },
+            time_b: TimeOfDay { hour: 19, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 22, minute: 0 },
+                end: TimeOfDay { hour: 7, minute: 0 },
+            }),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 7, 0));
+    }
+
+    #[test]
+    fn twice_daily_pushes_both_slots_past_quiet() {
+        // Quiet 06:00 → 23:30 (very long; both slots inside).
+        // 09:00 → 23:30, 19:00 → 23:30 → earliest is the same-day 23:30.
+        let after = dt(2026, 1, 5, 0, 0);
+        let cfg = ScheduleConfig::TwiceDaily {
+            time_a: TimeOfDay { hour: 9, minute: 0 },
+            time_b: TimeOfDay { hour: 19, minute: 0 },
+            weekdays: WeekdayMask::ALL,
+            quiet_hours: Some(QuietHours {
+                start: TimeOfDay { hour: 6, minute: 0 },
+                end: TimeOfDay { hour: 23, minute: 30 },
+            }),
+        };
+        let next = next_fire_after(&cfg, after, never_fired).expect("some");
+        assert_eq!(next, dt(2026, 1, 5, 23, 30));
     }
 
     // ----- DailyMinCount ---------------------------------------------------
