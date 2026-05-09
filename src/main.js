@@ -288,6 +288,29 @@ const I18N = {
     "diag.note":                        "The local count includes every individual answer across single, rapid, and drill modes — so 50 rapid rounds = 500 entries, not 50. The server's leaderboard only reflects the synced subset.",
     "diag.dedup_btn":                   "Clean up duplicates",
     "diag.dedup_done":                  "Removed {removed} duplicates ({before} → {after}). Trigger a sync next so the server picks up the cleaned state.",
+
+    "notif_rationale_title":   "Get reminded to drill techniques",
+    "notif_rationale_body":    "We'll send a quick quiz reminder at the times you choose. You can change or turn this off anytime in Settings.",
+    "notif_rationale_cta_yes": "Enable reminders",
+    "notif_rationale_cta_no":  "Not now",
+
+    "settings.notif.section":         "Notifications",
+    "settings.notif.permission":      "Permission",
+    "settings.notif.state.granted":   "Allowed",
+    "settings.notif.state.denied":    "Blocked",
+    "settings.notif.state.default":   "Not yet asked",
+    "settings.notif.state.unknown":   "Unknown",
+    "settings.notif.enable":          "Enable reminders",
+    "settings.notif.open_os_settings":"Open system settings",
+    "settings.notif.denied_help":     "Reminders are blocked at the OS level. Open the system settings to allow them again.",
+    "settings.notif.granted_help":    "Reminders can be delivered. Adjust schedule and prefs below.",
+    "settings.notif.sound":           "Sound on notifications",
+    "settings.notif.vibration":       "Vibrate on notifications",
+    "settings.notif.toggle_on":       "On",
+    "settings.notif.toggle_off":      "Off",
+    "settings.notif.prefs_help":      "These prefs apply to future reminders. Channel changes may need a fresh schedule edit to take effect.",
+
+    "toast.quiz_time": "Quiz time",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -550,6 +573,29 @@ const I18N = {
     "diag.note":                        "Le compteur local inclut chaque réponse individuelle, donc 50 rafales = 500 entrées, pas 50. Le classement serveur ne reflète que ce qui a été synchronisé.",
     "diag.dedup_btn":                   "Nettoyer les doublons",
     "diag.dedup_done":                  "{removed} doublons supprimés ({before} → {after}). Déclenche une synchro pour propager l'état nettoyé au serveur.",
+
+    "notif_rationale_title":   "Activer les rappels d'entraînement",
+    "notif_rationale_body":    "On t'enverra un petit rappel de quiz aux horaires que tu choisis. Tu peux modifier ou désactiver à tout moment dans les Réglages.",
+    "notif_rationale_cta_yes": "Activer les rappels",
+    "notif_rationale_cta_no":  "Pas maintenant",
+
+    "settings.notif.section":         "Notifications",
+    "settings.notif.permission":      "Autorisation",
+    "settings.notif.state.granted":   "Autorisée",
+    "settings.notif.state.denied":    "Bloquée",
+    "settings.notif.state.default":   "Pas encore demandée",
+    "settings.notif.state.unknown":   "Inconnue",
+    "settings.notif.enable":          "Activer les rappels",
+    "settings.notif.open_os_settings":"Ouvrir les réglages système",
+    "settings.notif.denied_help":     "Les rappels sont bloqués au niveau du système. Ouvre les réglages système pour les autoriser à nouveau.",
+    "settings.notif.granted_help":    "Les rappels peuvent être envoyés. Ajuste le planning et les préférences ci-dessous.",
+    "settings.notif.sound":           "Son des notifications",
+    "settings.notif.vibration":       "Vibration des notifications",
+    "settings.notif.toggle_on":       "Activé",
+    "settings.notif.toggle_off":      "Désactivé",
+    "settings.notif.prefs_help":      "Ces préférences s'appliquent aux prochains rappels. Une modification du planning peut être nécessaire pour qu'elles prennent effet.",
+
+    "toast.quiz_time": "C'est l'heure du quiz",
   },
 };
 
@@ -596,6 +642,16 @@ const store = {
       // users keep their preference.
       prompt_mode: "audio",
     },
+    // Notification UX prefs. Both default ON. Persisted to localStorage
+    // under `notif_sound_enabled` / `notif_vibration_enabled` (the keys
+    // contracted with the backend agent). Round-1 scope: UI scaffold only;
+    // not pushed back to the Rust channel builder yet.
+    notifSoundEnabled: true,
+    notifVibrationEnabled: true,
+    // Mirrors `get_notification_permission_state` — "granted" | "denied"
+    // | "default" | null while loading. Refreshed on boot and after the
+    // user clicks "Enable reminders" in the rationale modal or settings.
+    notifPermissionState: null,
   },
   quiz: null,
   rapid: null,
@@ -632,6 +688,10 @@ const STORE_KEYS = {
   updaterAutoCheck:    "kata.updater_auto_check",
   updaterLastNotes:    "kata.updater_last_notes",
   updaterLastDismiss:  "kata.updater_last_dismiss",
+  // Notification UX (round 1: storage-only; backend reads on next channel rebuild).
+  notifRationaleShown: "notif_rationale_shown",
+  notifSoundEnabled:   "notif_sound_enabled",
+  notifVibrationEnabled: "notif_vibration_enabled",
 };
 
 // ---------------------------------------------------------------------------
@@ -757,6 +817,15 @@ function loadLocalSettings() {
     const savedDrillMode = localStorage.getItem(STORE_KEYS.drillPromptMode);
     if (["image", "kanji", "romaji", "audio"].includes(savedDrillMode)) {
       store.settings.drill.prompt_mode = savedDrillMode;
+    }
+    // Notification prefs default ON; only flip to false when explicitly "0".
+    const savedSound = localStorage.getItem(STORE_KEYS.notifSoundEnabled);
+    if (savedSound !== null) {
+      store.settings.notifSoundEnabled = savedSound !== "0";
+    }
+    const savedVib = localStorage.getItem(STORE_KEYS.notifVibrationEnabled);
+    if (savedVib !== null) {
+      store.settings.notifVibrationEnabled = savedVib !== "0";
     }
   } catch (_) {}
 }
