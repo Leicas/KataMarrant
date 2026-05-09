@@ -15,11 +15,21 @@ rapid-fire bursts, and a periodic notification that reopens the quiz.
 npm install
 npm run dev                  # desktop dev (hot-reload frontend, compiles Rust)
 npm run build                # desktop release
+npm run android:init         # one-time android scaffolding (init + apply patches)
 npm run android:dev          # android dev (requires Android Studio + JDK)
 npm run android:build        # android release apk
 npm run ios:dev              # ios dev (requires Xcode on macOS, see iOS section)
 npm run ios:build            # ios release ipa (requires signing setup)
 ```
+
+`src-tauri/gen/` is gitignored — `tauri android/ios init` regenerates it
+wholesale. Hand-edited Android customisations live in
+`src-tauri/android-patches/` and are re-applied by
+`scripts/patch-android-gen.mjs` (which `npm run android:init` invokes
+automatically; CI runs it after its own `tauri android init` step). If you
+manually re-run `tauri android init` afterwards, follow up with
+`npm run android:patch-gen` to re-apply the manifest perms +
+notification small-icon + accent color.
 
 Rust-only (in `src-tauri/`):
 

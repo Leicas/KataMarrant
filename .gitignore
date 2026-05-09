@@ -2,34 +2,12 @@ node_modules/
 dist/
 target/
 src-tauri/target/
-# `tauri android/ios init` regenerates everything under src-tauri/gen/, so
-# the contents are ignored by default. We still need to track a small set
-# of files we customise (manifest permissions, notification icon, color
-# resources) because they are NOT regenerated on subsequent inits — Tauri
-# preserves existing user-edited files. We therefore ignore everything
-# under gen/ but un-ignore exactly the paths we own. Note: gitignore can
-# only re-include a file if NO parent directory was ignored, which is why
-# this uses a glob (`/**`) rather than a directory rule.
-# Ignore everything Tauri's `tauri android/ios init` writes under
-# src-tauri/gen/, except the small set of files we hand-edit (manifest
-# permissions, notification small-icon drawable, color resources).
-# Tauri preserves these on re-init, so they belong in git.
-#
-# Gitignore subtlety: re-including a file requires every parent directory
-# to be reachable (i.e. NOT excluded by an earlier rule), so we ignore at
-# the file-pattern level using `**/*` and explicitly un-ignore each
-# parent directory in the path of every kept leaf.
-src-tauri/gen/**/*
-!src-tauri/gen/android/
-!src-tauri/gen/android/app/
-!src-tauri/gen/android/app/src/
-!src-tauri/gen/android/app/src/main/
-!src-tauri/gen/android/app/src/main/AndroidManifest.xml
-!src-tauri/gen/android/app/src/main/res/
-!src-tauri/gen/android/app/src/main/res/drawable/
-!src-tauri/gen/android/app/src/main/res/drawable/ic_stat_quiz.xml
-!src-tauri/gen/android/app/src/main/res/values/
-!src-tauri/gen/android/app/src/main/res/values/colors.xml
+# `tauri android/ios init` regenerates everything under src-tauri/gen/ on
+# every CI run, so the contents are ignored. Hand-edited customisations
+# (notification icon drawable, manifest permission additions, accent
+# color) live under `src-tauri/android-patches/` and are re-applied
+# post-init by `scripts/patch-android-gen.mjs`.
+src-tauri/gen/
 .venv/
 .claude/
 .DS_Store

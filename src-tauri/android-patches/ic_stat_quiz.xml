@@ -11,6 +11,11 @@
     Shape: a stylized "K" (KataMarrant) with a curved sweep behind it
     suggesting the throwing-arc motion of a kata throw. Pure geometry — no
     photo-realism, in line with Android's monochrome small-icon guidelines.
+
+    Copied verbatim into gen/android/app/src/main/res/drawable/ by
+    scripts/patch-android-gen.mjs after `npx tauri android init`. The
+    source-of-truth lives here, not in gen/, because gen/ is regenerated
+    fresh on every CI run.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
