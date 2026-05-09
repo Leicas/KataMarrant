@@ -310,6 +310,10 @@ const I18N = {
     "settings.notif.toggle_off":      "Off",
     "settings.notif.prefs_help":      "These prefs apply to future reminders. Channel changes may need a fresh schedule edit to take effect.",
 
+    "notif.action.answer": "Answer now",
+    "notif.action.snooze": "Snooze 1h",
+    "notif.action.skip":   "Skip today",
+
     "toast.quiz_time": "Quiz time",
   },
   fr: {
@@ -594,6 +598,10 @@ const I18N = {
     "settings.notif.toggle_on":       "Activé",
     "settings.notif.toggle_off":      "Désactivé",
     "settings.notif.prefs_help":      "Ces préférences s'appliquent aux prochains rappels. Une modification du planning peut être nécessaire pour qu'elles prennent effet.",
+
+    "notif.action.answer": "Répondre",
+    "notif.action.snooze": "Reporter 1 h",
+    "notif.action.skip":   "Passer aujourd'hui",
 
     "toast.quiz_time": "C'est l'heure du quiz",
   },
@@ -3891,6 +3899,75 @@ async function requestNotificationPermission() {
   }
 }
 
+// Registers the "quiz_prompt" action group with the OS and subscribes to
+// action-button taps. The Rust plugin's public API doesn't expose action-type
+// registration, so this has to live JS-side. The `quiz_prompt` id matches the
+// Rust constant `notification::QUIZ_ACTION_TYPE_ID`. Idempotent — safe to
+// call on every boot.
+async function setupNotificationActions() {
+  try {
+    await invoke("plugin:notification|register_action_types", {
+      types: [{
+        id: "quiz_prompt",
+        actions: [
+          { id: "answer",     title: t("notif.action.answer") },
+          { id: "snooze_1h",  title: t("notif.action.snooze") },
+          { id: "skip_today", title: t("notif.action.skip"),
+            destructive: true },
+        ],
+      }],
+    });
+  } catch (e) {
+    // Older plugin builds or desktop platforms without action support — log
+    // and continue. Lock-Screen actions degrade gracefully (notification
+    // still appears, just without buttons).
+    console.warn("registerActionTypes failed:", e);
+  }
+
+  try {
+    const Channel = window.__TAURI__?.core?.Channel;
+    if (!Channel) {
+      console.warn("__TAURI__.core.Channel unavailable; onAction skipped");
+      return;
+    }
+    const handler = new Channel((notification) => {
+      const actionId = notification?.actionId || notification?.action_id;
+      const slug = notification?.extra?.technique_slug
+                || notification?.extra?.["technique_slug"]
+                || null;
+      if (!actionId) return;
+      // Forward to Rust so server-side state (skip-today flag, snooze
+      // re-enqueue) is updated authoritatively. Both arg shapes are
+      // tolerated to match Rust's serde renaming.
+      invoke("notification_action_handler", {
+        actionId,
+        techniqueSlug: slug,
+        action_id: actionId,
+        technique_slug: slug,
+      }).catch((e) => console.error("notification_action_handler failed:", e));
+
+      // For the "answer" action, also drive the frontend straight into the
+      // quiz with the slug pre-selected. Rust will not navigate the UI.
+      if (actionId === "answer") {
+        try { startSingleQuiz(slug); } catch (_) {}
+      }
+    });
+    // The plugin's listener registration command is `register_listener` on
+    // 2.x; older builds used camelCase `registerListener`. Try both.
+    try {
+      await invoke("plugin:notification|register_listener", {
+        event: "actionPerformed", handler,
+      });
+    } catch (_) {
+      await invoke("plugin:notification|registerListener", {
+        event: "actionPerformed", handler,
+      });
+    }
+  } catch (e) {
+    console.warn("onAction setup failed:", e);
+  }
+}
+
 function notifRationaleAlreadyShown() {
   try {
     return localStorage.getItem(STORE_KEYS.notifRationaleShown) === "1";
@@ -4099,6 +4176,12 @@ async function boot() {
   } catch (e) {
     console.error("listen show_quiz_prompt failed", e);
   }
+
+  // Lock-Screen action buttons (Answer / Snooze / Skip) — registered each
+  // boot, idempotent. Failures are non-fatal: the notification still shows
+  // without buttons.
+  try { await setupNotificationActions(); }
+  catch (e) { console.error("setupNotificationActions failed", e); }
 
   navigate("home");
 
