@@ -1,3 +1,16 @@
+## [1.7.0](https://github.com/Leicas/KataMarrant/compare/v1.6.0...v1.7.0) (2026-05-09)
+
+### Features
+
+* **android:** manifest exact-alarm perms + notification icon/color resources ([9a6082d](https://github.com/Leicas/KataMarrant/commit/9a6082d4fc5a705f9a6e98af670772b3b2b8540d)), closes [#D4A24](https://github.com/Leicas/KataMarrant/issues/D4A24)
+* **notif:** add i18n strings + state plumbing for notification UX ([5cbecac](https://github.com/Leicas/KataMarrant/commit/5cbecac837e96638a4ac0c4f7741194761483d25))
+* **notif:** add onboarding rationale modal + permission helpers ([7a9e6e9](https://github.com/Leicas/KataMarrant/commit/7a9e6e9b82c2337a5f95d85b0f20203c8f296a80))
+* **notif:** channel v2 + action handler + permission commands ([f6567e7](https://github.com/Leicas/KataMarrant/commit/f6567e77aabb3b7a18a2cf744570af58f70a40ce))
+* **notif:** route show_quiz_prompt payload + foreground toast ([52eddb2](https://github.com/Leicas/KataMarrant/commit/52eddb290fd4da7312a5f39afc4e2ff1b89fa02b))
+* **notif:** wire up quiz_prompt action types + onAction listener (JS-side) ([acd1cb7](https://github.com/Leicas/KataMarrant/commit/acd1cb7169cc083c1941255c82587e9de3d54029))
+* **scheduler:** quiet hours on Daily/TwiceDaily + localized mobile notif builder ([e8c2e6a](https://github.com/Leicas/KataMarrant/commit/e8c2e6aa9669584a3b267678f06eb23cfcc12a76))
+* **ui:** add Notifications section to Settings ([fa066a7](https://github.com/Leicas/KataMarrant/commit/fa066a745606669905d155464d2bb07ca1f6fc06))
+
 ## [1.6.0](https://github.com/Leicas/KataMarrant/compare/v1.5.2...v1.6.0) (2026-05-08)
 
 ### Features
