@@ -288,6 +288,29 @@ const I18N = {
     "diag.note":                        "The local count includes every individual answer across single, rapid, and drill modes — so 50 rapid rounds = 500 entries, not 50. The server's leaderboard only reflects the synced subset.",
     "diag.dedup_btn":                   "Clean up duplicates",
     "diag.dedup_done":                  "Removed {removed} duplicates ({before} → {after}). Trigger a sync next so the server picks up the cleaned state.",
+
+    "notif_rationale_title":   "Get reminded to drill techniques",
+    "notif_rationale_body":    "We'll send a quick quiz reminder at the times you choose. You can change or turn this off anytime in Settings.",
+    "notif_rationale_cta_yes": "Enable reminders",
+    "notif_rationale_cta_no":  "Not now",
+
+    "settings.notif.section":         "Notifications",
+    "settings.notif.permission":      "Permission",
+    "settings.notif.state.granted":   "Allowed",
+    "settings.notif.state.denied":    "Blocked",
+    "settings.notif.state.default":   "Not yet asked",
+    "settings.notif.state.unknown":   "Unknown",
+    "settings.notif.enable":          "Enable reminders",
+    "settings.notif.open_os_settings":"Open system settings",
+    "settings.notif.denied_help":     "Reminders are blocked at the OS level. Open the system settings to allow them again.",
+    "settings.notif.granted_help":    "Reminders can be delivered. Adjust schedule and prefs below.",
+    "settings.notif.sound":           "Sound on notifications",
+    "settings.notif.vibration":       "Vibrate on notifications",
+    "settings.notif.toggle_on":       "On",
+    "settings.notif.toggle_off":      "Off",
+    "settings.notif.prefs_help":      "These prefs apply to future reminders. Channel changes may need a fresh schedule edit to take effect.",
+
+    "toast.quiz_time": "Quiz time",
   },
   fr: {
     "tab.home":     "Accueil",
@@ -550,6 +573,29 @@ const I18N = {
     "diag.note":                        "Le compteur local inclut chaque réponse individuelle, donc 50 rafales = 500 entrées, pas 50. Le classement serveur ne reflète que ce qui a été synchronisé.",
     "diag.dedup_btn":                   "Nettoyer les doublons",
     "diag.dedup_done":                  "{removed} doublons supprimés ({before} → {after}). Déclenche une synchro pour propager l'état nettoyé au serveur.",
+
+    "notif_rationale_title":   "Activer les rappels d'entraînement",
+    "notif_rationale_body":    "On t'enverra un petit rappel de quiz aux horaires que tu choisis. Tu peux modifier ou désactiver à tout moment dans les Réglages.",
+    "notif_rationale_cta_yes": "Activer les rappels",
+    "notif_rationale_cta_no":  "Pas maintenant",
+
+    "settings.notif.section":         "Notifications",
+    "settings.notif.permission":      "Autorisation",
+    "settings.notif.state.granted":   "Autorisée",
+    "settings.notif.state.denied":    "Bloquée",
+    "settings.notif.state.default":   "Pas encore demandée",
+    "settings.notif.state.unknown":   "Inconnue",
+    "settings.notif.enable":          "Activer les rappels",
+    "settings.notif.open_os_settings":"Ouvrir les réglages système",
+    "settings.notif.denied_help":     "Les rappels sont bloqués au niveau du système. Ouvre les réglages système pour les autoriser à nouveau.",
+    "settings.notif.granted_help":    "Les rappels peuvent être envoyés. Ajuste le planning et les préférences ci-dessous.",
+    "settings.notif.sound":           "Son des notifications",
+    "settings.notif.vibration":       "Vibration des notifications",
+    "settings.notif.toggle_on":       "Activé",
+    "settings.notif.toggle_off":      "Désactivé",
+    "settings.notif.prefs_help":      "Ces préférences s'appliquent aux prochains rappels. Une modification du planning peut être nécessaire pour qu'elles prennent effet.",
+
+    "toast.quiz_time": "C'est l'heure du quiz",
   },
 };
 
@@ -596,6 +642,16 @@ const store = {
       // users keep their preference.
       prompt_mode: "audio",
     },
+    // Notification UX prefs. Both default ON. Persisted to localStorage
+    // under `notif_sound_enabled` / `notif_vibration_enabled` (the keys
+    // contracted with the backend agent). Round-1 scope: UI scaffold only;
+    // not pushed back to the Rust channel builder yet.
+    notifSoundEnabled: true,
+    notifVibrationEnabled: true,
+    // Mirrors `get_notification_permission_state` — "granted" | "denied"
+    // | "default" | null while loading. Refreshed on boot and after the
+    // user clicks "Enable reminders" in the rationale modal or settings.
+    notifPermissionState: null,
   },
   quiz: null,
   rapid: null,
@@ -632,6 +688,10 @@ const STORE_KEYS = {
   updaterAutoCheck:    "kata.updater_auto_check",
   updaterLastNotes:    "kata.updater_last_notes",
   updaterLastDismiss:  "kata.updater_last_dismiss",
+  // Notification UX (round 1: storage-only; backend reads on next channel rebuild).
+  notifRationaleShown: "notif_rationale_shown",
+  notifSoundEnabled:   "notif_sound_enabled",
+  notifVibrationEnabled: "notif_vibration_enabled",
 };
 
 // ---------------------------------------------------------------------------
@@ -757,6 +817,15 @@ function loadLocalSettings() {
     const savedDrillMode = localStorage.getItem(STORE_KEYS.drillPromptMode);
     if (["image", "kanji", "romaji", "audio"].includes(savedDrillMode)) {
       store.settings.drill.prompt_mode = savedDrillMode;
+    }
+    // Notification prefs default ON; only flip to false when explicitly "0".
+    const savedSound = localStorage.getItem(STORE_KEYS.notifSoundEnabled);
+    if (savedSound !== null) {
+      store.settings.notifSoundEnabled = savedSound !== "0";
+    }
+    const savedVib = localStorage.getItem(STORE_KEYS.notifVibrationEnabled);
+    if (savedVib !== null) {
+      store.settings.notifVibrationEnabled = savedVib !== "0";
     }
   } catch (_) {}
 }
@@ -1113,12 +1182,21 @@ function resolveGroupsFilter() {
   return null;
 }
 
-async function fetchNextQuestion() {
-  return invoke("next_question", {
+async function fetchNextQuestion(forcedSlug = null) {
+  // The backend `next_question` command currently doesn't accept a forced
+  // slug — it always picks via the weighted shuffler. We pass it as an
+  // extra arg for forward-compatibility (the Rust agent may add a
+  // `forced_slug: Option<String>` field). If it's ignored today, we still
+  // fall back to a regular pick and the user lands on the quiz tab, which
+  // is the contract requirement: "let it pick a question" if forcing is
+  // unsupported.
+  const args = {
     distractorMode: store.settings.distractor_mode,
     groupFilter: null,
     groupsFilter: resolveGroupsFilter(),
-  });
+  };
+  if (forcedSlug) args.forcedSlug = forcedSlug;
+  return invoke("next_question", args);
 }
 
 async function recordAnswer(slug, correct, mode, responseMs) {
@@ -2862,6 +2940,101 @@ function buildSyncSection() {
   return wrap;
 }
 
+// Builds the Notifications block of the Settings card: permission state row
+// + Enable/Open-OS-settings CTA + sound/vibration toggles. Pulls the latest
+// permission state from Rust on every render so it reflects OS-level changes
+// the user made outside the app.
+async function buildNotificationSection() {
+  const wrap = h("div", { class: "notif-pane" });
+
+  const state = await fetchNotificationPermissionState();
+  const stateLabel = (() => {
+    switch (state) {
+      case "granted": return t("settings.notif.state.granted");
+      case "denied":  return t("settings.notif.state.denied");
+      case "default": return t("settings.notif.state.default");
+      default:        return t("settings.notif.state.unknown");
+    }
+  })();
+
+  wrap.appendChild(h("label", { class: "notif-section-label" },
+    t("settings.notif.section")));
+
+  wrap.appendChild(h("div", { class: "notif-perm-row" },
+    h("span", { class: "muted" }, t("settings.notif.permission") + ": "),
+    h("span", { class: `notif-state notif-state-${state}` }, stateLabel),
+  ));
+
+  if (state === "default") {
+    wrap.appendChild(h("div", { class: "field" },
+      h("button", {
+        class: "btn primary full",
+        type: "button",
+        onclick: async () => {
+          await requestNotificationPermission();
+          markNotifRationaleShown();
+          render();
+        },
+      }, t("settings.notif.enable")),
+    ));
+  } else if (state === "denied") {
+    wrap.appendChild(h("div", { class: "field" },
+      h("div", { class: "muted", style: "margin-bottom:8px" },
+        t("settings.notif.denied_help")),
+      h("button", {
+        class: "btn full",
+        type: "button",
+        onclick: () => openOsNotificationSettings(),
+      }, t("settings.notif.open_os_settings")),
+    ));
+  } else if (state === "granted") {
+    wrap.appendChild(h("div", { class: "muted", style: "margin: 0 0 10px 0" },
+      t("settings.notif.granted_help")));
+  }
+
+  // Sound toggle
+  const soundSelect = h("select", {});
+  for (const [val, label] of [["1", t("settings.notif.toggle_on")],
+                              ["0", t("settings.notif.toggle_off")]]) {
+    const opt = h("option", { value: val }, label);
+    if ((val === "1") === store.settings.notifSoundEnabled) opt.selected = true;
+    soundSelect.appendChild(opt);
+  }
+  soundSelect.addEventListener("change", () => {
+    const on = soundSelect.value === "1";
+    store.settings.notifSoundEnabled = on;
+    try { localStorage.setItem(STORE_KEYS.notifSoundEnabled, on ? "1" : "0"); }
+    catch (_) {}
+  });
+  wrap.appendChild(h("div", { class: "field" },
+    h("label", {}, t("settings.notif.sound")),
+    soundSelect,
+  ));
+
+  // Vibration toggle
+  const vibSelect = h("select", {});
+  for (const [val, label] of [["1", t("settings.notif.toggle_on")],
+                              ["0", t("settings.notif.toggle_off")]]) {
+    const opt = h("option", { value: val }, label);
+    if ((val === "1") === store.settings.notifVibrationEnabled) opt.selected = true;
+    vibSelect.appendChild(opt);
+  }
+  vibSelect.addEventListener("change", () => {
+    const on = vibSelect.value === "1";
+    store.settings.notifVibrationEnabled = on;
+    try { localStorage.setItem(STORE_KEYS.notifVibrationEnabled, on ? "1" : "0"); }
+    catch (_) {}
+  });
+  wrap.appendChild(h("div", { class: "field" },
+    h("label", {}, t("settings.notif.vibration")),
+    vibSelect,
+    h("div", { class: "muted", style: "margin-top:6px" },
+      t("settings.notif.prefs_help")),
+  ));
+
+  return wrap;
+}
+
 async function renderSettings() {
   const root = el("#view-settings");
   root.innerHTML = "";
@@ -2888,6 +3061,9 @@ async function renderSettings() {
 
   // Schedule editor — multi-control: kind picker + conditional sub-fields.
   card.appendChild(buildScheduleEditor());
+
+  // Notification permission + sound/vibration prefs (Track: notif UX).
+  card.appendChild(await buildNotificationSection());
 
   // Sync (Track 4) — magic-link login + manual sync.
   card.appendChild(buildSyncSection());
@@ -3089,7 +3265,7 @@ async function renderSettings() {
 // Quiz session lifecycle
 // ---------------------------------------------------------------------------
 
-async function startSingleQuiz() {
+async function startSingleQuiz(forcedSlug = null) {
   navigate("quiz");
   store.quiz = {
     question: null,
@@ -3100,7 +3276,7 @@ async function startSingleQuiz() {
   };
   render();
   try {
-    store.quiz.question = await fetchNextQuestion();
+    store.quiz.question = await fetchNextQuestion(forcedSlug);
     store.quiz.shown_at = Date.now();
   } catch (e) {
     console.error(e);
@@ -3675,6 +3851,143 @@ async function buildUpdaterSection() {
   return card;
 }
 
+// ---------------------------------------------------------------------------
+// Notification UX (Android 13+ POST_NOTIFICATIONS, iOS, desktop)
+//
+// Contract with the backend (round 1):
+//   - get_notification_permission_state() → "granted" | "denied" | "default"
+//   - request_notification_permission()   → boolean (Rust shows OS prompt)
+// localStorage keys: notif_rationale_shown, notif_sound_enabled, notif_vibration_enabled.
+// ---------------------------------------------------------------------------
+
+async function fetchNotificationPermissionState() {
+  try {
+    const v = await invoke("get_notification_permission_state");
+    if (v === "granted" || v === "denied" || v === "default") {
+      store.settings.notifPermissionState = v;
+      return v;
+    }
+  } catch (e) {
+    // Backend may not yet expose the command on every platform — treat as
+    // "default" to keep the UI quiet rather than spamming errors. The
+    // rationale modal stays gated by the !rationale_shown flag so we won't
+    // re-prompt across boots either way.
+    console.warn("get_notification_permission_state unavailable:", e);
+  }
+  store.settings.notifPermissionState = "default";
+  return "default";
+}
+
+async function requestNotificationPermission() {
+  try {
+    const granted = await invoke("request_notification_permission");
+    // Refresh the cached state so the settings UI reflects the OS answer
+    // even when the user denies / dismisses the system prompt.
+    await fetchNotificationPermissionState();
+    return !!granted;
+  } catch (e) {
+    console.error("request_notification_permission failed", e);
+    return false;
+  }
+}
+
+function notifRationaleAlreadyShown() {
+  try {
+    return localStorage.getItem(STORE_KEYS.notifRationaleShown) === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
+function markNotifRationaleShown() {
+  try { localStorage.setItem(STORE_KEYS.notifRationaleShown, "1"); }
+  catch (_) {}
+}
+
+// Builds and shows the onboarding rationale card. Backdrop is intentionally
+// non-dismissable (no click-to-close) — we want one of the two CTAs to fire
+// so the `notif_rationale_shown` flag always gets set.
+function showNotifRationaleCard() {
+  if (document.querySelector(".notif-rationale")) return; // idempotent
+  const wrap = h("div", { class: "notif-rationale", role: "dialog", "aria-modal": "true" });
+  const backdrop = h("div", { class: "notif-rationale-backdrop" });
+  const close = () => {
+    markNotifRationaleShown();
+    wrap.classList.add("notif-rationale-out");
+    setTimeout(() => wrap.remove(), 180);
+  };
+  const yesBtn = h("button", {
+    class: "btn primary full",
+    type: "button",
+    onclick: async () => {
+      yesBtn.disabled = true;
+      try { await requestNotificationPermission(); }
+      finally { close(); }
+    },
+  }, t("notif_rationale_cta_yes"));
+  const noBtn = h("button", {
+    class: "btn ghost full",
+    type: "button",
+    onclick: () => close(),
+  }, t("notif_rationale_cta_no"));
+  const card = h("div", { class: "notif-rationale-card" },
+    h("div", { class: "notif-rationale-icon", "aria-hidden": "true" }, "🔔"),
+    h("h2", { class: "notif-rationale-title" }, t("notif_rationale_title")),
+    h("p", { class: "notif-rationale-body" }, t("notif_rationale_body")),
+    h("div", { class: "notif-rationale-actions" }, yesBtn, noBtn),
+  );
+  wrap.appendChild(backdrop);
+  wrap.appendChild(card);
+  document.body.appendChild(wrap);
+}
+
+// Lightweight bottom-of-screen toast used to confirm a foreground scheduled
+// quiz fire ("Quiz time"). Auto-dismisses after ~2.5s. We keep it as its own
+// container instead of piggy-backing on .micro-feedback so the bottom-anchored
+// position doesn't fight with the top-right XP/combo pill stack.
+function showFgToast(text) {
+  let stack = document.querySelector(".fg-toasts");
+  if (!stack) {
+    stack = h("div", { class: "fg-toasts", "aria-live": "polite" });
+    document.body.appendChild(stack);
+  }
+  const toast = h("div", { class: "fg-toast" }, text);
+  stack.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("fg-toast-out");
+    setTimeout(() => toast.remove(), 220);
+  }, 2500);
+}
+
+// Open OS-level notification settings via tauri-plugin-opener. We don't have
+// a perfect deep-link target across platforms, so this is best-effort: on
+// Android we link to the app's notification settings page; on iOS / desktop
+// we fall back to the platform's general settings URI. If the open fails,
+// silently noop — the user can navigate manually.
+async function openOsNotificationSettings() {
+  // Best-effort URIs:
+  // - Android: app notification settings page (intent://) — Tauri's opener
+  //   plugin doesn't support raw intents, so we link the package's settings
+  //   via the package://... scheme that Android system handles for "App
+  //   info". This is intentionally imperfect; perfectionism not required.
+  const platform = document.body.dataset.platform || "unknown";
+  let url = null;
+  if (platform === "android") {
+    url = "package:fr.weillduflos.katamarrant";
+  } else if (platform === "ios") {
+    url = "app-settings:";
+  } else if (platform === "macos") {
+    url = "x-apple.systempreferences:com.apple.preference.notifications";
+  } else if (platform === "windows") {
+    url = "ms-settings:notifications";
+  } else if (platform === "linux") {
+    url = "gnome-control-center notifications";
+  }
+  if (!url) return;
+  try { await opener.openUrl(url); }
+  catch (e) { console.warn("openOsNotificationSettings: openUrl failed", e); }
+}
+
 // Detect the OS so CSS can branch (e.g. macOS hides our window controls in
 // favor of the OS-drawn traffic lights, and insets the titlebar 78px to
 // avoid colliding with them). Falls back to navigator.userAgent when the
@@ -3756,15 +4069,51 @@ async function boot() {
   catch (e) { console.error("fetchGamificationState", e); }
 
   try {
-    await listen("show_quiz_prompt", async (_event) => {
+    await listen("show_quiz_prompt", async (event) => {
+      // Round 2 payload shape: { technique_slug?, source }. Tolerate a
+      // missing/legacy payload (no body) by falling back to a regular
+      // single-quiz start, which is what the old listener did.
+      const payload = (event && event.payload) || {};
+      const source = payload.source || "scheduled";
+      const slug   = payload.technique_slug || null;
+
+      // Don't interrupt a rapid burst mid-run. The user explicitly opted in
+      // to a 10-question session; barging in with a single-question quiz
+      // would silently scramble their progress.
       if (store.rapid && store.rapid.current < store.rapid.total) return;
-      startSingleQuiz();
+
+      // Foreground toast: only for naturally-firing scheduled prompts. Tap /
+      // action sources came from the user explicitly engaging the
+      // notification, so the toast would be redundant noise.
+      if (source === "scheduled") {
+        try { showFgToast(t("toast.quiz_time")); } catch (_) {}
+      }
+
+      // Always switch to the quiz tab before auto-starting — otherwise a
+      // notification tap while the user is in Settings would silently push a
+      // quiz into a hidden view. startSingleQuiz() calls navigate("quiz")
+      // first, so this is implicit.
+      try { startSingleQuiz(slug); }
+      catch (e) { console.error("startSingleQuiz from event failed", e); }
     });
   } catch (e) {
     console.error("listen show_quiz_prompt failed", e);
   }
 
   navigate("home");
+
+  // Notification rationale card — shown once per install, only if the OS
+  // permission is still in the "default" (not yet asked) state. Sequenced
+  // AFTER navigate() so the home view is painted underneath the modal.
+  try {
+    await fetchNotificationPermissionState();
+    if (!notifRationaleAlreadyShown()
+        && store.settings.notifPermissionState === "default") {
+      showNotifRationaleCard();
+    }
+  } catch (e) {
+    console.error("notif rationale boot path failed", e);
+  }
 
   // Auto-update boot check (desktop only). Delayed so the first paint isn't
   // blocked and the app is fully responsive when the pill appears.
