@@ -353,6 +353,15 @@ jobs:
           ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
 
+      # `tauri android init` regenerates gen/android/ wholesale, wiping out
+      # any hand-edited manifest tweaks we need (USE_EXACT_ALARM permission,
+      # notification meta-data, branded small-icon drawable). The patch
+      # script re-applies them from src-tauri/android-patches/ — see the
+      # script header for the exact list. Idempotent.
+      - name: Apply Android post-init patches (manifest perms + notif icon)
+        if: env.HAS_KEYSTORE == 'true'
+        run: node scripts/patch-android-gen.mjs
+
       # `tauri android init` scaffolds gen/android/ with the DEFAULT Tauri
       # bird icons in mipmap-*/ — it does NOT pull from src-tauri/icons/.
       # Without this step, the published APK+AAB ship with the wrong icon.

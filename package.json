@@ -6,6 +6,8 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
+    "android:init": "tauri android init && node scripts/patch-android-gen.mjs",
+    "android:patch-gen": "node scripts/patch-android-gen.mjs",
     "android:dev": "tauri android dev",
     "android:build": "tauri android build",
     "ios:dev": "tauri ios dev",
