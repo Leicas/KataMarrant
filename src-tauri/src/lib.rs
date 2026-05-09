@@ -65,6 +65,7 @@ fn default_schedule() -> ScheduleConfig {
     ScheduleConfig::Daily {
         time: TimeOfDay { hour: 19, minute: 0 },
         weekdays: WeekdayMask::ALL,
+        quiet_hours: None,
     }
 }
 
@@ -144,11 +145,18 @@ pub fn run() {
                 )),
             });
 
-            // Mobile: notification channel (Android no-op on iOS) + permission.
+            // Mobile: notification channel (Android no-op on iOS).
+            //
+            // We deliberately do NOT call `request_permission` from here
+            // anymore. Android 13+ requires a user-initiated gesture for
+            // the permission dialog to appear at all, and prompting on
+            // cold-boot is hostile to first-run UX. The frontend now
+            // shows a rationale screen, then invokes the
+            // `request_notification_permission` Tauri command at the
+            // moment the user opts in.
             #[cfg(mobile)]
             {
                 notification::setup_channels(app.handle());
-                notification::request_permission(app.handle());
             }
 
             // Desktop tokio loop (also runs on mobile as a foreground complement).
@@ -212,6 +220,9 @@ pub fn run() {
             commands::scheduler::set_quiz_schedule,
             commands::scheduler::get_quiz_schedule,
             commands::scheduler::trigger_quiz_now,
+            commands::notification::request_notification_permission,
+            commands::notification::get_notification_permission_state,
+            commands::notification::notification_action_handler,
             commands::gamification::get_gamification_state,
             commands::gamification::set_daily_goal,
             commands::gamification::complete_rapid,

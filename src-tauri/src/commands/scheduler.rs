@@ -60,7 +60,10 @@ pub fn get_quiz_schedule(state: tauri::State<'_, AppState>) -> AppResult<Schedul
 #[tauri::command]
 pub async fn trigger_quiz_now(app_handle: tauri::AppHandle) -> AppResult<()> {
     use tauri::Emitter;
-    let payload = scheduler::QuizPromptPayload { source: "manual".into() };
+    let payload = scheduler::QuizPromptPayload {
+        source: "manual".into(),
+        technique_slug: None,
+    };
     app_handle.emit("show_quiz_prompt", &payload)?;
     Ok(())
 }
