@@ -3744,6 +3744,125 @@ async function buildUpdaterSection() {
   return card;
 }
 
+// ---------------------------------------------------------------------------
+// Notification UX (Android 13+ POST_NOTIFICATIONS, iOS, desktop)
+//
+// Contract with the backend (round 1):
+//   - get_notification_permission_state() → "granted" | "denied" | "default"
+//   - request_notification_permission()   → boolean (Rust shows OS prompt)
+// localStorage keys: notif_rationale_shown, notif_sound_enabled, notif_vibration_enabled.
+// ---------------------------------------------------------------------------
+
+async function fetchNotificationPermissionState() {
+  try {
+    const v = await invoke("get_notification_permission_state");
+    if (v === "granted" || v === "denied" || v === "default") {
+      store.settings.notifPermissionState = v;
+      return v;
+    }
+  } catch (e) {
+    // Backend may not yet expose the command on every platform — treat as
+    // "default" to keep the UI quiet rather than spamming errors. The
+    // rationale modal stays gated by the !rationale_shown flag so we won't
+    // re-prompt across boots either way.
+    console.warn("get_notification_permission_state unavailable:", e);
+  }
+  store.settings.notifPermissionState = "default";
+  return "default";
+}
+
+async function requestNotificationPermission() {
+  try {
+    const granted = await invoke("request_notification_permission");
+    // Refresh the cached state so the settings UI reflects the OS answer
+    // even when the user denies / dismisses the system prompt.
+    await fetchNotificationPermissionState();
+    return !!granted;
+  } catch (e) {
+    console.error("request_notification_permission failed", e);
+    return false;
+  }
+}
+
+function notifRationaleAlreadyShown() {
+  try {
+    return localStorage.getItem(STORE_KEYS.notifRationaleShown) === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
+function markNotifRationaleShown() {
+  try { localStorage.setItem(STORE_KEYS.notifRationaleShown, "1"); }
+  catch (_) {}
+}
+
+// Builds and shows the onboarding rationale card. Backdrop is intentionally
+// non-dismissable (no click-to-close) — we want one of the two CTAs to fire
+// so the `notif_rationale_shown` flag always gets set.
+function showNotifRationaleCard() {
+  if (document.querySelector(".notif-rationale")) return; // idempotent
+  const wrap = h("div", { class: "notif-rationale", role: "dialog", "aria-modal": "true" });
+  const backdrop = h("div", { class: "notif-rationale-backdrop" });
+  const close = () => {
+    markNotifRationaleShown();
+    wrap.classList.add("notif-rationale-out");
+    setTimeout(() => wrap.remove(), 180);
+  };
+  const yesBtn = h("button", {
+    class: "btn primary full",
+    type: "button",
+    onclick: async () => {
+      yesBtn.disabled = true;
+      try { await requestNotificationPermission(); }
+      finally { close(); }
+    },
+  }, t("notif_rationale_cta_yes"));
+  const noBtn = h("button", {
+    class: "btn ghost full",
+    type: "button",
+    onclick: () => close(),
+  }, t("notif_rationale_cta_no"));
+  const card = h("div", { class: "notif-rationale-card" },
+    h("div", { class: "notif-rationale-icon", "aria-hidden": "true" }, "🔔"),
+    h("h2", { class: "notif-rationale-title" }, t("notif_rationale_title")),
+    h("p", { class: "notif-rationale-body" }, t("notif_rationale_body")),
+    h("div", { class: "notif-rationale-actions" }, yesBtn, noBtn),
+  );
+  wrap.appendChild(backdrop);
+  wrap.appendChild(card);
+  document.body.appendChild(wrap);
+}
+
+// Open OS-level notification settings via tauri-plugin-opener. We don't have
+// a perfect deep-link target across platforms, so this is best-effort: on
+// Android we link to the app's notification settings page; on iOS / desktop
+// we fall back to the platform's general settings URI. If the open fails,
+// silently noop — the user can navigate manually.
+async function openOsNotificationSettings() {
+  // Best-effort URIs:
+  // - Android: app notification settings page (intent://) — Tauri's opener
+  //   plugin doesn't support raw intents, so we link the package's settings
+  //   via the package://... scheme that Android system handles for "App
+  //   info". This is intentionally imperfect; perfectionism not required.
+  const platform = document.body.dataset.platform || "unknown";
+  let url = null;
+  if (platform === "android") {
+    url = "package:fr.weillduflos.katamarrant";
+  } else if (platform === "ios") {
+    url = "app-settings:";
+  } else if (platform === "macos") {
+    url = "x-apple.systempreferences:com.apple.preference.notifications";
+  } else if (platform === "windows") {
+    url = "ms-settings:notifications";
+  } else if (platform === "linux") {
+    url = "gnome-control-center notifications";
+  }
+  if (!url) return;
+  try { await opener.openUrl(url); }
+  catch (e) { console.warn("openOsNotificationSettings: openUrl failed", e); }
+}
+
 // Detect the OS so CSS can branch (e.g. macOS hides our window controls in
 // favor of the OS-drawn traffic lights, and insets the titlebar 78px to
 // avoid colliding with them). Falls back to navigator.userAgent when the
@@ -3834,6 +3953,19 @@ async function boot() {
   }
 
   navigate("home");
+
+  // Notification rationale card — shown once per install, only if the OS
+  // permission is still in the "default" (not yet asked) state. Sequenced
+  // AFTER navigate() so the home view is painted underneath the modal.
+  try {
+    await fetchNotificationPermissionState();
+    if (!notifRationaleAlreadyShown()
+        && store.settings.notifPermissionState === "default") {
+      showNotifRationaleCard();
+    }
+  } catch (e) {
+    console.error("notif rationale boot path failed", e);
+  }
 
   // Auto-update boot check (desktop only). Delayed so the first paint isn't
   // blocked and the app is fully responsive when the pill appears.

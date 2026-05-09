@@ -1686,3 +1686,68 @@ main {
     margin-right: 4px;
   }
 }
+
+/* ----- Notification rationale modal -------------------------------------
+   Shown once per install on cold boot when permission state is "default".
+   Backdrop is intentionally non-dismissable: one of the two CTAs always
+   fires, which sets `notif_rationale_shown` so we never re-prompt. */
+.notif-rationale {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  animation: fadeIn .18s ease-out;
+}
+.notif-rationale-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 12, 10, 0.74);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.notif-rationale-card {
+  position: relative;
+  width: min(420px, 100%);
+  background: var(--bg-elev-2);
+  border-radius: var(--rad-4);
+  padding: 28px 24px 22px;
+  box-shadow: var(--shadow-3);
+  text-align: center;
+  animation: notifRationaleIn .26s cubic-bezier(.2, .8, .2, 1);
+}
+.notif-rationale-out { animation: notifRationaleOut .18s ease-in forwards; }
+@keyframes notifRationaleOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.notif-rationale-icon {
+  font-size: 38px;
+  line-height: 1;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 2px 6px rgba(208, 69, 69, 0.35));
+}
+.notif-rationale-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fg-heading);
+  margin-bottom: 10px;
+  letter-spacing: -0.005em;
+}
+.notif-rationale-body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  margin-bottom: 22px;
+}
+.notif-rationale-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@keyframes notifRationaleIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
