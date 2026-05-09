@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/Leicas/KataMarrant/compare/v1.7.0...v1.7.1) (2026-05-09)
+
+### Bug Fixes
+
+* **ci:** apply android manifest + drawable patches post-init instead of committing partial gen/ ([9129809](https://github.com/Leicas/KataMarrant/commit/91298093cb8204654db250b295177683abf15fa7))
+
 ## [1.7.0](https://github.com/Leicas/KataMarrant/compare/v1.6.0...v1.7.0) (2026-05-09)
 
 ### Features
