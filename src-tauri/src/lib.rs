@@ -189,8 +189,10 @@ pub fn run() {
 
             // Mobile: pre-enqueue pending OS-level notifications via
             // tauri-plugin-notification. On Android this lands as
-            // `setExactAndAllowWhileIdle` and is delivered by the plugin's
-            // BroadcastReceiver — fires whether or not our app is running.
+            // `setAndAllowWhileIdle` (inexact, ±5-15min Doze drift — we
+            // don't declare exact-alarm permissions; see scheduler.rs)
+            // and is delivered by the plugin's BroadcastReceiver — fires
+            // whether or not our app is running.
             // On iOS this populates UNUserNotificationCenter's pending queue.
             // We replaced the previous Android WorkManager path because that
             // plugin's worker tried to relaunch MainActivity to deliver the
