@@ -1,3 +1,9 @@
+## [1.7.2](https://github.com/Leicas/KataMarrant/compare/v1.7.1...v1.7.2) (2026-05-10)
+
+### Bug Fixes
+
+* **android:** drop USE_EXACT_ALARM permission flagged by Google Play ([f05d1a6](https://github.com/Leicas/KataMarrant/commit/f05d1a6bec4fe98341ba882b48a1f26768bcd09a))
+
 ## [1.7.1](https://github.com/Leicas/KataMarrant/compare/v1.7.0...v1.7.1) (2026-05-09)
 
 ### Bug Fixes
