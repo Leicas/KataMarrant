@@ -9,17 +9,22 @@
 // patch checks for a marker before inserting).
 //
 // What this does:
-//   1. Inject 3 <uses-permission> tags (USE_EXACT_ALARM, SCHEDULE_EXACT_ALARM
-//      maxSdk=32, SET_ALARM) into AndroidManifest.xml so
-//      tauri-plugin-notification's setExactAndAllowWhileIdle path doesn't
-//      silently downgrade on Android 12+.
-//   2. Inject 2 <meta-data> tags (default_notification_icon,
+//   1. Inject 2 <meta-data> tags (default_notification_icon,
 //      default_notification_color) into the <application> element so
 //      notifications use a branded monochrome icon + #D4A24C accent
 //      instead of a generic white square.
-//   3. Copy android-patches/ic_stat_quiz.xml into res/drawable/.
-//   4. Add a `<color name="notification_color">#D4A24C</color>` entry to
+//   2. Copy android-patches/ic_stat_quiz.xml into res/drawable/.
+//   3. Add a `<color name="notification_color">#D4A24C</color>` entry to
 //      res/values/colors.xml (or create the file if Tauri's init didn't).
+//
+// NOTE on exact-alarm permissions: we deliberately do NOT declare
+// USE_EXACT_ALARM (Google Play restricts it to alarm/calendar apps —
+// KataMarrant doesn't qualify) or SCHEDULE_EXACT_ALARM (would be unused
+// without runtime grant UX). tauri-plugin-notification 2.3.3 already
+// detects `canScheduleExactAlarms() == false` and falls back to
+// AlarmManager.setAndAllowWhileIdle (inexact). Reminders may drift
+// ±5-15min in Doze mode — acceptable for a daily learning prompt and
+// keeps the manifest Play-Console-clean.
 
 import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -34,30 +39,9 @@ if (!existsSync(genAndroid)) {
   process.exit(1);
 }
 
-// 1 + 2: AndroidManifest.xml
+// 1: AndroidManifest.xml — inject notification meta-data
 const manifestPath = join(genAndroid, 'app', 'src', 'main', 'AndroidManifest.xml');
 let manifest = readFileSync(manifestPath, 'utf8');
-
-if (!manifest.includes('android.permission.USE_EXACT_ALARM')) {
-  // Insert our 3 perms right after the <manifest ...> opening tag.
-  manifest = manifest.replace(
-    /(<manifest[^>]*>\s*)/,
-    `$1
-    <!-- KataMarrant: exact-alarm permissions for tauri-plugin-notification's
-         setExactAndAllowWhileIdle path. USE_EXACT_ALARM is auto-granted on
-         API 33+ for notification-style use cases. SCHEDULE_EXACT_ALARM is
-         the legacy permission for API 31-32; capped at maxSdkVersion=32 so
-         Play Store doesn't flag it on newer targets. SET_ALARM is the
-         classic alarm-clock intent permission, kept for older devices. -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32"/>
-    <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
-`,
-  );
-  console.log('[patch-android-gen] manifest: added 3 alarm permissions');
-} else {
-  console.log('[patch-android-gen] manifest: alarm permissions already present (skipped)');
-}
 
 if (!manifest.includes('com.tauri.notification.default_notification_icon')) {
   // Insert our 2 meta-data tags right after the <application ...> opening tag.
@@ -80,7 +64,7 @@ if (!manifest.includes('com.tauri.notification.default_notification_icon')) {
 
 writeFileSync(manifestPath, manifest);
 
-// 3: copy the small-icon drawable
+// 2: copy the small-icon drawable
 const drawableDir = join(genAndroid, 'app', 'src', 'main', 'res', 'drawable');
 mkdirSync(drawableDir, { recursive: true });
 copyFileSync(
@@ -89,7 +73,7 @@ copyFileSync(
 );
 console.log('[patch-android-gen] copied ic_stat_quiz.xml into res/drawable/');
 
-// 4: colors.xml — add our notification_color entry. Tauri's init may or may
+// 3: colors.xml — add our notification_color entry. Tauri's init may or may
 //    not have created colors.xml; handle both cases.
 const valuesDir = join(genAndroid, 'app', 'src', 'main', 'res', 'values');
 mkdirSync(valuesDir, { recursive: true });

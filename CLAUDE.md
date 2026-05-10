@@ -122,15 +122,19 @@ all platforms.
 - **Mobile (Android + iOS)**: `tauri-plugin-notification` pre-enqueues pending
   local notifications via `scheduler::schedule_next_mobile` (capped at 32
   slots over 30 days, well under iOS's 64-pending-per-app limit). On Android
-  this lands as `setExactAndAllowWhileIdle` alarms delivered by the plugin's
-  `TimedNotificationPublisher` BroadcastReceiver, so the notification fires
-  whether or not our app process is alive. `RunEvent::Resumed` in `lib.rs`
-  re-enqueues on each foreground so config edits propagate and the rolling
-  horizon never drains. Caveat: `DailyMinCount` always fires the OS-level
-  notification at the configured time regardless of today's count — the
-  count check would require running app-side code at fire time, which
-  neither platform reliably allows when the app is killed; the next
-  foreground tick re-evaluates and prunes future slots accordingly.
+  this lands as `setAndAllowWhileIdle` alarms (inexact, ±5-15min Doze drift)
+  delivered by the plugin's `TimedNotificationPublisher` BroadcastReceiver,
+  so the notification fires whether or not our app process is alive. We
+  deliberately do NOT declare `USE_EXACT_ALARM` (Google Play restricts it
+  to alarm/calendar apps) or `SCHEDULE_EXACT_ALARM` (would need a runtime
+  grant UX); the plugin's `canScheduleExactAlarms()`-gated fallback is
+  what we run. `RunEvent::Resumed` in `lib.rs` re-enqueues on each
+  foreground so config edits propagate and the rolling horizon never
+  drains. Caveat: `DailyMinCount` always fires the OS-level notification
+  at the configured time regardless of today's count — the count check
+  would require running app-side code at fire time, which neither
+  platform reliably allows when the app is killed; the next foreground
+  tick re-evaluates and prunes future slots accordingly.
 
   > Background: an earlier Android path used `tauri-plugin-schedule-task`
   > (WorkManager → `startActivity(MainActivity)` → Rust handler). It silently

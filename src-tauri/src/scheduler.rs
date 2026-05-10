@@ -10,11 +10,12 @@
 //! - **Mobile (Android + iOS)**: `tauri-plugin-notification` pre-enqueues a
 //!   batch of pending local notifications (capped at 32 to stay well under
 //!   iOS's 64-pending-per-app limit). On Android the plugin lands these as
-//!   `setExactAndAllowWhileIdle` alarms delivered by a BroadcastReceiver, so
-//!   the notification fires whether or not our app process is alive. When
-//!   the app is foregrounded (`RunEvent::Resumed`) we cancel-then-re-enqueue
-//!   so the queue tracks any config edits and the rolling horizon never
-//!   drains.
+//!   `setAndAllowWhileIdle` alarms (inexact, ±5-15min Doze drift — see the
+//!   `schedule_next_mobile` comment for why we don't declare exact-alarm
+//!   permissions) delivered by a BroadcastReceiver, so the notification
+//!   fires whether or not our app process is alive. When the app is
+//!   foregrounded (`RunEvent::Resumed`) we cancel-then-re-enqueue so the
+//!   queue tracks any config edits and the rolling horizon never drains.
 
 use chrono::{Datelike, Duration as ChronoDuration, Local, TimeZone, Timelike};
 use serde::{Deserialize, Serialize};
@@ -398,9 +399,13 @@ fn count_today(app: &AppHandle) -> u32 {
 // Mobile scheduling via tauri-plugin-notification.
 //
 // Pre-enqueues a batch of pending local notifications via the OS-level alarm
-// path. On Android this lands as `setExactAndAllowWhileIdle` (or
-// `setAndAllowWhileIdle` if exact-alarm permission isn't granted) and is
-// delivered by `app.tauri.notification.TimedNotificationPublisher` — a
+// path. On Android this lands as `setAndAllowWhileIdle` (inexact, ±5-15min
+// drift in Doze mode) — we deliberately do NOT declare USE_EXACT_ALARM
+// (Google Play restricts it to alarm/calendar apps) or SCHEDULE_EXACT_ALARM
+// (would need a runtime grant UX), so tauri-plugin-notification's
+// `canScheduleExactAlarms() == false` fallback path is what we get.
+// Drift is acceptable for a daily learning prompt. The alarm is delivered
+// by `app.tauri.notification.TimedNotificationPublisher` — a
 // BroadcastReceiver that fires regardless of whether our app process is
 // alive. On iOS the pending notifications sit in UNUserNotificationCenter.
 //
