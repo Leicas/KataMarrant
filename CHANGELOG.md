@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/Leicas/KataMarrant/compare/v1.7.2...v1.8.0) (2026-05-30)
+
+### Features
+
+* **notif:** goal-aware mobile notifications + sumi-gaeshi FR fix ([#14](https://github.com/Leicas/KataMarrant/issues/14)) ([d0e3f8b](https://github.com/Leicas/KataMarrant/commit/d0e3f8bee6ba98a6320e7024a0936bf61ed451e4))
+
 ## [1.7.2](https://github.com/Leicas/KataMarrant/compare/v1.7.1...v1.7.2) (2026-05-10)
 
 ### Bug Fixes
