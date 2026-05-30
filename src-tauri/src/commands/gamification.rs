@@ -490,14 +490,24 @@ pub fn get_gamification_state(
 }
 
 #[tauri::command]
-pub fn set_daily_goal(goal: u32, state: tauri::State<'_, AppState>) -> AppResult<()> {
+pub fn set_daily_goal(
+    goal: u32,
+    state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
     if !(1..=100).contains(&goal) {
         return Err(AppError::Gamification(format!(
             "daily_goal must be in 1..=100 (got {goal})"
         )));
     }
-    let conn = state.db.lock().unwrap();
-    db::set_daily_goal(&conn, goal as i64)
+    {
+        let conn = state.db.lock().unwrap();
+        db::set_daily_goal(&conn, goal as i64)?;
+    }
+    // The goal change affects the "il te manque X" body and the
+    // skip-when-met logic — refresh OS-level pending notifications.
+    crate::scheduler::re_enqueue_mobile(&app);
+    Ok(())
 }
 
 #[tauri::command]

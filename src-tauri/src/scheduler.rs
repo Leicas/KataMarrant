@@ -466,11 +466,30 @@ pub async fn schedule_next_mobile_with_anchor(
     }
 
     let locale = read_ui_language(app);
-    let (title, body) = localized_quiz_strings(&locale);
+    let (title, default_body) = localized_quiz_strings(&locale);
+
+    // Snapshot today's daily-goal progress once. We bake "il te manque X"
+    // into any slot that falls on today's local date, and SKIP today's
+    // remaining slots entirely if the goal is already met. Future-day
+    // slots get the generic body because tomorrow's progress is unknown.
+    // `RunEvent::Resumed` and `re_enqueue_mobile` (called after each
+    // answer / goal change) keep today's baked count fresh.
+    let today_str = crate::db::local_today_string();
+    let (today_count, daily_goal) = {
+        let conn = state.db.lock().unwrap();
+        let q = crate::db::get_daily(&conn, &today_str)
+            .map(|r| r.questions)
+            .unwrap_or(0);
+        let g = crate::db::get_gamification_state(&conn)
+            .map(|s| s.daily_goal)
+            .unwrap_or(0);
+        (q, g)
+    };
 
     let horizon = Local::now() + ChronoDuration::days(30);
     let mut anchor = start_anchor;
     let mut count = 0;
+    let mut skipped_today = 0usize;
     let max_pending: usize = 32;
 
     while count < max_pending {
@@ -481,6 +500,21 @@ pub async fn schedule_next_mobile_with_anchor(
         };
         if next > horizon {
             break;
+        }
+
+        // Goal-aware gate: drop today's remaining slots if the user has
+        // already reached the daily goal. Previously a documented
+        // limitation of `DailyMinCount`; now applies uniformly across
+        // every schedule type because the daily goal is a gamification
+        // concept independent of cadence.
+        let slot_day = next.format("%Y-%m-%d").to_string();
+        let is_today = slot_day == today_str;
+        let goal_met_today =
+            is_today && daily_goal > 0 && today_count >= daily_goal;
+        if goal_met_today {
+            anchor = next;
+            skipped_today += 1;
+            continue;
         }
 
         let unix = next.timestamp();
@@ -499,13 +533,22 @@ pub async fn schedule_next_mobile_with_anchor(
         // collected yet for slots 32 alarms ahead.
         let picked_slug = pick_slug_for_slot(unix);
 
+        // Personalize today's body with "Il te manque X" / "X more left".
+        // Future-day slots fall back to the generic body.
+        let body_text: String = if is_today && daily_goal > 0 {
+            let remaining = (daily_goal - today_count).max(1);
+            localized_remaining_body(&locale, remaining)
+        } else {
+            default_body.to_string()
+        };
+
         let id = crate::notification::mobile_notification_id(count as i32);
         let builder = app
             .notification()
             .builder()
             .id(id)
             .title(title)
-            .body(body)
+            .body(body_text)
             .group("kata-quiz")
             .summary("Quiz reminder")
             .action_type_id(crate::notification::QUIZ_ACTION_TYPE_ID)
@@ -534,8 +577,25 @@ pub async fn schedule_next_mobile_with_anchor(
         count += 1;
     }
 
-    log::info!("[scheduler] mobile: enqueued {count} notifications");
+    log::info!(
+        "[scheduler] mobile: enqueued {count} notifications (skipped {skipped_today} today-slots because goal met: {today_count}/{daily_goal})"
+    );
 }
+
+/// Re-enqueue OS-level notifications on mobile, no-op on desktop. Spawned
+/// as a background task so callers (sync IPC handlers like
+/// `answer_question` / `set_daily_goal`) don't have to await — the
+/// re-enqueue is best-effort and `cancel_all + show` is idempotent.
+#[cfg(mobile)]
+pub fn re_enqueue_mobile(app: &AppHandle) {
+    let h = app.clone();
+    tauri::async_runtime::spawn(async move {
+        schedule_next_mobile(&h).await;
+    });
+}
+
+#[cfg(not(mobile))]
+pub fn re_enqueue_mobile(_app: &AppHandle) {}
 
 /// Read `ui_language` from the tauri-plugin-store `settings.json`.
 /// Returns `"en"` if the key is missing, malformed, or the underlying
@@ -570,6 +630,25 @@ fn localized_quiz_strings(locale: &str) -> (&'static str, &'static str) {
             "KataMarrant",
             "Quiz time! Tap to identify a technique.",
         ),
+    }
+}
+
+/// Localized "X more to reach today's goal" body used in place of the
+/// generic prompt when the slot lands on today's local date AND the user
+/// has a daily goal set. `remaining` is clamped to >= 1 by the caller
+/// (goal-met slots are skipped instead of personalized).
+#[cfg(mobile)]
+fn localized_remaining_body(locale: &str, remaining: i64) -> String {
+    let n = remaining.max(1);
+    match locale {
+        "fr" => {
+            let plural = if n > 1 { "s" } else { "" };
+            format!("Il te manque {n} question{plural} pour ton objectif du jour")
+        }
+        _ => {
+            let plural = if n > 1 { "s" } else { "" };
+            format!("{n} more question{plural} to reach today's goal")
+        }
     }
 }
 

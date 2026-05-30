@@ -174,9 +174,15 @@ pub fn answer_question(
     mode: Option<String>,
     response_ms: Option<i64>,
     state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
 ) -> AppResult<AnswerGamificationOutcome> {
     let mode_str = mode.as_deref().unwrap_or("single");
-    record_answer_with_gamification(&state, &slug, correct, mode_str, response_ms)
+    let out = record_answer_with_gamification(&state, &slug, correct, mode_str, response_ms);
+    // Refresh the OS-level pending notifications so today's "il te manque X"
+    // body stays in sync, and any remaining today-slot is dropped if this
+    // answer just crossed the daily goal. No-op on desktop.
+    crate::scheduler::re_enqueue_mobile(&app);
+    out
 }
 
 fn weighted_pick<R: Rng>(weights: &[f64], rng: &mut R) -> usize {
