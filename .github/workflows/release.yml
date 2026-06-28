@@ -245,6 +245,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      HAS_PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - name: Skip if Android signing not configured
         if: env.HAS_KEYSTORE != 'true'
@@ -515,6 +516,19 @@ jobs:
             "katamarrant-${TAG}-android-universal.apk" \
             "katamarrant-${TAG}-android-universal.aab" \
             --clobber
+
+      # Push the signed AAB straight to Play closed testing, so a tag publishes
+      # to testers with no manual upload. Requires the PLAY_SERVICE_ACCOUNT_JSON
+      # secret (a Play Android Publisher service-account key).
+      - name: Upload AAB to Play (closed testing → Alpha)
+        if: env.HAS_KEYSTORE == 'true' && env.HAS_PLAY == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: fr.weill_duflos.katamarrant
+          releaseFiles: src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
+          track: alpha          # Play track id of the closed-testing track
+          status: completed     # set to "draft" to require manual rollout in Play
 
       - name: Always wipe key.properties + decoded keystore
         if: always() && env.HAS_KEYSTORE == 'true'
