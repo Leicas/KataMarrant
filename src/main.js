@@ -8,6 +8,12 @@ const opener = window.__TAURI__.opener;
 
 const RAPID_LENGTH = 10;
 
+// Nage-komi auto-play bounds. The user-configurable base interval (seconds)
+// is clamped to this range; jitter is ±NAGEKOMI_JITTER around the base.
+const NAGEKOMI_MIN_S = 2;
+const NAGEKOMI_MAX_S = 60;
+const NAGEKOMI_JITTER = 0.2; // ±20%
+
 // Default schedule mirrors the backend default — Daily 19:00, every day.
 // Used as a fallback when the backend hasn't returned yet.
 //
@@ -32,6 +38,7 @@ const I18N = {
     "tab.quiz":     "Quiz",
     "tab.rapid":    "Rapid",
     "tab.drill":    "Drill",
+    "tab.nagekomi": "Nage-komi",
     "tab.browse":   "Browse",
     "tab.stats":    "Stats",
     "tab.settings": "⚙",
@@ -39,6 +46,7 @@ const I18N = {
     "nav.quiz":     "Quiz",
     "nav.rapid":    "Rapid",
     "nav.drill":    "Drill",
+    "nav.nagekomi": "Nage-komi",
     "nav.browse":   "Browse",
     "nav.stats":    "Stats",
     "nav.settings": "Settings",
@@ -52,6 +60,7 @@ const I18N = {
     "home.single":        "Single quiz",
     "home.rapid":         "Rapid-fire ({n})",
     "home.drill":         "Drill (timed)",
+    "home.nagekomi":      "Nage-komi (auto-play)",
     "home.browse":        "Browse all 40 techniques",
     "home.family.gokyo":    "Gokyo",
     "home.family.osaekomi": "Osaekomi",
@@ -83,6 +92,15 @@ const I18N = {
     "drill.timed_out":    "Time's up",
     "drill.timer_label":  "Timer: {n}s",
     "drill.audio_hint":   "Tap to replay the technique name",
+
+    "nagekomi.title":     "Nage-komi — repetition throwing",
+    "nagekomi.intro":     "Auto-play random throws from your selected set. Each one plays its name and shows the card. No scoring — just drill the rhythm.",
+    "nagekomi.start":     "Start nage-komi",
+    "nagekomi.stop":      "Stop",
+    "nagekomi.exit":      "Exit",
+    "nagekomi.running":   "Running — throw {n}",
+    "nagekomi.interval_label": "Interval: ~{n}s",
+    "nagekomi.audio_hint": "Tap to replay the technique name",
 
     "browse.group":       "Group {g} — {name}",
     "browse.seen":        "seen {n}×",
@@ -164,6 +182,9 @@ const I18N = {
     "settings.drill_prompt_kanji":  "Kanji only",
     "settings.drill_prompt_romaji": "Rōmaji only",
     "settings.drill_prompt_audio":  "Audio (Japanese TTS)",
+    "settings.nagekomi_section": "Nage-komi mode",
+    "settings.nagekomi_interval": "Interval (seconds)",
+    "settings.nagekomi_interval_help": "Base seconds between throws. A small random jitter (±20%) is applied each throw so the rhythm isn't perfectly predictable.",
     "settings.test":          "Trigger a quiz prompt now (test)",
     "settings.credits":       "Credits",
     "settings.credits_videos": "Reference videos curated by judo.how — the ▶ button opens the YouTube clip from the matching technique page. Each video belongs to its uploader.",
@@ -321,6 +342,7 @@ const I18N = {
     "tab.quiz":     "Quiz",
     "tab.rapid":    "Rafale",
     "tab.drill":    "Drill",
+    "tab.nagekomi": "Nage-komi",
     "tab.browse":   "Liste",
     "tab.stats":    "Stats",
     "tab.settings": "⚙",
@@ -328,6 +350,7 @@ const I18N = {
     "nav.quiz":     "Quiz",
     "nav.rapid":    "Rafale",
     "nav.drill":    "Drill",
+    "nav.nagekomi": "Nage-komi",
     "nav.browse":   "Liste",
     "nav.stats":    "Stats",
     "nav.settings": "Réglages",
@@ -341,6 +364,7 @@ const I18N = {
     "home.single":        "Une question",
     "home.rapid":         "Rafale ({n})",
     "home.drill":         "Drill (chrono)",
+    "home.nagekomi":      "Nage-komi (auto)",
     "home.browse":        "Parcourir les 40 techniques",
     "home.family.gokyo":    "Gokyo",
     "home.family.osaekomi": "Osaekomi",
@@ -372,6 +396,15 @@ const I18N = {
     "drill.timed_out":    "Temps écoulé",
     "drill.timer_label":  "Chrono : {n}s",
     "drill.audio_hint":   "Tape pour réécouter le nom de la prise",
+
+    "nagekomi.title":     "Nage-komi — répétition des projections",
+    "nagekomi.intro":     "Lecture automatique de prises tirées au hasard dans ta sélection. Chacune annonce son nom et affiche la carte. Pas de score — juste le rythme à travailler.",
+    "nagekomi.start":     "Démarrer le nage-komi",
+    "nagekomi.stop":      "Arrêter",
+    "nagekomi.exit":      "Quitter",
+    "nagekomi.running":   "En cours — prise {n}",
+    "nagekomi.interval_label": "Intervalle : ~{n}s",
+    "nagekomi.audio_hint": "Tape pour réécouter le nom de la prise",
 
     "browse.group":       "Groupe {g} — {name}",
     "browse.seen":        "vue {n}×",
@@ -453,6 +486,9 @@ const I18N = {
     "settings.drill_prompt_kanji":  "Kanji seul",
     "settings.drill_prompt_romaji": "Rōmaji seul",
     "settings.drill_prompt_audio":  "Audio (TTS japonais)",
+    "settings.nagekomi_section": "Mode nage-komi",
+    "settings.nagekomi_interval": "Intervalle (secondes)",
+    "settings.nagekomi_interval_help": "Secondes de base entre les prises. Une légère variation aléatoire (±20 %) est appliquée à chaque prise pour que le rythme ne soit pas parfaitement prévisible.",
     "settings.test":          "Déclencher un rappel maintenant (test)",
     "settings.credits":       "Crédits",
     "settings.credits_videos": "Vidéos de référence sélectionnées par judo.how — le bouton ▶ ouvre la vidéo YouTube intégrée sur la page de la technique. Chaque vidéo appartient à son auteur.",
@@ -650,6 +686,14 @@ const store = {
       // users keep their preference.
       prompt_mode: "audio",
     },
+    // Nage-komi (repetition throwing) auto-play settings. `interval_s` is the
+    // base seconds between throws; a ±20% jitter is applied per throw at run
+    // time so the cadence isn't metronomic. Persisted to localStorage under
+    // `kata.nagekomi_interval_s`; loadLocalSettings clamps to [NAGEKOMI_MIN_S,
+    // NAGEKOMI_MAX_S].
+    nagekomi: {
+      interval_s: 5,
+    },
     // Notification UX prefs. Both default ON. Persisted to localStorage
     // under `notif_sound_enabled` / `notif_vibration_enabled` (the keys
     // contracted with the backend agent). Round-1 scope: UI scaffold only;
@@ -664,6 +708,9 @@ const store = {
   quiz: null,
   rapid: null,
   drill: null,
+  // Nage-komi auto-play run state. null when not running. See startNagekomi /
+  // armNagekomiTimer / stopNagekomi below.
+  nagekomi: null,
   // Gamification snapshot (level, xp, streak, daily_goal, today). Refreshed
   // from the backend on boot and after each answer via the augmented
   // answer_question response. Used to seed UI defaults (daily-goal stepper,
@@ -693,6 +740,7 @@ const STORE_KEYS = {
   quizPromptMode: "kata.quiz_prompt_mode",
   drillDuration:  "kata.drill_duration_s",
   drillPromptMode:"kata.drill_prompt_mode",
+  nagekomiInterval: "kata.nagekomi_interval_s",
   updaterAutoCheck:    "kata.updater_auto_check",
   updaterLastNotes:    "kata.updater_last_notes",
   updaterLastDismiss:  "kata.updater_last_dismiss",
@@ -778,6 +826,16 @@ function navigate(view) {
   if (store.view === "drill" && view !== "drill") {
     clearDrillTimer();
   }
+  // Same contract for nage-komi: leaving the view must stop the auto-play
+  // loop (cancels the pending timeout + pauses audio) so no timer dangles and
+  // audio doesn't keep playing on another screen. stopNagekomi also reports
+  // the run for achievements. Guard on `running` so navigating INTO nagekomi
+  // (view !== "nagekomi" is false then) and the startNagekomi → navigate call
+  // don't tear down the run we're about to start.
+  if (store.view === "nagekomi" && view !== "nagekomi"
+      && store.nagekomi && store.nagekomi.running) {
+    stopNagekomi();
+  }
   // Invalidate cached sync status when entering settings, so the next
   // buildSyncSection() pulls fresh state. Within a settings session the
   // status_loaded flag prevents the per-keystroke fetch loop.
@@ -826,6 +884,11 @@ function loadLocalSettings() {
     if (["image", "kanji", "romaji", "audio"].includes(savedDrillMode)) {
       store.settings.drill.prompt_mode = savedDrillMode;
     }
+    const savedNagekomiInterval = parseInt(localStorage.getItem(STORE_KEYS.nagekomiInterval) || "", 10);
+    if (Number.isFinite(savedNagekomiInterval)) {
+      store.settings.nagekomi.interval_s =
+        Math.max(NAGEKOMI_MIN_S, Math.min(NAGEKOMI_MAX_S, savedNagekomiInterval));
+    }
     // Notification prefs default ON; only flip to false when explicitly "0".
     const savedSound = localStorage.getItem(STORE_KEYS.notifSoundEnabled);
     if (savedSound !== null) {
@@ -848,6 +911,7 @@ function saveLocalSettings() {
     localStorage.setItem(STORE_KEYS.quizPromptMode, store.settings.quiz_prompt_mode);
     localStorage.setItem(STORE_KEYS.drillDuration, String(store.settings.drill.duration_s));
     localStorage.setItem(STORE_KEYS.drillPromptMode, store.settings.drill.prompt_mode);
+    localStorage.setItem(STORE_KEYS.nagekomiInterval, String(store.settings.nagekomi.interval_s));
   } catch (_) {}
 }
 
@@ -1256,6 +1320,19 @@ async function completeDrillRun(consecutiveCorrect, promptMode) {
   } catch (e) { console.error("complete_drill_run", e); }
 }
 
+// Report a finished nage-komi run so the backend can award the matching
+// achievements. Mirrors completeDrillRun's invoke convention — passes the
+// number of throws played this session. Best-effort: any error (missing
+// command on desktop, offline, etc.) is swallowed so it never breaks the run.
+async function completeNagekomiRun(count) {
+  try {
+    const newly = await invoke("complete_nagekomi_run", { throws: count });
+    if (Array.isArray(newly)) {
+      for (const a of newly) showAchievementOverlay(a);
+    }
+  } catch (e) { console.error("complete_nagekomi_run", e); }
+}
+
 // ---------------------------------------------------------------------------
 // Toast / micro-feedback layer for gamification events.
 // ---------------------------------------------------------------------------
@@ -1517,6 +1594,11 @@ async function renderHome() {
       onclick: () => startDrill(),
     }, h("span", { class: "act-ico" }, "⏱"),
        h("span", {}, t("home.drill"))),
+    h("button", {
+      class: "btn action-btn", type: "button",
+      onclick: () => startNagekomi(),
+    }, h("span", { class: "act-ico" }, "↻"),
+       h("span", {}, t("home.nagekomi"))),
     h("button", {
       class: "btn ghost action-btn", type: "button",
       onclick: () => navigate("browse"),
@@ -1983,6 +2065,166 @@ async function nextDrillQuestion() {
     console.error(e);
   }
   render();
+}
+
+// ---------------------------------------------------------------------------
+// Nage-komi mode: auto-play random throws from the selected set.
+//
+// Not a test — no scoring, no user input during a run. Each cycle picks a
+// random technique, plays its audio clip, shows its illustration + reveal
+// card, then re-arms a setTimeout (NOT setInterval) with fresh ±20% jitter so
+// the cadence can't be anticipated. The run stops cleanly on Stop, on Exit, or
+// when the user navigates away (navigate() calls stopNagekomi for us).
+// ---------------------------------------------------------------------------
+
+// The candidate pool reuses the SAME filtering the quiz/drill use:
+// resolveGroupsFilter() (settings group_filter wins over the home family
+// quick-select). We apply it client-side over the already-loaded
+// store.techniques rather than asking the backend, since nage-komi just needs
+// a plain random draw (no weighting). Returns the full list if nothing is
+// loaded or the filter would empty the pool.
+function nagekomiCandidates() {
+  const all = store.techniques || [];
+  const groups = resolveGroupsFilter();
+  if (!groups) return all;
+  const filtered = all.filter(tech => groups.includes(tech.group));
+  return filtered.length ? filtered : all;
+}
+
+// Seconds for the next throw: base interval ± up to NAGEKOMI_JITTER (20%).
+function nagekomiNextDelayMs() {
+  const base = store.settings.nagekomi.interval_s;
+  const jitter = 1 + (Math.random() * 2 - 1) * NAGEKOMI_JITTER;
+  return Math.max(NAGEKOMI_MIN_S, base * jitter) * 1000;
+}
+
+function clearNagekomiTimer() {
+  if (store.nagekomi && store.nagekomi.timer_id != null) {
+    clearTimeout(store.nagekomi.timer_id);
+    store.nagekomi.timer_id = null;
+  }
+}
+
+// Pick a random technique avoiding an immediate repeat of the just-played one
+// (unless the pool has only a single member). Returns null if no candidates.
+function pickNagekomiTechnique() {
+  const cands = nagekomiCandidates();
+  if (!cands.length) return null;
+  if (cands.length === 1) return cands[0];
+  const last = store.nagekomi ? store.nagekomi.current_slug : null;
+  let pick;
+  do {
+    pick = cands[Math.floor(Math.random() * cands.length)];
+  } while (pick.slug === last);
+  return pick;
+}
+
+// Play one throw: pick → audio + card → schedule the next. Re-armed each
+// cycle so jitter is fresh. Bails out silently if the run was stopped.
+function nagekomiCycle() {
+  if (!store.nagekomi || !store.nagekomi.running) return;
+  const tech = pickNagekomiTechnique();
+  if (!tech) return;
+  store.nagekomi.current_slug = tech.slug;
+  store.nagekomi.count += 1;
+  // Defer audio slightly so the card paints before play() fires (mirrors
+  // maybeAutoSpeak); the Start tap already satisfied the WebView gesture gate.
+  setTimeout(() => {
+    if (store.nagekomi && store.nagekomi.running
+        && store.nagekomi.current_slug === tech.slug) {
+      playAudioClip(tech);
+    }
+  }, 120);
+  render();
+  store.nagekomi.timer_id = setTimeout(nagekomiCycle, nagekomiNextDelayMs());
+}
+
+function startNagekomi() {
+  navigate("nagekomi");
+  store.nagekomi = {
+    running: true,
+    timer_id: null,
+    current_slug: null,
+    // Number of throws played this run — reported to the backend on stop so
+    // it can award nage-komi achievements.
+    count: 0,
+  };
+  // Kick the first throw immediately (the Start tap is the audio gesture).
+  nagekomiCycle();
+}
+
+// Stop a run cleanly: cancel the pending timer, pause audio, report the run to
+// the backend (best-effort), and clear state. Safe to call when not running.
+function stopNagekomi() {
+  if (!store.nagekomi) return;
+  clearNagekomiTimer();
+  store.nagekomi.running = false;
+  try { if (_audioEl) _audioEl.pause(); } catch (_) { /* ignore */ }
+  const count = store.nagekomi.count;
+  store.nagekomi = null;
+  if (count > 0) completeNagekomiRun(count);
+}
+
+async function renderNagekomi() {
+  const root = el("#view-nagekomi");
+  root.innerHTML = "";
+
+  const interval = store.settings.nagekomi.interval_s;
+
+  // Idle: intro + Start.
+  if (!store.nagekomi || !store.nagekomi.running) {
+    root.appendChild(h("div", { class: "card" },
+      h("h2", {}, t("nagekomi.title")),
+      h("p", { class: "muted" }, t("nagekomi.intro")),
+      h("p", { class: "muted", style: "margin-top:6px" },
+        t("nagekomi.interval_label", { n: interval })),
+      h("div", { class: "btn-row", style: "margin-top:10px" },
+        h("button", { class: "btn primary full", onclick: () => startNagekomi() },
+          t("nagekomi.start")),
+      ),
+    ));
+    return;
+  }
+
+  const nk = store.nagekomi;
+  const tech = (store.techniques || []).find(x => x.slug === nk.current_slug);
+
+  // Header: throw counter + Stop. Stop mirrors the drill exit button.
+  root.appendChild(h("div", { class: "drill-header" },
+    h("span", { class: "muted" }, t("nagekomi.running", { n: nk.count })),
+    h("button", {
+      class: "btn ghost small",
+      onclick: () => { stopNagekomi(); render(); },
+    }, t("nagekomi.stop")),
+  ));
+
+  if (!tech) return;
+
+  // Card: image + romaji + kanji + French, reusing the reveal styling so each
+  // cycle gets the soft entrance animation. `nagekomi-card` keys the fresh
+  // mount so the animation replays on every throw.
+  const card = h("div", { class: "card quiz-card" },
+    h("div", { class: "quiz-meta" },
+      h("span", { class: "badge brand" }, `${tech.group}. ${GROUP_NAMES[tech.group] || ""}`),
+    ),
+    h("div", { class: "quiz-image-wrap" }, makeImageEl(tech, tech.name)),
+    h("div", { class: "reveal good nagekomi-card" },
+      h("div", { class: "reveal-name" }, tech.name),
+      h("div", { class: "reveal-kanji" }, tech.kanji),
+      h("div", { class: "reveal-fr" }, localizedTranslation(tech)),
+      h("div", { class: "reveal-meta" },
+        groupBadge(tech.group, "gold"),
+        categoryBadge(tech.category),
+      ),
+      h("div", { class: "btn-row", style: "justify-content:center; margin-top:10px" },
+        h("button", {
+          class: "btn ghost small",
+          onclick: () => playAudioClip(tech),
+        }, t("nagekomi.audio_hint")),
+      ),
+    ),
+  );
+  root.appendChild(card);
 }
 
 async function renderDrill() {
@@ -3236,6 +3478,33 @@ async function renderSettings() {
 
   root.appendChild(drillCard);
 
+  // Nage-komi mode: base interval (seconds) between auto-played throws.
+  const nagekomiCard = h("div", { class: "card" }, h("h2", {}, t("settings.nagekomi_section")));
+  const nagekomiIntervalInput = h("input", {
+    type: "number",
+    min: String(NAGEKOMI_MIN_S),
+    max: String(NAGEKOMI_MAX_S),
+    step: "1",
+    value: String(store.settings.nagekomi.interval_s),
+  });
+  nagekomiIntervalInput.addEventListener("change", () => {
+    const n = parseInt(nagekomiIntervalInput.value, 10);
+    if (!Number.isFinite(n)) {
+      nagekomiIntervalInput.value = String(store.settings.nagekomi.interval_s);
+      return;
+    }
+    const clamped = Math.max(NAGEKOMI_MIN_S, Math.min(NAGEKOMI_MAX_S, n));
+    store.settings.nagekomi.interval_s = clamped;
+    nagekomiIntervalInput.value = String(clamped);
+    saveLocalSettings();
+  });
+  nagekomiCard.appendChild(h("div", { class: "field" },
+    h("label", {}, t("settings.nagekomi_interval")),
+    nagekomiIntervalInput,
+    h("div", { class: "muted", style: "margin-top:6px" }, t("settings.nagekomi_interval_help")),
+  ));
+  root.appendChild(nagekomiCard);
+
   // App updates — desktop only; on mobile the card just explains store updates.
   root.appendChild(await buildUpdaterSection());
 
@@ -3327,6 +3596,7 @@ function render() {
     case "quiz":     return renderQuiz();
     case "rapid":    return renderRapid();
     case "drill":    return renderDrill();
+    case "nagekomi": return renderNagekomi();
     case "browse":   return renderBrowse();
     case "stats":    return renderStats();
     case "settings": return renderSettings();

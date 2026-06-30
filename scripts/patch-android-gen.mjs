@@ -16,6 +16,9 @@
 //   2. Copy android-patches/ic_stat_quiz.xml into res/drawable/.
 //   3. Add a `<color name="notification_color">#D4A24C</color>` entry to
 //      res/values/colors.xml (or create the file if Tauri's init didn't).
+//   4. Change MainActivity's launchMode from the Tauri template default
+//      `singleTask` to `singleTop` — fixes "tapping the notification body
+//      does not foreground/respond" (see the long comment at the patch site).
 //
 // NOTE on exact-alarm permissions: we deliberately do NOT declare
 // USE_EXACT_ALARM (Google Play restricts it to alarm/calendar apps —
@@ -60,6 +63,48 @@ if (!manifest.includes('com.tauri.notification.default_notification_icon')) {
   console.log('[patch-android-gen] manifest: added notification icon + color meta-data');
 } else {
   console.log('[patch-android-gen] manifest: notification meta-data already present (skipped)');
+}
+
+// 1b: MainActivity launchMode — fix notification-tap not reopening the app.
+//
+// The Tauri CLI template declares the activity with
+// `android:launchMode="singleTask"`. tauri-plugin-notification builds the
+// notification's *content* (body-tap) PendingIntent via
+// `PendingIntent.getActivity(...)` with the intent flags
+// `FLAG_ACTIVITY_SINGLE_TOP | FLAG_ACTIVITY_CLEAR_TOP` and an
+// ACTION_MAIN / CATEGORY_LAUNCHER intent (see
+// TauriNotificationManager.kt::buildIntent + createActionIntents in the
+// 2.3.3 plugin). On a `singleTask` root activity, FLAG_ACTIVITY_CLEAR_TOP
+// applied by an ACTION_MAIN/LAUNCHER intent finishes-and-recreates the
+// activity rather than routing cleanly through `onNewIntent`. For a Tauri
+// WebView app that means the WebView is torn down and reloaded on every
+// tap; the plugin fires its `actionPerformed` event (actionId "tap") into
+// the *old* webview/page that is being destroyed, so the in-app deep-link
+// is dropped and the body tap appears to do nothing — while the action
+// BUTTONS keep working because they are normally exercised with the app
+// already in the foreground (warm), where no clear/recreate happens.
+//
+// Switching to `singleTop` keeps a single top-of-task instance and
+// delivers the tap intent through `onNewIntent` WITHOUT the destroy/
+// recreate, so the WebView is preserved and the `actionPerformed` /
+// onNewIntent path reliably reaches the live frontend. Cold starts
+// (process dead) still launch normally. We deliberately do NOT use
+// `singleInstance` (it isolates MainActivity in its own task and breaks
+// startActivityForResult flows used by file pickers / tauri-plugin-opener).
+if (/android:name=".MainActivity"/.test(manifest)) {
+  if (/android:launchMode="singleTask"/.test(manifest)) {
+    manifest = manifest.replace(
+      /android:launchMode="singleTask"/,
+      'android:launchMode="singleTop"',
+    );
+    console.log('[patch-android-gen] manifest: MainActivity launchMode singleTask -> singleTop (notification-tap fix)');
+  } else if (/android:launchMode="singleTop"/.test(manifest)) {
+    console.log('[patch-android-gen] manifest: MainActivity launchMode already singleTop (skipped)');
+  } else {
+    console.warn('[patch-android-gen] manifest: MainActivity launchMode not "singleTask" — template may have changed; left as-is. Verify notification-tap still works.');
+  }
+} else {
+  console.warn('[patch-android-gen] manifest: MainActivity element not found — skipping launchMode patch.');
 }
 
 writeFileSync(manifestPath, manifest);

@@ -719,6 +719,14 @@ main {
   margin-bottom: 10px;
 }
 
+/* ----- Nage-komi auto-play card -----
+   Reuses .reveal for the soft entrance + theming; this just centers the
+   text block (the quiz reveal is left-aligned) so the auto-play card reads
+   as a clean, glanceable display rather than a graded answer. A fresh DOM
+   node is built per throw, so the .reveal `revealIn` animation replays each
+   cycle. */
+.reveal.nagekomi-card { text-align: center; }
+
 .muted { color: var(--muted); font-size: 12px; }
 
 /* ----- Video modal ----- */

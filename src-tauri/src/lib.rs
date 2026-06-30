@@ -229,6 +229,7 @@ pub fn run() {
             commands::gamification::set_daily_goal,
             commands::gamification::complete_rapid,
             commands::gamification::complete_drill_run,
+            commands::gamification::complete_nagekomi_run,
             commands::gamification::list_achievements,
             commands::sync::auth_start,
             commands::sync::auth_poll,

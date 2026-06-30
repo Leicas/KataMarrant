@@ -53,6 +53,18 @@ pub fn xp_for_answer(correct: bool, combo_after: u32) -> i64 {
     10 + bonus
 }
 
+/// XP awarded for a completed nage-komi run of `throws` repetitions.
+///
+/// Nage-komi is *passive* repetition drilling (audio + image auto-play, no
+/// scoring), so each item is worth less than an active correct answer. An
+/// active answer earns 10 XP (`xp_for_answer`); a nage-komi throw earns
+/// 2 XP — roughly a fifth, reflecting that the user is listening/watching
+/// rather than recalling. Linear in the count, no combo bonus (there is no
+/// notion of correctness to chain). A run with 0 throws earns nothing.
+pub fn xp_for_nagekomi(throws: u32) -> i64 {
+    2 * throws as i64
+}
+
 // ---------------------------------------------------------------------------
 // Achievements registry
 // ---------------------------------------------------------------------------
@@ -157,6 +169,37 @@ pub const ACHIEVEMENTS: &[AchievementDef] = &[
         name_fr: "Sensei silencieux",
         description_en: "Answer 10 consecutive drill questions in audio prompt mode.",
         description_fr: "Répondre 10 prises de drill en audio sans quitter.",
+    },
+    // Nage-komi (uchi-komi style repetition drilling) — passive listening
+    // milestones keyed on cumulative throws auto-played across all runs.
+    // Thresholds mirror the milestone style of the streak/centenary set.
+    AchievementDef {
+        code: "nagekomi_first",
+        name_en: "First Repetitions",
+        name_fr: "Premières répétitions",
+        description_en: "Finish your first nage-komi run.",
+        description_fr: "Terminer ta première série de nage-komi.",
+    },
+    AchievementDef {
+        code: "nagekomi_50",
+        name_en: "Fifty Throws",
+        name_fr: "Cinquante projections",
+        description_en: "Complete 50 nage-komi throws in total.",
+        description_fr: "Compléter 50 projections de nage-komi au total.",
+    },
+    AchievementDef {
+        code: "nagekomi_250",
+        name_en: "Two Hundred Fifty Throws",
+        name_fr: "Deux cent cinquante projections",
+        description_en: "Complete 250 nage-komi throws in total.",
+        description_fr: "Compléter 250 projections de nage-komi au total.",
+    },
+    AchievementDef {
+        code: "nagekomi_1000",
+        name_en: "Thousand Throws",
+        name_fr: "Mille projections",
+        description_en: "Complete 1000 nage-komi throws in total.",
+        description_fr: "Compléter 1000 projections de nage-komi au total.",
     },
 ];
 
@@ -546,6 +589,101 @@ pub fn complete_drill_run(
     Ok(out)
 }
 
+/// Read the cumulative nage-komi throw count, creating its backing table on
+/// first use. The table lives outside `gamification_state` (whose schema is
+/// owned by `db::initialize`) so that adding nage-komi required no migration
+/// to the existing one-row state table. Backward-compat is automatic: existing
+/// users simply have no row yet and read `0`.
+fn nagekomi_total(conn: &rusqlite::Connection) -> AppResult<i64> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS nagekomi_progress (
+             id          INTEGER PRIMARY KEY CHECK (id = 1),
+             total_throws INTEGER NOT NULL DEFAULT 0,
+             updated_at   INTEGER NOT NULL DEFAULT 0
+         );
+         INSERT OR IGNORE INTO nagekomi_progress (id) VALUES (1);",
+    )?;
+    let total: i64 = conn.query_row(
+        "SELECT total_throws FROM nagekomi_progress WHERE id = 1",
+        [],
+        |r| r.get(0),
+    )?;
+    Ok(total)
+}
+
+/// Record a completed nage-komi run.
+///
+/// Mirrors `complete_drill_run`'s contract: it receives the per-run count
+/// (`throws`), returns `AppResult<Vec<UnlockedAchievement>>` listing any
+/// achievements newly unlocked by this run, and never panics. The frontend
+/// calls it as `invoke("complete_nagekomi_run", { throws })` when a run ends.
+///
+/// Side effects, in order:
+///   1. Increment the cumulative nage-komi throw counter.
+///   2. Award `xp_for_nagekomi(throws)` XP, recompute level, and reflect the
+///      XP in today's `daily_progress.xp_earned` (without inflating the
+///      question/correct counts — nage-komi has no scoring so it must not
+///      count toward the daily answer goal).
+///   3. Unlock cumulative-throw milestone achievements.
+#[tauri::command]
+pub fn complete_nagekomi_run(
+    throws: u32,
+    state: tauri::State<'_, AppState>,
+) -> AppResult<Vec<UnlockedAchievement>> {
+    let mut out = Vec::new();
+    let conn = state.db.lock().unwrap();
+
+    // 1. Bump the cumulative counter.
+    let prev_total = nagekomi_total(&conn)?;
+    let new_total = prev_total + throws as i64;
+    let now = chrono::Utc::now().timestamp();
+    conn.execute(
+        "UPDATE nagekomi_progress SET total_throws = ?1, updated_at = ?2 WHERE id = 1",
+        rusqlite::params![new_total, now],
+    )?;
+
+    // 2. Award XP (passive — scaled below an active answer) and recompute level.
+    let xp_gained = xp_for_nagekomi(throws);
+    if xp_gained > 0 {
+        let mut gstate = db::get_gamification_state(&conn)?;
+        gstate.xp_total += xp_gained;
+        gstate.level = level_for_xp(gstate.xp_total) as i64;
+        gstate.updated_at = now;
+        db::set_gamification_state(&conn, &gstate)?;
+        // Surface the XP in today's running total without touching the
+        // answer/correct counters (bump_daily increments `questions`, which
+        // we must avoid here — nage-komi is not a quizzed answer).
+        let today = db::local_today_string();
+        conn.execute(
+            "INSERT INTO daily_progress (day, questions, correct, goal_met, xp_earned, updated_at)
+             VALUES (?1, 0, 0, 0, ?2, strftime('%s','now'))
+             ON CONFLICT(day) DO UPDATE SET
+                 xp_earned = xp_earned + ?2,
+                 updated_at = strftime('%s','now')",
+            rusqlite::params![today, xp_gained],
+        )?;
+    }
+
+    // 3. Cumulative-throw milestone achievements. `nagekomi_first` unlocks on
+    //    any completed run (>= 1 throw); the rest on total-throw thresholds.
+    let milestones: &[(i64, &str)] = &[
+        (1, "nagekomi_first"),
+        (50, "nagekomi_50"),
+        (250, "nagekomi_250"),
+        (1000, "nagekomi_1000"),
+    ];
+    for &(threshold, code) in milestones {
+        if new_total >= threshold
+            && !db::is_unlocked(&conn, code)?
+            && db::unlock_achievement(&conn, code, None)?
+        {
+            out.push(UnlockedAchievement::new(code));
+        }
+    }
+
+    Ok(out)
+}
+
 #[tauri::command]
 pub fn list_achievements(
     state: tauri::State<'_, AppState>,
@@ -612,5 +750,63 @@ mod tests {
         assert_eq!(xp_for_answer(true, 2), 11);
         assert_eq!(xp_for_answer(true, 6), 15);
         assert_eq!(xp_for_answer(true, 50), 15);
+    }
+
+    #[test]
+    fn nagekomi_xp_is_linear_and_below_active_answer() {
+        // 0 throws → nothing.
+        assert_eq!(xp_for_nagekomi(0), 0);
+        // 2 XP per throw, linear.
+        assert_eq!(xp_for_nagekomi(1), 2);
+        assert_eq!(xp_for_nagekomi(10), 20);
+        assert_eq!(xp_for_nagekomi(50), 100);
+        // A passive throw must earn strictly less than a base active answer (10).
+        assert!(xp_for_nagekomi(1) < xp_for_answer(true, 0));
+    }
+
+    #[test]
+    fn nagekomi_achievements_are_registered() {
+        for code in ["nagekomi_first", "nagekomi_50", "nagekomi_250", "nagekomi_1000"] {
+            assert!(
+                achievement_def(code).is_some(),
+                "missing achievement def: {code}"
+            );
+        }
+    }
+
+    /// Mirror of the milestone table inside `complete_nagekomi_run`: assert the
+    /// cumulative-total thresholds unlock the expected codes at the boundaries.
+    #[test]
+    fn nagekomi_milestone_thresholds() {
+        let milestones: &[(i64, &str)] = &[
+            (1, "nagekomi_first"),
+            (50, "nagekomi_50"),
+            (250, "nagekomi_250"),
+            (1000, "nagekomi_1000"),
+        ];
+        let unlocked_at = |total: i64| -> Vec<&str> {
+            milestones
+                .iter()
+                .filter(|(t, _)| total >= *t)
+                .map(|(_, c)| *c)
+                .collect()
+        };
+        assert_eq!(unlocked_at(0), Vec::<&str>::new());
+        assert_eq!(unlocked_at(1), vec!["nagekomi_first"]);
+        assert_eq!(unlocked_at(49), vec!["nagekomi_first"]);
+        assert_eq!(unlocked_at(50), vec!["nagekomi_first", "nagekomi_50"]);
+        assert_eq!(
+            unlocked_at(250),
+            vec!["nagekomi_first", "nagekomi_50", "nagekomi_250"]
+        );
+        assert_eq!(
+            unlocked_at(1000),
+            vec![
+                "nagekomi_first",
+                "nagekomi_50",
+                "nagekomi_250",
+                "nagekomi_1000"
+            ]
+        );
     }
 }
