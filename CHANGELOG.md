@@ -1,3 +1,9 @@
+## [1.9.0-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.8.0...v1.9.0-beta.1) (2026-06-30)
+
+### Features
+
+* nage-komi auto-play mode + gamification; fix Android notification tap ([04ef63d](https://github.com/Leicas/KataMarrant/commit/04ef63d811c714986fbb28ef230a8e82e65dd8c3))
+
 ## [1.8.0](https://github.com/Leicas/KataMarrant/compare/v1.7.2...v1.8.0) (2026-05-30)
 
 ### Features
