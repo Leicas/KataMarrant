@@ -1,3 +1,9 @@
+## [1.9.0-beta.2](https://github.com/Leicas/KataMarrant/compare/v1.9.0-beta.1...v1.9.0-beta.2) (2026-07-01)
+
+### Bug Fixes
+
+* **notif:** open app on tap + working snooze/skip via patched notification plugin fork ([7ae83d5](https://github.com/Leicas/KataMarrant/commit/7ae83d5420a1ec7d1fd83288acef987a460f8f72))
+
 ## [1.9.0-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.8.0...v1.9.0-beta.1) (2026-06-30)
 
 ### Features
