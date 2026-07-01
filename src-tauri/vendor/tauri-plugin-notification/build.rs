@@ -19,6 +19,7 @@ const COMMANDS: &[&str] = &[
     "delete_channel",
     "create_channel",
     "permission_state",
+    "get_pending_action", // KataMarrant fork: cold-start action replay
 ];
 
 fn main() {

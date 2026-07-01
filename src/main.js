@@ -4208,26 +4208,7 @@ async function setupNotificationActions() {
       console.warn("__TAURI__.core.Channel unavailable; onAction skipped");
       return;
     }
-    const handler = new Channel((notification) => {
-      const actionId = notification?.actionId || notification?.action_id;
-      const slug = notification?.extra?.technique_slug
-                || notification?.extra?.["technique_slug"]
-                || null;
-      if (!actionId) return;
-      // Forward to Rust so server-side state (skip-today flag, snooze
-      // re-enqueue) is updated authoritatively. Both arg shapes are
-      // tolerated to match Rust's serde renaming.
-      invoke("notification_action_handler", {
-        actionId,
-        techniqueSlug: slug,
-        action_id: actionId,
-        technique_slug: slug,
-      }).catch((e) => console.error("notification_action_handler failed:", e));
-
-      // Body-tap (actionId "tap") opens the quiz via the show_quiz_prompt
-      // event emitted by notification_action_handler's default arm; snooze /
-      // skip are handled entirely in Rust and must NOT open the quiz.
-    });
+    const handler = new Channel((payload) => routeNotifAction(payload));
     // The plugin's listener registration command is `register_listener` on
     // 2.x; older builds used camelCase `registerListener`. Try both.
     try {
@@ -4239,9 +4220,44 @@ async function setupNotificationActions() {
         event: "actionPerformed", handler,
       });
     }
+
+    // Cold-start replay: if a notification launched the app from a DEAD
+    // process, the plugin's load() emitted `actionPerformed` before this
+    // listener existed, so the live event was lost. Pull the buffered action
+    // (vendored-fork getPendingAction command) and route it now so a cold tap
+    // still deep-links into the quiz — and snooze/skip still register. No-op
+    // on desktop / stock plugin (command absent -> rejects -> swallowed).
+    try {
+      const pending = await invoke("plugin:notification|get_pending_action");
+      if (pending && pending.action) routeNotifAction(pending.action);
+    } catch (_) { /* no pending action, or command unavailable */ }
   } catch (e) {
     console.warn("onAction setup failed:", e);
   }
+}
+
+// Route a notification action — from the live onAction Channel OR replayed on
+// cold start — to Rust, which owns the behavior: "tap"/unknown emits
+// show_quiz_prompt (opens the quiz for the picked technique); snooze_1h /
+// skip_today re-arm the schedule WITHOUT opening. The picked slug is baked
+// into the notification's `extra` map at schedule time; the actionPerformed
+// payload nests the source notification under `notification`, so the slug is
+// at payload.notification.extra.technique_slug (tolerate a flat payload.extra
+// too). Slug may be null -> Rust/next_question falls back to a weighted pick.
+function routeNotifAction(payload) {
+  if (!payload) return;
+  const actionId = payload.actionId || payload.action_id;
+  if (!actionId) return;
+  const notif = payload.notification || payload;
+  const slug = (notif && notif.extra && notif.extra.technique_slug)
+            || (payload.extra && payload.extra.technique_slug)
+            || null;
+  invoke("notification_action_handler", {
+    actionId,
+    techniqueSlug: slug,
+    action_id: actionId,
+    technique_slug: slug,
+  }).catch((e) => console.error("notification_action_handler failed:", e));
 }
 
 function notifRationaleAlreadyShown() {

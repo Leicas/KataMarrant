@@ -78,6 +78,11 @@ class RemoveActiveArgs {
 )
 class NotificationPlugin(private val activity: Activity): Plugin(activity) {
   private var webView: WebView? = null
+  // KataMarrant fork: buffer the most recent notification action so the
+  // frontend can retrieve it on a COLD start. On a cold tap, load() fires
+  // onIntent and emits "actionPerformed" BEFORE the JS listener attaches, so
+  // the live event is lost; getPendingAction lets boot code replay it once.
+  private var pendingActionJson: JSObject? = null
   private lateinit var manager: TauriNotificationManager
   private lateinit var notificationManager: NotificationManager
   private lateinit var notificationStorage: NotificationStorage
@@ -130,8 +135,21 @@ class NotificationPlugin(private val activity: Activity): Plugin(activity) {
     }
     val dataJson = manager.handleNotificationActionPerformed(intent, notificationStorage)
     if (dataJson != null) {
+      pendingActionJson = dataJson // KataMarrant fork: buffer for cold-start replay
       trigger("actionPerformed", dataJson)
     }
+  }
+
+  @Command
+  fun getPendingAction(invoke: Invoke) {
+    // KataMarrant fork: return + clear the buffered cold-start action. The
+    // frontend calls this once on boot so a notification that launched the app
+    // from a dead process still deep-links into the quiz. Returns
+    // { action: <actionPerformed payload> | null }.
+    val res = JSObject()
+    res.put("action", pendingActionJson)
+    pendingActionJson = null
+    invoke.resolve(res)
   }
 
   @Command

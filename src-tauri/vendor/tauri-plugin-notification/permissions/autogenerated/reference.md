@@ -25,6 +25,7 @@ It allows all notification related features.
 - `allow-delete-channel`
 - `allow-create-channel`
 - `allow-permission-state`
+- `allow-get-pending-action`
 
 ## Permission Table
 
@@ -213,6 +214,32 @@ Enables the get_pending command without any pre-configured scope.
 <td>
 
 Denies the get_pending command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`notification:allow-get-pending-action`
+
+</td>
+<td>
+
+Enables the get_pending_action command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`notification:deny-get-pending-action`
+
+</td>
+<td>
+
+Denies the get_pending_action command without any pre-configured scope.
 
 </td>
 </tr>
