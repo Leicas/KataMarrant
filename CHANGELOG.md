@@ -1,3 +1,9 @@
+## [1.9.0-beta.3](https://github.com/Leicas/KataMarrant/compare/v1.9.0-beta.2...v1.9.0-beta.3) (2026-07-01)
+
+### Bug Fixes
+
+* **notif:** cold-start deep-link into picked quiz + prerelease-unique Android versionCode ([961f8c3](https://github.com/Leicas/KataMarrant/commit/961f8c3dc537c5e41d3bdf04782c7bb2058ce458))
+
 ## [1.9.0-beta.2](https://github.com/Leicas/KataMarrant/compare/v1.9.0-beta.1...v1.9.0-beta.2) (2026-07-01)
 
 ### Bug Fixes
