@@ -8,6 +8,14 @@ src-tauri/target/
 # color) live under `src-tauri/android-patches/` and are re-applied
 # post-init by `scripts/patch-android-gen.mjs`.
 src-tauri/gen/
+# Build artifacts written INTO the vendored plugin fork by `tauri android
+# build` (gradle outputs + the .tauri api module tauri injects at build time).
+# Only the crate SOURCE under src-tauri/vendor/ is tracked.
+src-tauri/vendor/**/android/build/
+src-tauri/vendor/**/android/.gradle/
+src-tauri/vendor/**/android/.cxx/
+src-tauri/vendor/**/android/.tauri/
+src-tauri/vendor/**/android/local.properties
 .venv/
 .claude/
 .DS_Store

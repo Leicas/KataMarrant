@@ -17,8 +17,14 @@
 //   3. Add a `<color name="notification_color">#D4A24C</color>` entry to
 //      res/values/colors.xml (or create the file if Tauri's init didn't).
 //   4. Change MainActivity's launchMode from the Tauri template default
-//      `singleTask` to `singleTop` — fixes "tapping the notification body
-//      does not foreground/respond" (see the long comment at the patch site).
+//      `singleTask` to `singleTop`. This helps the WARM notification-tap path
+//      (deliver via onNewIntent without a destroy/recreate). The COLD path
+//      root cause (a dead-process tap landing on the Android home screen)
+//      was the plugin's ACTION_MAIN/CATEGORY_LAUNCHER content intent and is
+//      fixed in the vendored plugin fork (src-tauri/vendor/
+//      tauri-plugin-notification, wired via Cargo [patch.crates-io]) — see
+//      that dir's KATAMARRANT_FORK.md. singleTop stays as the complementary
+//      warm-path fix; do NOT revert it to singleTask.
 //
 // NOTE on exact-alarm permissions: we deliberately do NOT declare
 // USE_EXACT_ALARM (Google Play restricts it to alarm/calendar apps —

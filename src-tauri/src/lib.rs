@@ -225,6 +225,7 @@ pub fn run() {
             commands::notification::request_notification_permission,
             commands::notification::get_notification_permission_state,
             commands::notification::notification_action_handler,
+            commands::notification::notifications_actions_ready,
             commands::gamification::get_gamification_state,
             commands::gamification::set_daily_goal,
             commands::gamification::complete_rapid,

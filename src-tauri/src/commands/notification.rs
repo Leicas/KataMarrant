@@ -149,3 +149,19 @@ pub async fn notification_action_handler(
 
     Ok(())
 }
+
+/// Called by the frontend once `register_action_types` has resolved (so the
+/// `quiz_prompt` action group is persisted in the plugin's storage). It
+/// re-bakes the mobile OS-notification batch, because the batch enqueued by
+/// `lib.rs::setup` runs at process boot — BEFORE the WebView loads and
+/// registers the action types — so those pending alarms would otherwise carry
+/// no action buttons. `schedule_next_mobile` cancels the existing batch first,
+/// so this is idempotent (no duplicate alarms). No-op on desktop.
+#[tauri::command]
+pub async fn notifications_actions_ready(_app: AppHandle) -> AppResult<()> {
+    #[cfg(mobile)]
+    {
+        scheduler::schedule_next_mobile(&_app).await;
+    }
+    Ok(())
+}

@@ -4180,13 +4180,21 @@ async function setupNotificationActions() {
       types: [{
         id: "quiz_prompt",
         actions: [
-          { id: "answer",     title: t("notif.action.answer") },
+          // Body-tap already opens the quiz (via the show_quiz_prompt deep
+          // link), so a separate "Answer" button is redundant — keeping only
+          // Snooze + Skip means both stay visible in Android's ~3-slot budget.
           { id: "snooze_1h",  title: t("notif.action.snooze") },
           { id: "skip_today", title: t("notif.action.skip"),
             destructive: true },
         ],
       }],
     });
+    // The action group is now persisted in the plugin's storage. Ask Rust to
+    // re-bake the OS notification batch so the pending alarms actually carry
+    // the buttons: the boot-time enqueue (lib.rs setup) ran BEFORE this
+    // registration, so its alarms have none. Idempotent (Rust cancel_alls
+    // first). No-op on desktop.
+    try { await invoke("notifications_actions_ready"); } catch (_) {}
   } catch (e) {
     // Older plugin builds or desktop platforms without action support — log
     // and continue. Lock-Screen actions degrade gracefully (notification
@@ -4216,11 +4224,9 @@ async function setupNotificationActions() {
         technique_slug: slug,
       }).catch((e) => console.error("notification_action_handler failed:", e));
 
-      // For the "answer" action, also drive the frontend straight into the
-      // quiz with the slug pre-selected. Rust will not navigate the UI.
-      if (actionId === "answer") {
-        try { startSingleQuiz(slug); } catch (_) {}
-      }
+      // Body-tap (actionId "tap") opens the quiz via the show_quiz_prompt
+      // event emitted by notification_action_handler's default arm; snooze /
+      // skip are handled entirely in Rust and must NOT open the quiz.
     });
     // The plugin's listener registration command is `register_listener` on
     // 2.x; older builds used camelCase `registerListener`. Try both.
