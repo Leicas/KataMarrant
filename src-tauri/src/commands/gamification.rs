@@ -323,20 +323,17 @@ pub fn record_answer_with_gamification(
     // 3. Streak update.
     let today = db::local_today_string();
     let yesterday = db::local_day_offset_string(-1);
-    let streak_changed;
-    match gstate.last_active_day.as_deref() {
-        Some(d) if d == today => {
-            streak_changed = false;
-        }
+    let streak_changed = match gstate.last_active_day.as_deref() {
+        Some(d) if d == today => false,
         Some(d) if d == yesterday => {
             gstate.current_streak += 1;
-            streak_changed = true;
+            true
         }
         _ => {
             gstate.current_streak = 1;
-            streak_changed = true;
+            true
         }
-    }
+    };
     gstate.longest_streak = gstate.longest_streak.max(gstate.current_streak);
     gstate.last_active_day = Some(today.clone());
 
