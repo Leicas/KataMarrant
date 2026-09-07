@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/Leicas/KataMarrant/compare/v1.8.0...v1.9.0) (2026-09-07)
+
+### Features
+
+* **techniques:** add shime-waza + kansetsu-waza groups (Kodokan katame-waza) ([#15](https://github.com/Leicas/KataMarrant/issues/15)) ([2d531dd](https://github.com/Leicas/KataMarrant/commit/2d531dd8c10e61cbbc9d3e04bec2ffae060b5a7f))
+
 ## [1.8.0](https://github.com/Leicas/KataMarrant/compare/v1.7.2...v1.8.0) (2026-05-30)
 
 ### Features
