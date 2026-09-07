@@ -33,13 +33,15 @@ ushiro-goshi           ura-nage               sumi-otoshi           yoko-gake
 The 7 osaekomi pins (`kesa-gatame` … `tate-shiho-gatame`) have individually
 sourced illustrations listed in [ATTRIBUTION.md](ATTRIBUTION.md).
 
-### Shime-waza / kansetsu-waza — Kodokan video stills
+### Shime-waza / kansetsu-waza — posterized silhouettes
 
-Groups 7 and 8 use one JPEG still per technique (`<slug>.jpg`, 600px wide)
-grabbed from the official KODOKAN × IJF Academy demo videos at ~45% of the
-clip, with the bottom 15% cropped away so the on-screen technique name does
-not spoil the quiz. Regenerate with `scripts/kodokan_stills.py` (needs
-`yt-dlp`, `ffmpeg`, Pillow). See [ATTRIBUTION.md](ATTRIBUTION.md). If a
+Groups 7 and 8 use one PNG per technique (`<slug>.png`, 600px wide): a
+frame from the official KODOKAN × IJF Academy demo video (~45% into the clip,
+bottom caption strip cropped), the two judoka segmented out with rembg and
+re-rendered as a 3-tone amber/gold posterization with a light outline on the
+app's dark gradient — same palette as the category silhouettes. Regenerate
+with `scripts/kodokan_stills.py` (needs `yt-dlp`, `ffmpeg`, Pillow,
+numpy, `rembg[cpu]`). See [ATTRIBUTION.md](ATTRIBUTION.md). If a
 group is ever added without art, raise `ILLUSTRATED_GROUPS_MAX` in
 `src/main.js` only once its files exist — below that bound the quiz falls
 back to the kanji + romaji card. Slugs:

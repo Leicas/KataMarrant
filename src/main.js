@@ -170,7 +170,7 @@ const I18N = {
     "settings.test":          "Trigger a quiz prompt now (test)",
     "settings.credits":       "Credits",
     "settings.credits_videos": "Reference videos curated by judo.how for the throws, and the official KODOKAN × IJF Academy demos for pins, strangles and locks — the ▶ button opens the YouTube clip. Each video belongs to its uploader.",
-    "settings.credits_images": "Throw drawings extracted from the Gokyo-no-waza poster on Wikimedia Commons by user Mtwist; pin illustrations from Wikimedia Commons; strangle and lock stills from the official Kodokan demo videos.",
+    "settings.credits_images": "Throw drawings extracted from the Gokyo-no-waza poster on Wikimedia Commons by user Mtwist; pin illustrations from Wikimedia Commons; strangle and lock silhouettes derived from the official Kodokan demo videos.",
     "settings.credits_open":  "Open judo.how",
     "settings.credits_open_wm": "Open Wikimedia Commons",
 
@@ -467,7 +467,7 @@ const I18N = {
     "settings.test":          "Déclencher un rappel maintenant (test)",
     "settings.credits":       "Crédits",
     "settings.credits_videos": "Vidéos de référence sélectionnées par judo.how — le bouton ▶ ouvre la vidéo YouTube intégrée sur la page de la technique. Chaque vidéo appartient à son auteur.",
-    "settings.credits_images": "Dessins des projections extraits du poster Gokyo-no-waza sur Wikimedia Commons par l'utilisateur Mtwist ; illustrations des immobilisations issues de Wikimedia Commons ; images des étranglements et clés tirées des vidéos officielles du Kodokan.",
+    "settings.credits_images": "Dessins des projections extraits du poster Gokyo-no-waza sur Wikimedia Commons par l'utilisateur Mtwist ; illustrations des immobilisations issues de Wikimedia Commons ; silhouettes des étranglements et clés dérivées des vidéos officielles du Kodokan.",
     "settings.credits_open":  "Ouvrir judo.how",
     "settings.credits_open_wm": "Ouvrir Wikimedia Commons",
 
@@ -629,8 +629,8 @@ const I18N = {
 // syllabus (pins, strangles, joint locks).
 const GROUP_NAMES = ["", "Dai Ikkyō", "Dai Nikyō", "Dai Sankyō", "Dai Yonkyō", "Dai Gokyō", "Osaekomi-waza", "Shime-waza", "Kansetsu-waza"];
 // Groups that ship bundled per-technique illustrations (all of them today:
-// Gokyo poster crops for 1-5, Commons art for the pins, Kodokan video stills
-// for 7-8 — see src/assets/illustrations/README.md). A group added above
+// Gokyo poster crops for 1-5, Commons art for the pins, posterized silhouettes
+// derived from the Kodokan demos for 7-8 — see src/assets/illustrations/README.md). A group added above
 // this bound without art gets the kanji+romaji card instead of a picture
 // question, because every candidate would show the same category silhouette.
 const ILLUSTRATED_GROUPS_MAX = 8;
