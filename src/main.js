@@ -52,10 +52,13 @@ const I18N = {
     "home.single":        "Single quiz",
     "home.rapid":         "Rapid-fire ({n})",
     "home.drill":         "Drill (timed)",
-    "home.browse":        "Browse all 40 techniques",
+    "home.browse":        "Browse all techniques",
     "home.family.gokyo":    "Gokyo",
+    "home.family.newaza":   "Ne-waza",
+    "home.family.all":      "Everything",
     "home.family.osaekomi": "Osaekomi",
-    "home.family.both":     "Gokyo + Osaekomi",
+    "home.family.shime":    "Shime",
+    "home.family.kansetsu": "Kansetsu",
 
     "quiz.start":         "Start",
     "quiz.intro":         "Press start to draw a question.",
@@ -137,8 +140,8 @@ const I18N = {
     "settings.schedule.summary.every":    "Every {n} min",
     "settings.schedule.help": "Schedules a notification (Android/iOS) or in-app prompt (desktop).",
     "settings.distractor": "Distractor difficulty",
-    "settings.dist_group":    "Same gokyo group (hardest)",
-    "settings.dist_category": "Same category (te/koshi/ashi/sutemi)",
+    "settings.dist_group":    "Same group (hardest)",
+    "settings.dist_category": "Same category (te/koshi/ashi/sutemi/osaekomi/shime/kansetsu)",
     "settings.dist_any":      "Any (easiest)",
     "settings.group_filter":  "Group filter",
     "settings.group_all":     "All groups",
@@ -166,8 +169,8 @@ const I18N = {
     "settings.drill_prompt_audio":  "Audio (Japanese TTS)",
     "settings.test":          "Trigger a quiz prompt now (test)",
     "settings.credits":       "Credits",
-    "settings.credits_videos": "Reference videos curated by judo.how — the ▶ button opens the YouTube clip from the matching technique page. Each video belongs to its uploader.",
-    "settings.credits_images": "Technique drawings extracted from the Gokyo-no-waza poster on Wikimedia Commons by user Mtwist.",
+    "settings.credits_videos": "Reference videos curated by judo.how for the throws, and the official KODOKAN × IJF Academy demos for pins, strangles and locks — the ▶ button opens the YouTube clip. Each video belongs to its uploader.",
+    "settings.credits_images": "Throw drawings extracted from the Gokyo-no-waza poster on Wikimedia Commons by user Mtwist; pin illustrations from Wikimedia Commons; strangle and lock stills from the official Kodokan demo videos.",
     "settings.credits_open":  "Open judo.how",
     "settings.credits_open_wm": "Open Wikimedia Commons",
 
@@ -176,6 +179,7 @@ const I18N = {
     "video.open_external": "Open in browser",
     "video.credit_yt":     "Video on YouTube",
     "video.curated_by":    "curated by",
+    "video.by":            "by",
 
     "group.1": "1st group",
     "group.2": "2nd group",
@@ -183,12 +187,16 @@ const I18N = {
     "group.4": "4th group",
     "group.5": "5th group",
     "group.6": "Pinning techniques",
+    "group.7": "Strangling techniques",
+    "group.8": "Joint locks",
 
-    "cat.ashi-waza":   "Leg techniques",
-    "cat.koshi-waza":  "Hip techniques",
-    "cat.te-waza":     "Hand techniques",
-    "cat.sutemi-waza": "Sacrifice throws",
-    "cat.katame-waza": "Grappling holds",
+    "cat.ashi-waza":      "Leg techniques",
+    "cat.koshi-waza":     "Hip techniques",
+    "cat.te-waza":        "Hand techniques",
+    "cat.sutemi-waza":    "Sacrifice throws",
+    "cat.osaekomi-waza":  "Pinning holds",
+    "cat.shime-waza":     "Strangles",
+    "cat.kansetsu-waza":  "Joint locks",
 
     "profile.title":         "Your dōjō progress",
     "profile.level":         "Level {n}",
@@ -341,10 +349,13 @@ const I18N = {
     "home.single":        "Une question",
     "home.rapid":         "Rafale ({n})",
     "home.drill":         "Drill (chrono)",
-    "home.browse":        "Parcourir les 40 techniques",
+    "home.browse":        "Parcourir toutes les techniques",
     "home.family.gokyo":    "Gokyo",
+    "home.family.newaza":   "Ne-waza",
+    "home.family.all":      "Tout",
     "home.family.osaekomi": "Osaekomi",
-    "home.family.both":     "Gokyo + Osaekomi",
+    "home.family.shime":    "Shime",
+    "home.family.kansetsu": "Kansetsu",
 
     "quiz.start":         "Commencer",
     "quiz.intro":         "Appuie sur Commencer pour tirer une question.",
@@ -426,8 +437,8 @@ const I18N = {
     "settings.schedule.summary.every":    "Toutes les {n} min",
     "settings.schedule.help": "Déclenche une notification (Android/iOS) ou un prompt (desktop).",
     "settings.distractor": "Difficulté des distracteurs",
-    "settings.dist_group":    "Même groupe gokyo (le + dur)",
-    "settings.dist_category": "Même catégorie (te/koshi/ashi/sutemi)",
+    "settings.dist_group":    "Même groupe (le + dur)",
+    "settings.dist_category": "Même catégorie (te/koshi/ashi/sutemi/osaekomi/shime/kansetsu)",
     "settings.dist_any":      "N'importe (le + facile)",
     "settings.group_filter":  "Filtre par groupe",
     "settings.group_all":     "Tous les groupes",
@@ -456,7 +467,7 @@ const I18N = {
     "settings.test":          "Déclencher un rappel maintenant (test)",
     "settings.credits":       "Crédits",
     "settings.credits_videos": "Vidéos de référence sélectionnées par judo.how — le bouton ▶ ouvre la vidéo YouTube intégrée sur la page de la technique. Chaque vidéo appartient à son auteur.",
-    "settings.credits_images": "Dessins des techniques extraits du poster Gokyo-no-waza sur Wikimedia Commons par l'utilisateur Mtwist.",
+    "settings.credits_images": "Dessins des projections extraits du poster Gokyo-no-waza sur Wikimedia Commons par l'utilisateur Mtwist ; illustrations des immobilisations issues de Wikimedia Commons ; images des étranglements et clés tirées des vidéos officielles du Kodokan.",
     "settings.credits_open":  "Ouvrir judo.how",
     "settings.credits_open_wm": "Ouvrir Wikimedia Commons",
 
@@ -465,6 +476,7 @@ const I18N = {
     "video.open_external": "Ouvrir dans le navigateur",
     "video.credit_yt":     "Vidéo sur YouTube",
     "video.curated_by":    "sélectionnée par",
+    "video.by":            "par",
 
     "group.1": "Premier groupe",
     "group.2": "Deuxième groupe",
@@ -472,12 +484,16 @@ const I18N = {
     "group.4": "Quatrième groupe",
     "group.5": "Cinquième groupe",
     "group.6": "Immobilisations",
+    "group.7": "Étranglements",
+    "group.8": "Clés articulaires",
 
-    "cat.ashi-waza":   "Techniques de jambe",
-    "cat.koshi-waza":  "Techniques de hanche",
-    "cat.te-waza":     "Techniques de bras",
-    "cat.sutemi-waza": "Techniques de sacrifice",
-    "cat.katame-waza": "Techniques de contrôle",
+    "cat.ashi-waza":      "Techniques de jambe",
+    "cat.koshi-waza":     "Techniques de hanche",
+    "cat.te-waza":        "Techniques de bras",
+    "cat.sutemi-waza":    "Techniques de sacrifice",
+    "cat.osaekomi-waza":  "Immobilisations",
+    "cat.shime-waza":     "Étranglements",
+    "cat.kansetsu-waza":  "Clés articulaires",
 
     "profile.title":         "Ta progression au dōjō",
     "profile.level":         "Niveau {n}",
@@ -609,9 +625,16 @@ const I18N = {
 
 // Index 0 is intentionally empty so `GROUP_NAMES[g]` lines up with the
 // 1-based group ids in the backend `Technique.group` field. Groups 1..=5
-// are the Gokyo throws; group 6 is the classical Kodokan Osaekomi-waza
-// pinning syllabus.
-const GROUP_NAMES = ["", "Dai Ikkyō", "Dai Nikyō", "Dai Sankyō", "Dai Yonkyō", "Dai Gokyō", "Osaekomi-waza"];
+// are the Gokyo throws; groups 6..=8 are the classical Kodokan Katame-waza
+// syllabus (pins, strangles, joint locks).
+const GROUP_NAMES = ["", "Dai Ikkyō", "Dai Nikyō", "Dai Sankyō", "Dai Yonkyō", "Dai Gokyō", "Osaekomi-waza", "Shime-waza", "Kansetsu-waza"];
+// Groups that ship bundled per-technique illustrations (all of them today:
+// Gokyo poster crops for 1-5, Commons art for the pins, Kodokan video stills
+// for 7-8 — see src/assets/illustrations/README.md). A group added above
+// this bound without art gets the kanji+romaji card instead of a picture
+// question, because every candidate would show the same category silhouette.
+const ILLUSTRATED_GROUPS_MAX = 8;
+function hasBundledArt(tech) { return tech.group <= ILLUSTRATED_GROUPS_MAX; }
 const GROUPS_LAST = GROUP_NAMES.length - 1;
 
 function t(key, vars = {}) {
@@ -635,10 +658,11 @@ const store = {
     schedule: { ...DEFAULT_SCHEDULE },
     distractor_mode: "same-group",
     group_filter: 0,
-    // Coarse family selector exposed on the home screen as 3 quick-select
-    // buttons: "all" (all 47), "gokyo" (groups 1..=5, the 40 throws), or
-    // "osaekomi" (group 6, the 7 pins). The settings dropdown for a
-    // SPECIFIC group still wins over this when set (1..=6).
+    // Family selector exposed on the home screen as a 3x2 grid of quick-select
+    // buttons: "gokyo" (groups 1..=5, the 40 throws), "newaza" (groups 6..=8),
+    // "all" (every technique), then one button per ground family —
+    // "osaekomi" (6), "shime" (7), "kansetsu" (8). The settings dropdown for
+    // a SPECIFIC group still wins over this when set (1..=GROUPS_LAST).
     family_filter: "all",
     show_kanji_hint: false,   // image-first quiz; kanji always revealed after answer
     quiz_prompt_mode: "image", // "image" | "japanese" (kanji+romaji card, FR choices)
@@ -810,7 +834,7 @@ function loadLocalSettings() {
       localStorage.getItem(STORE_KEYS.distractor) || "same-group";
     store.settings.group_filter = parseInt(localStorage.getItem(STORE_KEYS.groupFilter) || "0", 10);
     const savedFamily = localStorage.getItem(STORE_KEYS.familyFilter);
-    if (["all", "gokyo", "osaekomi"].includes(savedFamily)) {
+    if (FAMILY_VALUES.includes(savedFamily)) {
       store.settings.family_filter = savedFamily;
     }
     store.settings.show_kanji_hint = localStorage.getItem(STORE_KEYS.showKanjiHint) === "true";
@@ -1079,15 +1103,21 @@ function openVideoModal(tech) {
     ));
   }
 
+  // Throws: judo.how picked the clip. Katame-waza (groups 6-8): the clip is
+  // the official Kodokan × IJF Academy demo, so credit the channel instead.
+  const kodokan = tech.group >= 6;
   footer.innerHTML = "";
   footer.appendChild(h("div", { class: "credit" },
     tech.youtube_id
-      ? `${t("video.credit_yt")} • ${t("video.curated_by")} `
+      ? `${t("video.credit_yt")} • ${t(kodokan ? "video.by" : "video.curated_by")} `
       : `${t("video.curated_by")} `,
     h("a", {
       href: "#",
-      onclick: (e) => { e.preventDefault(); openExternal(tech.judo_how_url); },
-    }, "judo.how"),
+      onclick: (e) => {
+        e.preventDefault();
+        openExternal(kodokan ? "https://www.youtube.com/@KODOKANJUDO" : tech.judo_how_url);
+      },
+    }, kodokan ? "KODOKAN" : "judo.how"),
   ));
   footer.appendChild(h("button", {
     class: "btn ghost small",
@@ -1178,16 +1208,25 @@ async function fetchAnalytics() {
   return invoke("get_analytics");
 }
 
-// A specific group picked in settings (1..=6) wins over the home family
-// quick-select. "gokyo" expands to [1,2,3,4,5]; "osaekomi" to [6]; "all"
-// means no group constraint.
+// Home-screen family quick-select values → backend group lists. null = no
+// constraint. Order here is the button order on the home screen (3 per row).
+const FAMILY_GROUPS = {
+  gokyo:    [1, 2, 3, 4, 5],
+  newaza:   [6, 7, 8],
+  all:      null,
+  osaekomi: [6],
+  shime:    [7],
+  kansetsu: [8],
+};
+const FAMILY_VALUES = Object.keys(FAMILY_GROUPS);
+
+// A specific group picked in settings (1..=GROUPS_LAST) wins over the home
+// family quick-select.
 function resolveGroupsFilter() {
   const single = store.settings.group_filter;
-  if (single >= 1 && single <= 6) return [single];
+  if (single >= 1 && single <= GROUPS_LAST) return [single];
   const family = store.settings.family_filter || "all";
-  if (family === "gokyo") return [1, 2, 3, 4, 5];
-  if (family === "osaekomi") return [6];
-  return null;
+  return FAMILY_GROUPS[family] ?? null;
 }
 
 async function fetchNextQuestion(forcedSlug = null) {
@@ -1524,7 +1563,8 @@ async function renderHome() {
        h("span", {}, t("home.browse"))),
   ));
 
-  // Family quick-select — 3 toggle buttons (Gokyo / Osaekomi / Both).
+  // Family quick-select — 3x2 toggle grid (Gokyo / Ne-waza / Everything,
+  // then Osaekomi / Shime / Kansetsu). Values and order come from FAMILY_GROUPS.
   // Sets `family_filter` and re-renders so the active state updates.
   // Backend filtering is applied in resolveGroupsFilter().
   const setFamily = (v) => {
@@ -1539,9 +1579,7 @@ async function renderHome() {
     onclick: () => setFamily(v),
   }, t(labelKey));
   root.appendChild(h("div", { class: "family-select" },
-    famBtn("gokyo",    "home.family.gokyo"),
-    famBtn("osaekomi", "home.family.osaekomi"),
-    famBtn("all",      "home.family.both"),
+    ...FAMILY_VALUES.map((v) => famBtn(v, `home.family.${v}`)),
   ));
 
   // Today summary strip — 4 stat cells in a horizontal flex row.
@@ -1583,10 +1621,14 @@ function renderQuizCard(q, mode, opts = {}) {
   // - "japanese" → big kanji + romaji subtitle. Choices = French translation.
   // - "kanji"    → big kanji only (drill harder option). Choices = French.
   // - "romaji"   → big romaji only (drill easier option). Choices = French.
-  const promptMode = opts.promptMode || "image";
+  const requestedMode = opts.promptMode || "image";
 
   const showKanjiHint = store.settings.show_kanji_hint;
   const tech = q.answer;
+  // Techniques without bundled art can't be asked as a picture question
+  // (every candidate would show the same silhouette) — fall back to the
+  // kanji+romaji card with translation choices. See hasBundledArt().
+  const promptMode = (requestedMode === "image" && !hasBundledArt(tech)) ? "japanese" : requestedMode;
 
   // -- Prompt panel --------------------------------------------------------
   let promptEl;
@@ -1631,9 +1673,17 @@ function renderQuizCard(q, mode, opts = {}) {
     if (!answered) maybeAutoSpeak(tech);
   } else if (promptMode === "free_text") {
     // Free-text reuses the image prompt; the choices area below is replaced
-    // by a text input in which the user types the rōmaji from memory.
-    promptEl = h("div", { class: "quiz-image-wrap" + (answered ? " compact" : "") });
-    promptEl.appendChild(makeImageEl(tech, "technique"));
+    // by a text input in which the user types the rōmaji from memory. With
+    // no bundled art the prompt is kanji + translation instead of a picture.
+    if (hasBundledArt(tech)) {
+      promptEl = h("div", { class: "quiz-image-wrap" + (answered ? " compact" : "") });
+      promptEl.appendChild(makeImageEl(tech, "technique"));
+    } else {
+      promptEl = h("div", { class: "quiz-text-prompt" },
+        h("div", { class: "prompt-kanji" }, tech.kanji),
+        h("div", { class: "prompt-romaji" }, localizedTranslation(tech)),
+      );
+    }
   } else {
     // romaji
     promptEl = h("div", { class: "quiz-text-prompt" },

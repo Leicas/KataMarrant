@@ -30,6 +30,29 @@ o-soto-guruma          uki-waza               yoko-wakare           yoko-guruma
 ushiro-goshi           ura-nage               sumi-otoshi           yoko-gake
 ```
 
+The 7 osaekomi pins (`kesa-gatame` … `tate-shiho-gatame`) have individually
+sourced illustrations listed in [ATTRIBUTION.md](ATTRIBUTION.md).
+
+### Shime-waza / kansetsu-waza — Kodokan video stills
+
+Groups 7 and 8 use one JPEG still per technique (`<slug>.jpg`, 600px wide)
+grabbed from the official KODOKAN × IJF Academy demo videos at ~45% of the
+clip, with the bottom 15% cropped away so the on-screen technique name does
+not spoil the quiz. Regenerate with `scripts/kodokan_stills.py` (needs
+`yt-dlp`, `ffmpeg`, Pillow). See [ATTRIBUTION.md](ATTRIBUTION.md). If a
+group is ever added without art, raise `ILLUSTRATED_GROUPS_MAX` in
+`src/main.js` only once its files exist — below that bound the quiz falls
+back to the kanji + romaji card. Slugs:
+
+```
+nami-juji-jime         gyaku-juji-jime        kata-juji-jime         hadaka-jime
+okuri-eri-jime         kataha-jime            katate-jime            ryote-jime
+sode-guruma-jime       tsukkomi-jime          sankaku-jime           do-jime
+ude-garami             ude-hishigi-juji-gatame ude-hishigi-ude-gatame ude-hishigi-hiza-gatame
+ude-hishigi-waki-gatame ude-hishigi-hara-gatame ude-hishigi-ashi-gatame ude-hishigi-te-gatame
+ude-hishigi-sankaku-gatame ashi-garami
+```
+
 ## Sources to consider
 
 - [Wikimedia Commons — Judo throws](https://commons.wikimedia.org/wiki/Category:Judo_throws)

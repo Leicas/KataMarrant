@@ -6,7 +6,8 @@
 
 <p align="center">
   A small Tauri 2 trainer for the <strong>Gokyo no Waza</strong> — the 40 throwing
-  techniques of judo grouped in five sets. Tap a video, pick the right name out of three.
+  techniques of judo grouped in five sets — plus the Kodokan <strong>katame-waza</strong>
+  (7 pins, 12 strangles, 10 joint locks). Tap a video, pick the right name out of three.
 </p>
 
 <p align="center">
@@ -27,8 +28,9 @@
 ## Modes
 
 ### Quiz — single question
-The classic flow. The card shows an image of one of the 40 techniques and
-three romaji choices. After you pick, the card reveals the romaji + kanji +
+The classic flow. The card shows an image of one of the techniques and
+three romaji choices (strangles and locks, which have no drawings yet, show
+the kanji + romaji card with translation choices instead). After you pick, the card reveals the romaji + kanji +
 French translation together, plus links to the [judo.how](https://judo.how/)
 reference video and the Wikipedia entry. One answer per session unless you
 hit "Suivant".
@@ -51,8 +53,10 @@ and the "silent sensei" achievement unlocks.
 
 ## Features
 
-- All 40 techniques across the 5 gokyo groups, each with a link to the
-  [judo.how](https://judo.how/) reference video and the French Wikipedia entry.
+- All 40 throws across the 5 gokyo groups plus the 29 Kodokan katame-waza
+  (osaekomi, shime, kansetsu), each with a link to the reference video
+  ([judo.how](https://judo.how/) for throws, the official Kodokan channel for
+  ground work) and a Wikipedia entry.
 - Image-first three-choice quiz: identify the technique from a picture, with
   romaji + kanji + French translation revealed together after each answer.
   Drop your own animated GIFs into `src/assets/illustrations/<slug>.gif` to

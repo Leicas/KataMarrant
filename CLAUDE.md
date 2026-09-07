@@ -5,7 +5,8 @@ Guidance for Claude Code working in this repo.
 ## Project overview
 
 KataMarrant is a cross-platform Tauri 2 app (Rust backend, vanilla JS frontend, no
-build step) for learning the 40 Gokyo no Waza techniques. Built to eventually run on
+build step) for learning the 40 Gokyo no Waza throws plus the Kodokan katame-waza
+(pins, strangles, joint locks). Built to eventually run on
 Android. The flow is multiple-choice quizzing with optional spaced-rep weighting,
 rapid-fire bursts, and a periodic notification that reopens the quiz.
 
@@ -64,7 +65,7 @@ NOT exercised — those need integration harnesses we don't have yet. CI runs
 | `lib.rs` | Tauri setup, command registration, scheduler loop spawn |
 | `state.rs` | `AppState` (db connection, scheduler state, recent-shown cooldown deque) |
 | `error.rs` | `AppError` / `AppResult<T>` (serializes to JSON) |
-| `data.rs` | Static `TECHNIQUES: &[Technique]` — 40 Gokyo entries (slug, romaji, kanji, `name_fr`, group, category, judo_how/wiki/image URLs) |
+| `data.rs` | Static `TECHNIQUES: &[Technique]` — 69 entries: 40 Gokyo throws (groups 1-5) + Kodokan Katame-waza (group 6 osaekomi pins, 7 shime strangles, 8 kansetsu locks); each has slug, romaji, kanji, `name_fr`/`name_en`, group, category, judo_how/wiki/image URLs, `youtube_id` |
 | `db.rs` | SQLite stats: `technique_stats`, `quiz_log`, helpers |
 | `scheduler.rs` | `ScheduleConfig`, `next_fire_after`, desktop loop, mobile (`schedule_next_mobile`) handler shared by Android + iOS |
 | `notification.rs` | Mobile notification channel (Android) + permission request + slot-id helper |
@@ -226,3 +227,7 @@ videos — judo.how stays the source of truth for the visual reference.
 - Rust commands return `AppResult<T>` — never panic in handlers.
 - Frontend is a single file; UI changes go in `src/main.js` / `src/styles.css`.
 - New techniques (kata, etc.) go in `src-tauri/src/data.rs` — keep slugs URL-safe.
+  A new `category` needs a matching `src/assets/silhouettes/<category>.svg` and
+  `cat.<category>` i18n keys; a new group needs a `GROUP_NAMES` entry + `group.N`
+  i18n keys in `src/main.js`. Groups without per-technique illustrations must be
+  above `ILLUSTRATED_GROUPS_MAX` so the quiz falls back to the kanji card.

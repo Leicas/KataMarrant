@@ -17,6 +17,17 @@ the same card.
 - Each underlying YouTube video belongs to its respective uploader. Refer to
   the YouTube page itself for the upload's attribution and licence.
 
+For the katame-waza groups (osaekomi pins, shime strangles, kansetsu locks),
+judo.how does not host video, so the "Watch video" button links straight to
+the official **KODOKAN × IJF Academy "100 Techniques"** demonstrations on the
+[Kodokan YouTube channel](https://www.youtube.com/@KODOKANJUDO). We only link
+out; nothing is embedded or re-hosted. The quiz images for the strangles and
+joint locks are single low-resolution stills taken from those demos (see
+`src/assets/illustrations/ATTRIBUTION.md`); they belong to the Kodokan and
+the IJF Academy and are used here as an educational reference alongside the
+link to the full video. If you represent the rights holder and want them
+removed, open an issue and they will be replaced with silhouettes.
+
 If you maintain a video that's linked here and would prefer a different
 attribution, please open an issue.
 
