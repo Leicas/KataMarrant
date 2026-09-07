@@ -124,6 +124,20 @@ pub const ACHIEVEMENTS: &[AchievementDef] = &[
         description_fr: "Les 7 immobilisations osaekomi-waza correctes au moins une fois.",
     },
     AchievementDef {
+        code: "shime_master",
+        name_en: "Shime Master",
+        name_fr: "Maître du Shime",
+        description_en: "All 12 shime-waza strangles answered correctly at least once.",
+        description_fr: "Les 12 étranglements shime-waza corrects au moins une fois.",
+    },
+    AchievementDef {
+        code: "kansetsu_master",
+        name_en: "Kansetsu Master",
+        name_fr: "Maître du Kansetsu",
+        description_en: "All 10 kansetsu-waza joint locks answered correctly at least once.",
+        description_fr: "Les 10 clés kansetsu-waza correctes au moins une fois.",
+    },
+    AchievementDef {
         code: "centenary",
         name_en: "Centenary",
         name_fr: "Centenaire",
@@ -309,20 +323,17 @@ pub fn record_answer_with_gamification(
     // 3. Streak update.
     let today = db::local_today_string();
     let yesterday = db::local_day_offset_string(-1);
-    let streak_changed;
-    match gstate.last_active_day.as_deref() {
-        Some(d) if d == today => {
-            streak_changed = false;
-        }
+    let streak_changed = match gstate.last_active_day.as_deref() {
+        Some(d) if d == today => false,
         Some(d) if d == yesterday => {
             gstate.current_streak += 1;
-            streak_changed = true;
+            true
         }
         _ => {
             gstate.current_streak = 1;
-            streak_changed = true;
+            true
         }
-    }
+    };
     gstate.longest_streak = gstate.longest_streak.max(gstate.current_streak);
     gstate.last_active_day = Some(today.clone());
 
@@ -392,8 +403,9 @@ pub fn record_answer_with_gamification(
         }
     }
 
-    // All forty. Note: TECHNIQUES.len() now includes the 7 Osaekomi pins
-    // in addition to the 40 throws, so the literal threshold is 47. The
+    // All forty. Note: TECHNIQUES.len() now includes the Katame-waza groups
+    // (7 pins + 12 strangles + 10 locks) on top of the 40 throws, so the
+    // literal threshold is 69. The
     // achievement code/name is preserved for back-compat with existing
     // unlock rows; the description still reads "every technique answered
     // at least once" which stays accurate.
@@ -406,18 +418,21 @@ pub fn record_answer_with_gamification(
         }
     }
 
-    // Osaekomi Master — every group-6 (osaekomi-waza) pin answered correctly
-    // at least once. Looser bar than the per-Gokyo-group mastery checks
+    // Katame-waza masters — every technique of the group (6 = osaekomi
+    // pins, 7 = shime strangles, 8 = kansetsu locks) answered correctly at
+    // least once. Looser bar than the per-Gokyo-group mastery checks
     // because the user just learned the syllabus exists.
-    if !db::is_unlocked(&conn, "osaekomi_master")? {
-        let slugs = group_slugs(6);
-        if !slugs.is_empty() {
-            let correct = db::count_correct_at_least_once_in(&conn, &slugs)?;
-            if correct >= slugs.len() as i64
-                && db::unlock_achievement(&conn, "osaekomi_master", None)?
-            {
-                unlocked.push(UnlockedAchievement::new("osaekomi_master"));
-            }
+    for (group, code) in [(6u8, "osaekomi_master"), (7, "shime_master"), (8, "kansetsu_master")] {
+        if db::is_unlocked(&conn, code)? {
+            continue;
+        }
+        let slugs = group_slugs(group);
+        if slugs.is_empty() {
+            continue;
+        }
+        let correct = db::count_correct_at_least_once_in(&conn, &slugs)?;
+        if correct >= slugs.len() as i64 && db::unlock_achievement(&conn, code, None)? {
+            unlocked.push(UnlockedAchievement::new(code));
         }
     }
 

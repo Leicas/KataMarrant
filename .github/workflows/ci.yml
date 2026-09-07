@@ -113,7 +113,17 @@ jobs:
 
   ios-build:
     name: iOS simulator build
-    runs-on: macos-latest
+    # Pinned: `macos-latest` moved to the macOS 26 image (Xcode 26.6) in
+    # 2026-09 and the simulator link step started failing with
+    # "Undefined symbols: __swift_FORCE_LOAD_$_swiftCompatibility56 /
+    # _swiftCompatibilityConcurrency" — the Swift objects inside libapp.a
+    # (Tauri, its plugins, swift-rs) force-load those back-compat shims for
+    # our iOS 13 deployment target and Xcode 26's toolchain no longer puts
+    # them on the search path. macos-15 (Xcode 16) is the last image where
+    # this job was green. Alternatives: raise bundle.iOS.minimumSystemVersion
+    # to >= 16.0 (drops both shims) or wait for swift-rs/tauri-build to
+    # handle the new toolchain layout.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
