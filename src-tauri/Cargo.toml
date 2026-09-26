@@ -47,3 +47,17 @@ time = { version = "0.3", features = ["std"] }
 [target.'cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))'.dependencies]
 tauri-plugin-updater = "2.10.1"
 tauri-plugin-process = "2.3.1"
+
+# Vendored fork of tauri-plugin-notification 2.3.3 with two Android-only Kotlin
+# fixes that cannot be applied from our own code (gen/ is regenerated wholesale):
+#   1. NotificationStorage.writeActionGroup: index the SharedPreferences keys by
+#      position (id0/id1/…) so getActionGroup can read them back — upstream wrote
+#      one shared key so action buttons ALWAYS came back empty (no snooze/skip).
+#   2. buildIntent/onIntent: deep-link via a dedicated action + FLAG_ACTIVITY_NEW_TASK
+#      instead of the ACTION_MAIN/CATEGORY_LAUNCHER intent, so a cold notification
+#      tap opens the app instead of bouncing to the Android home screen.
+# The version matches (2.3.3) so this transparently replaces the crates.io copy.
+# See vendor/tauri-plugin-notification/KATAMARRANT_FORK.md. On plugin upgrades,
+# re-apply these edits (or drop the patch once upstreamed).
+[patch.crates-io]
+tauri-plugin-notification = { path = "vendor/tauri-plugin-notification" }
