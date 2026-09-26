@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/Leicas/KataMarrant/compare/v1.9.0...v1.10.0) (2026-09-26)
+
+### Features
+
+* ship nage-komi auto-play + Android notification fixes on stable ([cb3ad3c](https://github.com/Leicas/KataMarrant/commit/cb3ad3cdf63f7b4544fceb4c0bbbd1ffbc6b66e0)), closes [#16](https://github.com/Leicas/KataMarrant/issues/16)
+
 ## [1.9.0](https://github.com/Leicas/KataMarrant/compare/v1.8.0...v1.9.0) (2026-09-07)
 
 ### Features
