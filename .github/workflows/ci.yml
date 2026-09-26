@@ -82,6 +82,12 @@ jobs:
           java-version: '17'
 
       - uses: android-actions/setup-android@v3
+        # The action's default `packages` is "tools platform-tools"; Google
+        # dropped the legacy `tools` package from the SDK repository
+        # (2026-09), which makes sdkmanager exit 1 ("Failed to find package
+        # 'tools'"). We only need platform-tools; the NDK is installed below.
+        with:
+          packages: platform-tools
 
       - name: Install Android NDK
         run: sdkmanager --install "ndk;26.1.10909125" >/dev/null
@@ -113,16 +119,12 @@ jobs:
 
   ios-build:
     name: iOS simulator build
-    # Pinned: `macos-latest` moved to the macOS 26 image (Xcode 26.6) in
-    # 2026-09 and the simulator link step started failing with
-    # "Undefined symbols: __swift_FORCE_LOAD_$_swiftCompatibility56 /
-    # _swiftCompatibilityConcurrency" — the Swift objects inside libapp.a
-    # (Tauri, its plugins, swift-rs) force-load those back-compat shims for
-    # our iOS 13 deployment target and Xcode 26's toolchain no longer puts
-    # them on the search path. macos-15 (Xcode 16) is the last image where
-    # this job was green. Alternatives: raise bundle.iOS.minimumSystemVersion
-    # to >= 16.0 (drops both shims) or wait for swift-rs/tauri-build to
-    # handle the new toolchain layout.
+    # Pinned to macos-15 (Xcode 16). On 2026-06-30 the `macos-latest` label
+    # rolled to macos-26 (Xcode 26.5), whose linker fails to find the Swift
+    # back-compat libs (swiftCompatibility56 / swiftCompatibilityConcurrency)
+    # that Tauri's generated iOS project force-loads, breaking the link with
+    # "Undefined symbols for architecture arm64". macos-15 links cleanly.
+    # Revisit once Tauri/Xcode resolve the compatibility-lib force-load.
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4

@@ -3,6 +3,23 @@
 ### Features
 
 * **techniques:** add shime-waza + kansetsu-waza groups (Kodokan katame-waza) ([#15](https://github.com/Leicas/KataMarrant/issues/15)) ([2d531dd](https://github.com/Leicas/KataMarrant/commit/2d531dd8c10e61cbbc9d3e04bec2ffae060b5a7f))
+## [1.9.0-beta.3](https://github.com/Leicas/KataMarrant/compare/v1.9.0-beta.2...v1.9.0-beta.3) (2026-07-01)
+
+### Bug Fixes
+
+* **notif:** cold-start deep-link into picked quiz + prerelease-unique Android versionCode ([961f8c3](https://github.com/Leicas/KataMarrant/commit/961f8c3dc537c5e41d3bdf04782c7bb2058ce458))
+
+## [1.9.0-beta.2](https://github.com/Leicas/KataMarrant/compare/v1.9.0-beta.1...v1.9.0-beta.2) (2026-07-01)
+
+### Bug Fixes
+
+* **notif:** open app on tap + working snooze/skip via patched notification plugin fork ([7ae83d5](https://github.com/Leicas/KataMarrant/commit/7ae83d5420a1ec7d1fd83288acef987a460f8f72))
+
+## [1.9.0-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.8.0...v1.9.0-beta.1) (2026-06-30)
+
+### Features
+
+* nage-komi auto-play mode + gamification; fix Android notification tap ([04ef63d](https://github.com/Leicas/KataMarrant/commit/04ef63d811c714986fbb28ef230a8e82e65dd8c3))
 
 ## [1.8.0](https://github.com/Leicas/KataMarrant/compare/v1.7.2...v1.8.0) (2026-05-30)
 
