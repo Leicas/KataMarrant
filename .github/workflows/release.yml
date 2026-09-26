@@ -274,6 +274,12 @@ jobs:
 
       - if: env.HAS_KEYSTORE == 'true'
         uses: android-actions/setup-android@v3
+        # The action's default `packages` is "tools platform-tools"; Google
+        # dropped the legacy `tools` package from the SDK repository
+        # (2026-09), which makes sdkmanager exit 1 ("Failed to find package
+        # 'tools'"). We only need platform-tools; the NDK is installed below.
+        with:
+          packages: platform-tools
 
       # Cache the NDK toolchain. `sdkmanager --install` redownloads ~1GB
       # of clang+lld+sysroots each cold run (~30-60s). The NDK is fully
