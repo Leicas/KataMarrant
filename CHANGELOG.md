@@ -1,4 +1,4 @@
-## [1.10.0-beta.1](https://github.com/Leicas/KataMarrant/compare/v1.9.0...v1.10.0-beta.1) (2026-09-27)
+## [1.10.0](https://github.com/Leicas/KataMarrant/compare/v1.9.0...v1.10.0) (2026-09-26)
 
 ### Features
 
